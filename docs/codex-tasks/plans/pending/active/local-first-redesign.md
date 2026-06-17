@@ -44,13 +44,13 @@ Discord
 - Added `/doctor` diagnostics for duplicate Discord channel mappings on the same local project path.
 - Extended `/unregister` so an admin can remove selected legacy channel mappings without leaving the current operator channel.
 - Added read-only `/mappings` overview for all project-channel mappings and duplicate project path groups.
+- Added `/mappings` cleanup buttons for duplicate mapping entries.
 
 ## Open
 
-- Configure a real Discord application and local `.env`.
-- Run a private Discord smoke test with a test guild.
+- Decide whether the legacy forum/thread mappings should be removed now or kept as archival Discord-side history.
 - Decide which operator UX improvements should be added next.
-- Commit and push only after the user explicitly approves publication.
+- Move this plan to `done` after the user accepts the current local-first control-center baseline.
 
 ## Constraints
 

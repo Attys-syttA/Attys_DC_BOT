@@ -158,6 +158,9 @@ A `/unregister` opcionális channel targetet is elfogadhat, hogy regi forum/thre
 mappingek az aktualis operatori csatornabol is takarithatok legyenek.
 A `/mappings` read-only attekintest adjon a channel-project mappingekrol, es
 kulon jelezze a duplikalt local project path csoportokat.
+Duplikalt mappingeknel a `/mappings` adhat Remove gombokat, amelyek csak a
+lokalis SQLite mappinget es a kapcsolodo session allapotot torlik, Discord
+csatornat vagy uzenetet nem torolnek.
 
 ## Kodmentesi Szabaly
 

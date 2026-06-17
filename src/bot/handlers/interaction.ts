@@ -7,9 +7,10 @@ import {
 } from "discord.js";
 import { isAllowedPrincipal } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
-import { upsertSession, getSession } from "../../db/database.js";
+import { upsertSession, getSession, getProject, getAllProjects, unregisterProject } from "../../db/database.js";
 import { codexAppServer } from "../../codex/app-server-client.js";
 import { deleteStoredThread } from "../../codex/storage.js";
+import { renderMappingsPayload } from "../commands/mappings.js";
 import { L } from "../../utils/i18n.js";
 import { getConfig } from "../../utils/config.js";
 
@@ -229,6 +230,28 @@ export async function handleButtonInteraction(
         },
       ],
       components: rows,
+    });
+    return;
+  }
+
+  if (action === "mapping-remove") {
+    const channelId = requestId;
+    const project = getProject(channelId);
+    if (!project) {
+      const projects = getAllProjects(interaction.guildId!);
+      await interaction.update({
+        content: L("This mapping is already removed.", "이 매핑은 이미 제거되었습니다."),
+        ...renderMappingsPayload(projects),
+      });
+      return;
+    }
+
+    await sessionManager.stopSession(channelId);
+    unregisterProject(channelId);
+    const projects = getAllProjects(interaction.guildId!);
+    await interaction.update({
+      content: L(`Removed mapping for <#${channelId}>.`, `<#${channelId}> 매핑을 제거했습니다.`),
+      ...renderMappingsPayload(projects),
     });
     return;
   }

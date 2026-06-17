@@ -53,6 +53,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `/doctor` diagnostics for duplicate Discord channel mappings that point at the same local project path.
 - Extended `/unregister` with an optional `channel` argument so legacy forum/thread mappings can be removed from the current operator channel.
 - Added read-only `/mappings` overview for project-channel mappings, with duplicate project path groups called out before cleanup.
+- Extended `/mappings` with cleanup buttons for duplicate mappings; each button stops that channel session, removes the mapping, and refreshes the overview.
 
 ## Open Work
 

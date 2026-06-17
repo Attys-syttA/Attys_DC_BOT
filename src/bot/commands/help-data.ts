@@ -90,7 +90,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     details: [
       "Attekintest ad arrol, hogy melyik Discord channel melyik local project path-hoz tartozik.",
       "A duplikalt project path-okat elore sorolja, igy a regi forum/thread maradvanyok gyorsan latszanak.",
-      "Nem torol semmit; takaritashoz hasznald a `/unregister channel:` parancsot.",
+      "Duplikalt mappingeknel Remove gombokat ad, ugyanaz a takaritas kezzel a `/unregister channel:` paranccsal is elerheto.",
     ],
   },
   {

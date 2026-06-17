@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   },
   getConfig: vi.fn(),
   upsertSession: vi.fn(),
+  getProject: vi.fn(),
+  getAllProjects: vi.fn(),
+  unregisterProject: vi.fn(),
   readThread: vi.fn(),
   deleteStoredThread: vi.fn(),
 }));
@@ -28,6 +31,9 @@ vi.mock("../../codex/session-manager.js", () => ({
 vi.mock("../../db/database.js", () => ({
   upsertSession: mocks.upsertSession,
   getSession: vi.fn(),
+  getProject: mocks.getProject,
+  getAllProjects: mocks.getAllProjects,
+  unregisterProject: mocks.unregisterProject,
 }));
 
 vi.mock("../../codex/app-server-client.js", () => ({
@@ -88,6 +94,22 @@ describe("interaction handlers", () => {
     mocks.sessionManager.getQueueSize.mockReturnValue(3);
     mocks.sessionManager.resolveApproval.mockReturnValue(true);
     mocks.sessionManager.resolveQuestion.mockReturnValue(true);
+    mocks.getProject.mockReturnValue({
+      channel_id: "legacy-channel",
+      project_path: "/projects/app",
+      guild_id: "guild-id",
+      auto_approve: 0,
+      created_at: "now",
+    });
+    mocks.getAllProjects.mockReturnValue([
+      {
+        channel_id: "current-channel",
+        project_path: "/projects/app",
+        guild_id: "guild-id",
+        auto_approve: 0,
+        created_at: "now",
+      },
+    ]);
     mocks.readThread.mockResolvedValue({
       turns: [
         {
@@ -247,5 +269,38 @@ describe("interaction handlers", () => {
       embeds: [],
       components: [],
     });
+  });
+
+  it("removes a selected project-channel mapping from mappings buttons", async () => {
+    const interaction = {
+      ...makeButton("mapping-remove:legacy-channel"),
+      guildId: "guild-id",
+    };
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.sessionManager.stopSession).toHaveBeenCalledWith("legacy-channel");
+    expect(mocks.unregisterProject).toHaveBeenCalledWith("legacy-channel");
+    expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      content: "Removed mapping for <#legacy-channel>.",
+      embeds: expect.any(Array),
+      components: expect.any(Array),
+    }));
+  });
+
+  it("reports a mapping button that was already removed", async () => {
+    mocks.getProject.mockReturnValue(undefined);
+    const interaction = {
+      ...makeButton("mapping-remove:legacy-channel"),
+      guildId: "guild-id",
+    };
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.unregisterProject).not.toHaveBeenCalled();
+    expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      content: "This mapping is already removed.",
+      embeds: expect.any(Array),
+    }));
   });
 });
