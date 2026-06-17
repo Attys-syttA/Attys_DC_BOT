@@ -34,6 +34,9 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Run plan check
+        run: npm run plans:check
+
       - name: Run typecheck
         run: npm run typecheck
 

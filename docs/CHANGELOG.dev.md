@@ -32,3 +32,4 @@
 - Mapping overview: bekerult a read-only `/mappings`, amely listazza a project-channel mappingeket, elore sorolja a duplikalt local project path-okat, es a `/unregister channel:` takaritasi iranyt jelzi.
 - Mapping cleanup UX: a `/mappings` duplikalt mappingeknel Remove gombokat ad, amelyek leallitjak az adott channel sessionjet, torlik a mappinget, majd frissitik az attekintest.
 - Plan hygiene: a local-first redesign reszterv `done` ala kerult; az aktiv `ujratervezes.md` geppel ellenorizheto elkeszult/nyitott allapotblokkot kapott.
+- Plan check gate: az `npm run check` es a GitHub CI is futtatja a `plans:check` ellenorzest az aktiv tervfajlokra.
