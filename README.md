@@ -64,11 +64,15 @@ npm run dev
 - `/status`: show registered project status
 - `/dashboard`: show the channel's local Codex control center
 - `/doctor`: check local Codex, config, and channel readiness without printing secrets
+- `/session current`: show the selected local Codex thread for this channel
+- `/session new`: make the next prompt start a fresh local Codex thread
+- `/session stop`: stop the active Codex turn in this channel
 - `/sessions`: show known local Codex sessions for the registered project
 - `/last`: show the last known assistant response
 - `/stop`: interrupt the current Codex turn
 - `/queue list`: show queued prompts
 - `/queue clear`: clear queued prompts
+- `/queue remove <number>`: remove one queued prompt by its list number
 - `/git-status`: run `git status --short --branch` in the registered local project
 - `/run-tests`: run `npm test` in the registered local project when `DISCORD_ENABLE_RUN_TESTS=true`
 - `/ask <prompt>`: send an explicit prompt to the registered local Codex session

@@ -27,6 +27,7 @@ import * as doctorCmd from "./commands/doctor.js";
 import * as gitStatusCmd from "./commands/git-status.js";
 import * as runTestsCmd from "./commands/run-tests.js";
 import * as dashboardCmd from "./commands/dashboard.js";
+import * as sessionCmd from "./commands/session.js";
 
 const commands = [
   registerCmd,
@@ -44,6 +45,7 @@ const commands = [
   gitStatusCmd,
   runTestsCmd,
   dashboardCmd,
+  sessionCmd,
 ];
 const commandMap = new Collection<
   string,

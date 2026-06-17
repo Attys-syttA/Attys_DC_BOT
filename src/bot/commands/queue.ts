@@ -17,6 +17,18 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((sub) =>
     sub.setName("clear").setDescription("Clear all queued messages")
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("remove")
+      .setDescription("Remove one queued message by its list number")
+      .addIntegerOption((opt) =>
+        opt
+          .setName("number")
+          .setDescription("Queue item number from /queue list")
+          .setRequired(true)
+          .setMinValue(1),
+      )
   );
 
 export async function execute(
@@ -78,6 +90,29 @@ export async function execute(
         },
       ],
       components: rows,
+    });
+    return;
+  }
+
+  if (subcommand === "remove") {
+    const itemNumber = interaction.options.getInteger("number", true);
+    const removed = sessionManager.removeFromQueue(channelId, itemNumber - 1);
+    if (!removed) {
+      await interaction.editReply({
+        content: L("No queued message exists with that number.", "해당 번호의 대기 메시지가 없습니다."),
+      });
+      return;
+    }
+
+    const preview = removed.length > 100 ? removed.slice(0, 100) + "…" : removed;
+    await interaction.editReply({
+      embeds: [
+        {
+          title: L("Queue Item Removed", "큐 항목 제거됨"),
+          description: L(`Removed item ${itemNumber}:\n> ${preview}`, `${itemNumber}번 항목을 제거했습니다:\n> ${preview}`),
+          color: 0xff6600,
+        },
+      ],
     });
     return;
   }

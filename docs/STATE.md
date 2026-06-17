@@ -38,11 +38,12 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added CI/lint/security automation: GitHub Actions CI, SQLite check, GitGuardian/ggshield secret scan, Dependabot, SECURITY.md, and ESLint.
 - Added focused command tests for `/ask`, `/dashboard`, `/doctor`, `/git-status`, and `/run-tests`.
 - Refreshed npm dependencies within current major lines for Dependabot follow-up: `tsx`, `zod`, `dotenv`, and `@types/node`.
+- Added `/session current/new/stop` and `/queue remove <number>` operator controls with focused tests.
 
 ## Open Work
 
 1. Review whether `/usage` and `/auto-approve` should stay or be removed from the canonical command set.
-2. Add broader command integration tests for session delete/resume and queue remove edge cases.
+2. Add broader command integration tests for session delete/resume edge cases.
 3. Remove remaining non-Windows launcher references if they are not needed.
 4. Initialize or reconcile local git state against `Attys-syttA/Attys_DC_BOT` only after review.
 5. Run the full validation and secret scan before any commit.

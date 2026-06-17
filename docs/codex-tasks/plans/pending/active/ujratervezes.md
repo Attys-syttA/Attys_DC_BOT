@@ -125,10 +125,14 @@ Canonical vagy celhoz kozeli parancsok:
 - `/dashboard`
 - `/doctor`
 - `/sessions`
+- `/session current`
+- `/session new`
+- `/session stop`
 - `/last`
 - `/stop`
 - `/queue list`
 - `/queue clear`
+- `/queue remove`
 - `/git-status`
 - `/run-tests`
 - `/ask`

@@ -33,6 +33,7 @@ Discord
 - Added focused command tests for `/ask`, `/dashboard`, `/doctor`, `/git-status`, and `/run-tests`.
 - Added focused Discord interaction tests for authorization, stop, queue confirm, approval, new-session, and ask-select flows.
 - Refreshed npm dependencies within current major versions after Dependabot opened `tsx` and `zod` branches.
+- Added `/session current/new/stop` and `/queue remove <number>` operator controls with focused tests.
 
 ## Open
 

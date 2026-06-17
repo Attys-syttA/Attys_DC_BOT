@@ -70,6 +70,8 @@ Optional local commands:
 
 - `/ask` gives a slash-command prompt path in addition to normal messages.
 - `/git-status` reports the registered local project's git state.
+- `/session current/new/stop` gives direct per-channel session controls.
+- `/queue remove` removes one queued prompt without using buttons.
 - `/run-tests` is disabled unless `DISCORD_ENABLE_RUN_TESTS=true` is set in `.env`.
 
 ## 6. Validate Before Commit
