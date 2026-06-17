@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getConfig: vi.fn(),
   upsertSession: vi.fn(),
   readThread: vi.fn(),
+  deleteStoredThread: vi.fn(),
 }));
 
 vi.mock("../../security/guard.js", () => ({
@@ -36,7 +37,7 @@ vi.mock("../../codex/app-server-client.js", () => ({
 }));
 
 vi.mock("../../codex/storage.js", () => ({
-  deleteStoredThread: vi.fn(),
+  deleteStoredThread: mocks.deleteStoredThread,
 }));
 
 vi.mock("../../utils/config.js", () => ({
@@ -80,6 +81,7 @@ describe("interaction handlers", () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: true,
+      DISCORD_ENABLE_SESSION_DELETE: true,
     });
     mocks.sessionManager.stopSession.mockResolvedValue(true);
     mocks.sessionManager.confirmQueue.mockReturnValue(true);
@@ -150,6 +152,7 @@ describe("interaction handlers", () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: false,
+      DISCORD_ENABLE_SESSION_DELETE: true,
     });
     const interaction = makeButton("approve-all:req-1");
 
@@ -168,6 +171,36 @@ describe("interaction handlers", () => {
     await handleSelectMenuInteraction(interaction as never);
 
     expect(mocks.upsertSession).toHaveBeenCalledWith(expect.any(String), "channel-1", null, "idle");
+    expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      components: [],
+    }));
+  });
+
+  it("rejects session delete when disabled in config", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+      DISCORD_ENABLE_AUTO_APPROVE: true,
+      DISCORD_ENABLE_SESSION_DELETE: false,
+    });
+    const interaction = makeButton("session-delete:thread-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.deleteStoredThread).not.toHaveBeenCalled();
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "`session-delete` is disabled. Set `DISCORD_ENABLE_SESSION_DELETE=true` in `.env` to enable it.",
+      embeds: [],
+      components: [],
+    });
+  });
+
+  it("deletes a selected session when explicitly enabled", async () => {
+    mocks.deleteStoredThread.mockReturnValue(true);
+    const interaction = makeButton("session-delete:thread-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.deleteStoredThread).toHaveBeenCalledWith("thread-1");
     expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
       components: [],
     }));

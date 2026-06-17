@@ -40,11 +40,12 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Refreshed npm dependencies within current major lines for Dependabot follow-up: `tsx`, `zod`, `dotenv`, and `@types/node`.
 - Added `/session current/new/stop` and `/queue remove <number>` operator controls with focused tests.
 - Gated `/auto-approve` and session-wide automatic approval behind explicit `DISCORD_ENABLE_AUTO_APPROVE=true`.
+- Gated local Codex session deletion behind explicit `DISCORD_ENABLE_SESSION_DELETE=true`.
 
 ## Open Work
 
 1. Review whether `/usage` should stay or be removed from the canonical command set.
-2. Add broader command integration tests for session delete/resume edge cases.
+2. Add broader command integration tests for session resume edge cases.
 3. Remove remaining non-Windows launcher references if they are not needed.
 4. Initialize or reconcile local git state against `Attys-syttA/Attys_DC_BOT` only after review.
 5. Run the full validation and secret scan before any commit.

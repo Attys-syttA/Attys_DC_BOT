@@ -234,6 +234,18 @@ export async function handleButtonInteraction(
   }
 
   if (action === "session-delete") {
+    if (!getConfig().DISCORD_ENABLE_SESSION_DELETE) {
+      await interaction.update({
+        content: L(
+          "`session-delete` is disabled. Set `DISCORD_ENABLE_SESSION_DELETE=true` in `.env` to enable it.",
+          "`session-delete`가 비활성화되어 있습니다.",
+        ),
+        embeds: [],
+        components: [],
+      });
+      return;
+    }
+
     const channelId = interaction.channelId;
     const deleted = deleteStoredThread(requestId);
     if (deleted) {
@@ -368,6 +380,7 @@ export async function handleSelectMenuInteraction(
     }
   }
 
+  const deleteEnabled = getConfig().DISCORD_ENABLE_SESSION_DELETE;
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`session-resume:${selectedSessionId}`)
@@ -378,7 +391,8 @@ export async function handleSelectMenuInteraction(
       .setCustomId(`session-delete:${selectedSessionId}`)
       .setLabel(L("Delete", "삭제"))
       .setStyle(ButtonStyle.Danger)
-      .setEmoji("🗑️"),
+      .setEmoji("🗑️")
+      .setDisabled(!deleteEnabled),
     new ButtonBuilder()
       .setCustomId(`session-cancel:${selectedSessionId}`)
       .setLabel(L("Cancel", "취소"))

@@ -106,6 +106,7 @@ SHOW_COST=false
 DISCORD_REGISTER_COMMANDS=false
 DISCORD_ENABLE_RUN_TESTS=false
 DISCORD_ENABLE_AUTO_APPROVE=false
+DISCORD_ENABLE_SESSION_DELETE=false
 ```
 
 Nem kell es nem lehet normal mukodeshez kotelezo:
@@ -147,6 +148,8 @@ A `/run-tests` csak explicit env engedellyel mukodjon, mert lokalis scriptet ind
 A `/auto-approve` maradhat operatori convenience parancs, de csak explicit
 `DISCORD_ENABLE_AUTO_APPROVE=true` mellett kapcsolhato be, mert parancs- es
 fajlmodositas-jovahagyast kerul meg.
+A `/clear-sessions` es az egyedi session delete csak explicit
+`DISCORD_ENABLE_SESSION_DELETE=true` mellett torolhet lokalis Codex sessiont.
 
 ## Kodmentesi Szabaly
 

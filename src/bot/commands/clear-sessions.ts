@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import { getProject } from "../../db/database.js";
 import { deleteStoredThread, listStoredThreads } from "../../codex/storage.js";
+import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 
 export const data = new SlashCommandBuilder()
@@ -15,6 +16,16 @@ export const data = new SlashCommandBuilder()
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  if (!getConfig().DISCORD_ENABLE_SESSION_DELETE) {
+    await interaction.editReply({
+      content: L(
+        "`/clear-sessions` is disabled. Set `DISCORD_ENABLE_SESSION_DELETE=true` in `.env` to enable it.",
+        "`/clear-sessions`가 비활성화되어 있습니다.",
+      ),
+    });
+    return;
+  }
+
   const channelId = interaction.channelId;
   const project = getProject(channelId);
 

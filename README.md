@@ -68,6 +68,7 @@ npm run dev
 - `/session new`: make the next prompt start a fresh local Codex thread
 - `/session stop`: stop the active Codex turn in this channel
 - `/sessions`: show known local Codex sessions for the registered project
+- `/clear-sessions`: delete local Codex session files for the registered project when `DISCORD_ENABLE_SESSION_DELETE=true`
 - `/last`: show the last known assistant response
 - `/stop`: interrupt the current Codex turn
 - `/queue list`: show queued prompts
@@ -100,6 +101,7 @@ Important `.env` keys:
 - `DISCORD_REGISTER_COMMANDS`
 - `DISCORD_ENABLE_RUN_TESTS`
 - `DISCORD_ENABLE_AUTO_APPROVE`
+- `DISCORD_ENABLE_SESSION_DELETE`
 
 No remote execution keys are required. Do not add custom execution-agent secrets, private hostnames, private IPs, or machine-specific private examples to tracked files.
 
@@ -113,6 +115,7 @@ No remote execution keys are required. Do not add custom execution-agent secrets
 - no custom HTTP execution server is opened by this project
 - no network-share or portable-drive workflow is part of the target architecture
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
+- local Codex session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 
 ## Validation
 

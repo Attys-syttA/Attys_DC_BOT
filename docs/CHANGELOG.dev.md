@@ -17,3 +17,4 @@
 - Dependency refresh: frissult a `tsx`, `zod`, `dotenv`, es `@types/node` a jelenlegi major agon belul; `npm run check`, `ggshield`, es audit zold.
 - Operator controls: bekerult a `/session current/new/stop` es a `/queue remove <number>`, celzott Vitest lefedessel.
 - Auto-approve safety: a `/auto-approve on` es a session-wide automatikus jovahagyas explicit `DISCORD_ENABLE_AUTO_APPROVE=true` env flag moge kerult; kikapcsolni tovabbra is lehet flag nelkul.
+- Session delete safety: a `/clear-sessions` es az egyedi session delete gomb explicit `DISCORD_ENABLE_SESSION_DELETE=true` env flag moge kerult.

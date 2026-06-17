@@ -35,6 +35,7 @@ Discord
 - Refreshed npm dependencies within current major versions after Dependabot opened `tsx` and `zod` branches.
 - Added `/session current/new/stop` and `/queue remove <number>` operator controls with focused tests.
 - Gated `/auto-approve` and session-wide automatic approval behind explicit `DISCORD_ENABLE_AUTO_APPROVE=true`.
+- Gated local Codex session deletion behind explicit `DISCORD_ENABLE_SESSION_DELETE=true`.
 
 ## Open
 

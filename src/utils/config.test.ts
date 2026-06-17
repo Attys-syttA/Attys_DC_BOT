@@ -22,6 +22,7 @@ describe("config", () => {
     delete process.env.DISCORD_REGISTER_COMMANDS;
     delete process.env.DISCORD_ENABLE_RUN_TESTS;
     delete process.env.DISCORD_ENABLE_AUTO_APPROVE;
+    delete process.env.DISCORD_ENABLE_SESSION_DELETE;
     delete process.env.SHOW_COST;
   });
 
@@ -52,6 +53,7 @@ describe("config", () => {
     expect(config.DISCORD_REGISTER_COMMANDS).toBe(false);
     expect(config.DISCORD_ENABLE_RUN_TESTS).toBe(false);
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(false);
+    expect(config.DISCORD_ENABLE_SESSION_DELETE).toBe(false);
     expect(config.SHOW_COST).toBe(false);
   });
 
@@ -95,6 +97,13 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_SESSION_DELETE as boolean", async () => {
+    process.env.DISCORD_ENABLE_SESSION_DELETE = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_SESSION_DELETE).toBe(true);
   });
 
   it("calls process.exit(1) when required env vars are missing", async () => {
