@@ -29,6 +29,7 @@ import * as gitStatusCmd from "./commands/git-status.js";
 import * as runTestsCmd from "./commands/run-tests.js";
 import * as dashboardCmd from "./commands/dashboard.js";
 import * as sessionCmd from "./commands/session.js";
+import * as mappingsCmd from "./commands/mappings.js";
 import * as helpCmd from "./commands/help.js";
 import * as sugoCmd from "./commands/sugo.js";
 
@@ -49,6 +50,7 @@ const commands = [
   runTestsCmd,
   dashboardCmd,
   sessionCmd,
+  mappingsCmd,
   helpCmd,
   sugoCmd,
 ];

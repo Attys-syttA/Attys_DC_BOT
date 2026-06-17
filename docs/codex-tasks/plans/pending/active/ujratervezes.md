@@ -132,6 +132,7 @@ Canonical vagy celhoz kozeli parancsok:
 - `/session new`
 - `/session stop`
 - `/last`
+- `/mappings`
 - `/stop`
 - `/queue list`
 - `/queue clear`
@@ -155,6 +156,8 @@ A `/clear-sessions` es az egyedi session delete csak explicit
 `DISCORD_ENABLE_SESSION_DELETE=true` mellett torolhet lokalis Codex sessiont.
 A `/unregister` opcionális channel targetet is elfogadhat, hogy regi forum/thread
 mappingek az aktualis operatori csatornabol is takarithatok legyenek.
+A `/mappings` read-only attekintest adjon a channel-project mappingekrol, es
+kulon jelezze a duplikalt local project path csoportokat.
 
 ## Kodmentesi Szabaly
 

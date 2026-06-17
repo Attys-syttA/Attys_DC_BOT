@@ -29,3 +29,4 @@
 - Startup notification: opcionális `DISCORD_NOTIFICATION_CHANNEL_ID` kulcs kerult be, amellyel a bot public-safe indulasi statuszt kuldhet egy operatori Discord csatornaba.
 - Mapping diagnostics: a `/doctor` most jelzi, ha ugyanahhoz a local project path-hoz tobb Discord channel mapping tartozik, peldaul regi forum/thread maradvany miatt.
 - Legacy mapping cleanup: a `/unregister` opcionális `channel` argumentumot kapott, igy az aktualis operatori csatornabol is torolheto regi forum/thread mapping.
+- Mapping overview: bekerult a read-only `/mappings`, amely listazza a project-channel mappingeket, elore sorolja a duplikalt local project path-okat, es a `/unregister channel:` takaritasi iranyt jelzi.

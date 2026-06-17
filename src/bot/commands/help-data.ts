@@ -84,6 +84,16 @@ export const HELP_ENTRIES: HelpEntry[] = [
     ],
   },
   {
+    name: "mappings",
+    usage: "/mappings",
+    short: "Listazza a project-channel mappingeket es jelzi a duplikalt project path-okat.",
+    details: [
+      "Attekintest ad arrol, hogy melyik Discord channel melyik local project path-hoz tartozik.",
+      "A duplikalt project path-okat elore sorolja, igy a regi forum/thread maradvanyok gyorsan latszanak.",
+      "Nem torol semmit; takaritashoz hasznald a `/unregister channel:` parancsot.",
+    ],
+  },
+  {
     name: "queue",
     usage: "/queue list|clear|remove number",
     short: "A varakozo promptok listazasa, torlese vagy egy elem eltavolitasa.",
