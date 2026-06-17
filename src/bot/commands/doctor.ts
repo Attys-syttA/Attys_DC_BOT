@@ -32,6 +32,7 @@ export async function execute(
 
   lines.push(config.DISCORD_APPLICATION_ID ? ok("DISCORD_APPLICATION_ID configured") : ok("DISCORD_APPLICATION_ID omitted, bot will query Discord when registering commands"));
   lines.push(config.DISCORD_GUILD_ID ? ok("DISCORD_GUILD_ID configured") : fail("DISCORD_GUILD_ID", "missing"));
+  lines.push(config.DISCORD_NOTIFICATION_CHANNEL_ID ? ok("notification channel configured") : info("notification channel not configured"));
   lines.push(config.ALLOWED_USER_IDS.length > 0 || config.ALLOWED_ROLE_IDS.length > 0 ? ok("allowed principals configured") : fail("allowed principals", "no users or roles configured"));
   lines.push(fs.existsSync(config.BASE_PROJECT_DIR) ? ok("BASE_PROJECT_DIR exists") : fail("BASE_PROJECT_DIR", "path does not exist"));
   lines.push(

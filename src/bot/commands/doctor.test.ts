@@ -48,6 +48,7 @@ describe("/doctor", () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_APPLICATION_ID: "app-id",
       DISCORD_GUILD_ID: "guild-id",
+      DISCORD_NOTIFICATION_CHANNEL_ID: "",
       ALLOWED_USER_IDS: ["user-id"],
       ALLOWED_ROLE_IDS: [],
       BASE_PROJECT_DIR: "/projects",
@@ -67,6 +68,7 @@ describe("/doctor", () => {
 
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("OK DISCORD_APPLICATION_ID configured");
+    expect(content).toContain("INFO notification channel not configured");
     expect(content).toContain("OK allowed principals configured");
     expect(content).toContain("INFO message prompts disabled; slash commands work without Message Content intent");
     expect(content).toContain("OK this channel is registered");
@@ -94,6 +96,7 @@ describe("/doctor", () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_APPLICATION_ID: "app-id",
       DISCORD_GUILD_ID: "guild-id",
+      DISCORD_NOTIFICATION_CHANNEL_ID: "notify-channel",
       ALLOWED_USER_IDS: ["user-id"],
       ALLOWED_ROLE_IDS: [],
       BASE_PROJECT_DIR: "/projects",
@@ -104,6 +107,7 @@ describe("/doctor", () => {
     await execute(interaction as never);
 
     const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("OK notification channel configured");
     expect(content).toContain("INFO message prompts enabled; Discord Message Content intent must be enabled in Developer Portal");
   });
 });

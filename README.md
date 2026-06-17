@@ -95,6 +95,7 @@ Important `.env` keys:
 - `DISCORD_BOT_TOKEN`
 - `DISCORD_APPLICATION_ID`
 - `DISCORD_GUILD_ID`
+- `DISCORD_NOTIFICATION_CHANNEL_ID`
 - `ALLOWED_USER_IDS`
 - `ALLOWED_ROLE_IDS`
 - `BASE_PROJECT_DIR`
@@ -125,6 +126,7 @@ No remote execution keys are required. Do not add custom execution-agent secrets
 - local Codex session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - message-based prompts require Discord's privileged Message Content intent; slash commands work with `DISCORD_ENABLE_MESSAGE_PROMPTS=false`
 - `/doctor` reports whether message prompt mode is enabled or slash-command-only mode is active
+- startup notifications go only to `DISCORD_NOTIFICATION_CHANNEL_ID` when it is configured, and the message does not include secrets or raw IDs
 
 ## Validation
 

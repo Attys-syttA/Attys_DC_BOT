@@ -9,6 +9,7 @@ describe("config", () => {
     process.env.DISCORD_BOT_TOKEN = "test-token";
     delete process.env.DISCORD_APPLICATION_ID;
     process.env.DISCORD_GUILD_ID = "test-guild";
+    delete process.env.DISCORD_NOTIFICATION_CHANNEL_ID;
     process.env.ALLOWED_USER_IDS = "user1,user2";
     delete process.env.ALLOWED_ROLE_IDS;
     process.env.BASE_PROJECT_DIR = "/projects";
@@ -36,6 +37,7 @@ describe("config", () => {
     expect(config.DISCORD_BOT_TOKEN).toBe("test-token");
     expect(config.DISCORD_APPLICATION_ID).toBe("");
     expect(config.DISCORD_GUILD_ID).toBe("test-guild");
+    expect(config.DISCORD_NOTIFICATION_CHANNEL_ID).toBe("");
     expect(config.ALLOWED_USER_IDS).toEqual(["user1", "user2"]);
     expect(config.ALLOWED_ROLE_IDS).toEqual([]);
     expect(config.BASE_PROJECT_DIR).toBe("/projects");
@@ -62,6 +64,13 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_APPLICATION_ID).toBe("app-id");
+  });
+
+  it("parses DISCORD_NOTIFICATION_CHANNEL_ID when provided", async () => {
+    process.env.DISCORD_NOTIFICATION_CHANNEL_ID = "notify-channel";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_NOTIFICATION_CHANNEL_ID).toBe("notify-channel");
   });
 
   it("parses ALLOWED_USER_IDS with spaces", async () => {

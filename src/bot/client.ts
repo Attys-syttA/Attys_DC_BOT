@@ -12,6 +12,7 @@ import { handleMessage } from "./handlers/message.js";
 import { handleButtonInteraction, handleSelectMenuInteraction } from "./handlers/interaction.js";
 import { isAllowedPrincipal } from "../security/guard.js";
 import { L } from "../utils/i18n.js";
+import { sendStartupNotification } from "./notifications.js";
 import * as registerCmd from "./commands/register.js";
 import * as unregisterCmd from "./commands/unregister.js";
 import * as statusCmd from "./commands/status.js";
@@ -81,26 +82,31 @@ export async function startBot(): Promise<Client> {
 
   client.on("ready", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
-    if (!config.DISCORD_REGISTER_COMMANDS) {
+    if (config.DISCORD_REGISTER_COMMANDS) {
+      try {
+        const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
+        const commandData = commands.map((c) => c.data.toJSON());
+        const applicationId =
+          config.DISCORD_APPLICATION_ID ||
+          (await rest.get(Routes.currentApplication()) as { id: string }).id;
+        await rest.put(
+          Routes.applicationGuildCommands(
+            applicationId,
+            config.DISCORD_GUILD_ID,
+          ),
+          { body: commandData },
+        );
+        console.log(`Registered ${commandData.length} slash commands`);
+      } catch (error) {
+        console.error("Failed to register slash commands:", error);
+      }
+    } else {
       console.log("Slash command registration skipped (DISCORD_REGISTER_COMMANDS=false)");
-      return;
     }
     try {
-      const rest = new REST({ version: "10" }).setToken(config.DISCORD_BOT_TOKEN);
-      const commandData = commands.map((c) => c.data.toJSON());
-      const applicationId =
-        config.DISCORD_APPLICATION_ID ||
-        (await rest.get(Routes.currentApplication()) as { id: string }).id;
-      await rest.put(
-        Routes.applicationGuildCommands(
-          applicationId,
-          config.DISCORD_GUILD_ID,
-        ),
-        { body: commandData },
-      );
-      console.log(`Registered ${commandData.length} slash commands`);
+      await sendStartupNotification(client, config);
     } catch (error) {
-      console.error("Failed to register slash commands:", error);
+      console.error("Failed to send startup notification:", error);
     }
   });
 

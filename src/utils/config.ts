@@ -4,6 +4,7 @@ const envSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1, "DISCORD_BOT_TOKEN is required"),
   DISCORD_APPLICATION_ID: z.string().default(""),
   DISCORD_GUILD_ID: z.string().min(1, "DISCORD_GUILD_ID is required"),
+  DISCORD_NOTIFICATION_CHANNEL_ID: z.string().default(""),
   ALLOWED_USER_IDS: z
     .string()
     .min(1, "ALLOWED_USER_IDS is required")

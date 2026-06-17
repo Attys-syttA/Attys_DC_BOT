@@ -40,6 +40,7 @@ Discord
 - Hardened session selection against failed Codex thread reads.
 - Added Hungarian `/help` and `/sugo` command help.
 - Extended `/doctor` with message prompt mode diagnostics.
+- Added optional public-safe startup notifications through `DISCORD_NOTIFICATION_CHANNEL_ID`.
 
 ## Open
 

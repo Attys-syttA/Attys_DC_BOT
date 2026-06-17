@@ -26,3 +26,4 @@
 - Prompt visibility: a `/ask` visszaigazolo uzenet most a konkret prompt szoveget is megmutatja roviditett, Discord-safe code blockban.
 - Help command: bekerult a magyar `/help` es `/sugo`, rovid parancslistaval es `parancs` opcional keresztuli reszletes leirassal.
 - Doctor diagnostics: a `/doctor` most jelzi, hogy message prompt mod aktiv-e, es figyelmeztet a Discord Message Content intent szuksegessegre.
+- Startup notification: opcionális `DISCORD_NOTIFICATION_CHANNEL_ID` kulcs kerult be, amellyel a bot public-safe indulasi statuszt kuldhet egy operatori Discord csatornaba.
