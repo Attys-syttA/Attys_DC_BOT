@@ -337,7 +337,7 @@ export class SessionManager {
     }
 
     const project = getProject(active.channelId);
-    if (project?.auto_approve) {
+    if (getConfig().DISCORD_ENABLE_AUTO_APPROVE && project?.auto_approve) {
       await codexAppServer.respond(msg.id, { decision: "acceptForSession" });
       return;
     }
@@ -533,9 +533,11 @@ export class SessionManager {
     const pending = pendingApprovals.get(id);
     if (!pending) return false;
 
-    if (decision === "approve-all") {
+    if (decision === "approve-all" && getConfig().DISCORD_ENABLE_AUTO_APPROVE) {
       setAutoApprove(pending.channelId, true);
       pending.resolve("acceptForSession");
+    } else if (decision === "approve-all") {
+      pending.resolve("accept");
     } else if (decision === "approve") {
       pending.resolve("accept");
     } else {

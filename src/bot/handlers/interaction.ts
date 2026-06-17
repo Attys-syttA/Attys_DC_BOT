@@ -286,10 +286,13 @@ export async function handleButtonInteraction(
     return;
   }
 
+  const autoApproveEnabled = getConfig().DISCORD_ENABLE_AUTO_APPROVE;
   const labels: Record<string, string> = {
     approve: L("✅ Approved", "✅ 승인됨"),
     deny: L("❌ Denied", "❌ 거부됨"),
-    "approve-all": L("⚡ Auto-approve enabled for this channel", "⚡ 이 채널에서 자동 승인이 활성화되었습니다"),
+    "approve-all": autoApproveEnabled
+      ? L("⚡ Auto-approve enabled for this channel", "⚡ 이 채널에서 자동 승인이 활성화되었습니다")
+      : L("✅ Approved for this request. Auto-approve is disabled in config.", "✅ 이 요청만 승인되었습니다."),
   };
 
   await interaction.update({

@@ -105,6 +105,7 @@ DISCORD_EPHEMERAL_RESPONSES=true
 SHOW_COST=false
 DISCORD_REGISTER_COMMANDS=false
 DISCORD_ENABLE_RUN_TESTS=false
+DISCORD_ENABLE_AUTO_APPROVE=false
 ```
 
 Nem kell es nem lehet normal mukodeshez kotelezo:
@@ -140,10 +141,12 @@ Canonical vagy celhoz kozeli parancsok:
 Meglevo optional parancsok, amelyeket kulon el kell donteni:
 
 - `/usage`
-- `/auto-approve`
 - `/clear-sessions`
 
 A `/run-tests` csak explicit env engedellyel mukodjon, mert lokalis scriptet indit.
+A `/auto-approve` maradhat operatori convenience parancs, de csak explicit
+`DISCORD_ENABLE_AUTO_APPROVE=true` mellett kapcsolhato be, mert parancs- es
+fajlmodositas-jovahagyast kerul meg.
 
 ## Kodmentesi Szabaly
 

@@ -77,7 +77,10 @@ describe("interaction handlers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isAllowedPrincipal.mockReturnValue(true);
-    mocks.getConfig.mockReturnValue({ DISCORD_QUEUE_MAX_ITEMS: 10 });
+    mocks.getConfig.mockReturnValue({
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+      DISCORD_ENABLE_AUTO_APPROVE: true,
+    });
     mocks.sessionManager.stopSession.mockResolvedValue(true);
     mocks.sessionManager.confirmQueue.mockReturnValue(true);
     mocks.sessionManager.getQueueSize.mockReturnValue(3);
@@ -139,6 +142,22 @@ describe("interaction handlers", () => {
     expect(mocks.sessionManager.resolveApproval).toHaveBeenCalledWith("req-1", "approve");
     expect(interaction.update).toHaveBeenCalledWith({
       content: "✅ Approved",
+      components: [],
+    });
+  });
+
+  it("does not claim auto-approve was enabled when disabled in config", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+      DISCORD_ENABLE_AUTO_APPROVE: false,
+    });
+    const interaction = makeButton("approve-all:req-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.sessionManager.resolveApproval).toHaveBeenCalledWith("req-1", "approve-all");
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "✅ Approved for this request. Auto-approve is disabled in config.",
       components: [],
     });
   });

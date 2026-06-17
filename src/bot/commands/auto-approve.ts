@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { getProject, setAutoApprove } from "../../db/database.js";
+import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 
 export const data = new SlashCommandBuilder()
@@ -34,6 +35,16 @@ export async function execute(
   }
 
   const enabled = mode === "on";
+  if (enabled && !getConfig().DISCORD_ENABLE_AUTO_APPROVE) {
+    await interaction.editReply({
+      content: L(
+        "`auto-approve` is disabled. Set `DISCORD_ENABLE_AUTO_APPROVE=true` in `.env` to enable it.",
+        "`auto-approve`가 비활성화되어 있습니다.",
+      ),
+    });
+    return;
+  }
+
   setAutoApprove(channelId, enabled);
 
   await interaction.editReply({

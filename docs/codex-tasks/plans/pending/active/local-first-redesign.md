@@ -34,13 +34,14 @@ Discord
 - Added focused Discord interaction tests for authorization, stop, queue confirm, approval, new-session, and ask-select flows.
 - Refreshed npm dependencies within current major versions after Dependabot opened `tsx` and `zod` branches.
 - Added `/session current/new/stop` and `/queue remove <number>` operator controls with focused tests.
+- Gated `/auto-approve` and session-wide automatic approval behind explicit `DISCORD_ENABLE_AUTO_APPROVE=true`.
 
 ## Open
 
 - Configure a real Discord application and local `.env`.
 - Run a private Discord smoke test with a test guild.
 - Decide which operator UX improvements should be added next.
-- Decide whether `/usage` and `/auto-approve` should remain in the long-term canonical command set.
+- Decide whether `/usage` should remain in the long-term canonical command set.
 - Commit and push only after the user explicitly approves publication.
 
 ## Constraints
