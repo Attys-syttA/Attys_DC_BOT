@@ -30,6 +30,7 @@ Discord
 - Added `DISCORD_APPLICATION_ID` and `DISCORD_ENABLE_RUN_TESTS` config keys.
 - Hardened attachment storage by sanitizing Discord filenames before writing into `.codex-uploads/`.
 - Added repo hygiene workflows: CI, SQLite native dependency check, GitGuardian/ggshield secret scan, Dependabot, SECURITY.md, and ESLint.
+- Added focused command tests for `/ask`, `/dashboard`, `/doctor`, and `/run-tests`.
 
 ## Open
 

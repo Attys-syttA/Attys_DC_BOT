@@ -11,3 +11,4 @@
 - ChadingTV alignment: bekerult a `/ask`, `/doctor`, `/git-status`, es env-gated `/run-tests`; a Discord application ID kulon env kulcs lett; az attachment filename kezeles sanitize-olva lett `.codex-uploads/` mentes elott.
 - Discord control center: bekerult a `/dashboard`, amely a regisztralt channel helyi Codex allapotat, queue meretet es biztonsagos vezerlogombjait mutatja.
 - Repo hygiene: bekerult a GitHub Actions CI, SQLite check, GitGuardian/ggshield secret scan, Dependabot, SECURITY.md, ESLint lint script es `.cache_ggshield/` ignore.
+- Command tests: bekerult celzott Vitest lefedes a `/ask`, `/dashboard`, `/doctor`, es `/run-tests` parancsokra, kulon figyelve arra, hogy a diagnosztika ne irjon ki config ertekeket.
