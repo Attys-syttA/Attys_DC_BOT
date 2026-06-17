@@ -8,6 +8,7 @@
     "dev": "tsx src/index.ts",
     "build": "tsup src/index.ts --format esm --dts",
     "start": "node dist/index.js",
+    "doctor:local": "tsx src/cli/preflight.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

@@ -49,6 +49,7 @@ Do not commit:
 
 ```powershell
 npm run build
+npm run doctor:local
 npm start
 ```
 

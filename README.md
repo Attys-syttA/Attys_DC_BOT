@@ -57,6 +57,12 @@ For development:
 npm run dev
 ```
 
+Local preflight without starting the Discord bot:
+
+```powershell
+npm run doctor:local
+```
+
 ## Commands
 
 - `/register <path>`: link the current channel to a local project folder
@@ -124,6 +130,7 @@ npm run typecheck
 npm test
 npm run build
 npm run check
+npm run doctor:local
 ggshield secret scan path --recursive --yes --use-gitignore .
 ```
 

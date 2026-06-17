@@ -21,3 +21,4 @@
 - Usage command: a `/usage` canonical local-first parancs lett, live Codex rate-limit olvasassal es cache fallback tesztlefedessel.
 - Session select hardening: ha a kivalasztott Codex thread olvasasa hibazik, a Discord handler kezelt hiba-uzenetet ad vissza.
 - CI fix: az attachment filename sanitize OS-fuggetlen lett, mert Linux CI alatt a backslash nem `path.basename` separator.
+- Local preflight: bekerult az `npm run doctor:local`, amely Discord bot inditas es titokkiiras nelkul ellenorzi a configot, SQLite initet, Codex CLI-t es `codex login status`-t.

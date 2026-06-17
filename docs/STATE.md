@@ -44,6 +44,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Promoted `/usage` to the canonical local-first command set with focused command tests and cache fallback coverage.
 - Hardened session selection so failed Codex thread reads return a Discord error instead of throwing through the handler.
 - Fixed attachment filename sanitization to strip Windows and POSIX path traversal separators consistently in CI.
+- Added `npm run doctor:local` for secret-safe local preflight before live Discord smoke testing.
 
 ## Open Work
 
