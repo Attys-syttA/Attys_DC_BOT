@@ -8,6 +8,7 @@ describe("safeAttachmentFileName", () => {
 
   it("strips path traversal and unsafe characters", () => {
     expect(safeAttachmentFileName("..\\..\\secret?.txt")).toBe("secret_.txt");
+    expect(safeAttachmentFileName("../../secret?.txt")).toBe("secret_.txt");
   });
 
   it("uses a safe fallback for empty names", () => {

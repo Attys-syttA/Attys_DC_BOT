@@ -22,7 +22,7 @@ function messageRoleIds(message: Message): string[] {
 }
 
 export function safeAttachmentFileName(name: string | null | undefined): string {
-  const baseName = path.basename(name ?? "attachment");
+  const baseName = (name ?? "attachment").split(/[\\/]+/).pop() ?? "attachment";
   const cleaned = baseName
     .replace(/[\x00-\x1f<>:"/\\|?*]+/g, "_")
     .replace(/\s+/g, "_")

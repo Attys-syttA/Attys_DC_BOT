@@ -20,3 +20,4 @@
 - Session delete safety: a `/clear-sessions` es az egyedi session delete gomb explicit `DISCORD_ENABLE_SESSION_DELETE=true` env flag moge kerult.
 - Usage command: a `/usage` canonical local-first parancs lett, live Codex rate-limit olvasassal es cache fallback tesztlefedessel.
 - Session select hardening: ha a kivalasztott Codex thread olvasasa hibazik, a Discord handler kezelt hiba-uzenetet ad vissza.
+- CI fix: az attachment filename sanitize OS-fuggetlen lett, mert Linux CI alatt a backslash nem `path.basename` separator.

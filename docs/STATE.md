@@ -43,6 +43,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Gated local Codex session deletion behind explicit `DISCORD_ENABLE_SESSION_DELETE=true`.
 - Promoted `/usage` to the canonical local-first command set with focused command tests and cache fallback coverage.
 - Hardened session selection so failed Codex thread reads return a Discord error instead of throwing through the handler.
+- Fixed attachment filename sanitization to strip Windows and POSIX path traversal separators consistently in CI.
 
 ## Open Work
 
