@@ -42,10 +42,10 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Gated `/auto-approve` and session-wide automatic approval behind explicit `DISCORD_ENABLE_AUTO_APPROVE=true`.
 - Gated local Codex session deletion behind explicit `DISCORD_ENABLE_SESSION_DELETE=true`.
 - Promoted `/usage` to the canonical local-first command set with focused command tests and cache fallback coverage.
+- Hardened session selection so failed Codex thread reads return a Discord error instead of throwing through the handler.
 
 ## Open Work
 
-1. Add broader command integration tests for session resume edge cases.
-2. Remove remaining non-Windows launcher references if they are not needed.
-3. Initialize or reconcile local git state against `Attys-syttA/Attys_DC_BOT` only after review.
-4. Run the full validation and secret scan before any commit.
+1. Remove remaining non-Windows launcher references if they are not needed.
+2. Initialize or reconcile local git state against `Attys-syttA/Attys_DC_BOT` only after review.
+3. Run the full validation and secret scan before any commit.

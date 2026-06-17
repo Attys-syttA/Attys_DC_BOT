@@ -370,7 +370,21 @@ export async function handleSelectMenuInteraction(
   }
 
   await interaction.deferUpdate();
-  const thread = await codexAppServer.readThread(selectedSessionId, true);
+  let thread;
+  try {
+    thread = await codexAppServer.readThread(selectedSessionId, true);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await interaction.editReply({
+      content: L(
+        `Failed to read selected Codex session: ${message}`,
+        `선택한 Codex 세션을 읽지 못했습니다: ${message}`,
+      ),
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
   let lastMessage = "";
   for (const turn of thread.turns ?? []) {
     for (const item of turn.items ?? []) {

@@ -176,6 +176,36 @@ describe("interaction handlers", () => {
     }));
   });
 
+  it("shows selected session details and disables delete when deletion is not enabled", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+      DISCORD_ENABLE_AUTO_APPROVE: true,
+      DISCORD_ENABLE_SESSION_DELETE: false,
+    });
+    const interaction = makeSelect("session-select", ["thread-1"]);
+
+    await handleSelectMenuInteraction(interaction as never);
+
+    expect(interaction.deferUpdate).toHaveBeenCalled();
+    expect(mocks.readThread).toHaveBeenCalledWith("thread-1", true);
+    const payload = interaction.editReply.mock.calls[0][0];
+    expect(payload.embeds[0].description).toContain("Last response");
+    expect(payload.components[0].components[1].data.disabled).toBe(true);
+  });
+
+  it("reports selected session read failures without throwing", async () => {
+    mocks.readThread.mockRejectedValue(new Error("missing thread"));
+    const interaction = makeSelect("session-select", ["thread-1"]);
+
+    await handleSelectMenuInteraction(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Failed to read selected Codex session: missing thread",
+      embeds: [],
+      components: [],
+    });
+  });
+
   it("rejects session delete when disabled in config", async () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_QUEUE_MAX_ITEMS: 10,
