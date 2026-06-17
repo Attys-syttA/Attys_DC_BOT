@@ -136,6 +136,8 @@ Canonical vagy celhoz kozeli parancsok:
 - `/queue clear`
 - `/queue remove`
 - `/git-status`
+- `/help`
+- `/sugo`
 - `/run-tests`
 - `/ask`
 - `/usage`

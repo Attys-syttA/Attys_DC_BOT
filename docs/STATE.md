@@ -47,6 +47,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `npm run doctor:local` for secret-safe local preflight before live Discord smoke testing.
 - Made Discord message intents conditional so slash-command-only mode can run without the privileged Message Content intent.
 - Restored visible `/ask` prompt context in the acknowledgement message so later Codex answers have an obvious source question.
+- Added Hungarian `/help` and `/sugo` commands with short command list and detailed per-command help through the `parancs` option.
 
 ## Open Work
 

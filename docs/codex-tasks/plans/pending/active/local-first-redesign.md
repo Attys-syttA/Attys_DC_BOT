@@ -38,6 +38,7 @@ Discord
 - Gated local Codex session deletion behind explicit `DISCORD_ENABLE_SESSION_DELETE=true`.
 - Promoted `/usage` into the canonical local-first command set with live-fetch/cache/failure tests.
 - Hardened session selection against failed Codex thread reads.
+- Added Hungarian `/help` and `/sugo` command help.
 
 ## Open
 

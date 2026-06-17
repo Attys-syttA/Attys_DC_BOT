@@ -81,6 +81,8 @@ npm run doctor:local
 - `/queue clear`: clear queued prompts
 - `/queue remove <number>`: remove one queued prompt by its list number
 - `/git-status`: run `git status --short --branch` in the registered local project
+- `/help`: show Hungarian help for known bot commands
+- `/sugo`: Hungarian alias for `/help`
 - `/run-tests`: run `npm test` in the registered local project when `DISCORD_ENABLE_RUN_TESTS=true`
 - `/usage`: show local Codex account usage when the app-server exposes rate limits
 - `/ask <prompt>`: send an explicit prompt to the registered local Codex session

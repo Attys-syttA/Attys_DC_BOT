@@ -24,3 +24,4 @@
 - Local preflight: bekerult az `npm run doctor:local`, amely Discord bot inditas es titokkiiras nelkul ellenorzi a configot, SQLite initet, Codex CLI-t es `codex login status`-t.
 - Discord intents: a bot csak akkor ker `GuildMessages` es `MessageContent` intentet, ha `DISCORD_ENABLE_MESSAGE_PROMPTS=true`; slash command uzemhez eleg a `Guilds` intent.
 - Prompt visibility: a `/ask` visszaigazolo uzenet most a konkret prompt szoveget is megmutatja roviditett, Discord-safe code blockban.
+- Help command: bekerult a magyar `/help` es `/sugo`, rovid parancslistaval es `parancs` opcional keresztuli reszletes leirassal.
