@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: approval public-safety hardening in progress
-- Git state: local `main` tracks `origin/main`; approval/error sanitizer prepared for validation
+- Phase: project path display hardening in progress
+- Git state: local `main` tracks `origin/main`; Discord project path labels prepared for validation
 
 ## Current Goal
 
@@ -86,6 +86,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `/logs contains` filtering on scrubbed public-safe log lines.
 - Added `/events status` filtering on public-safe operator event status text.
 - Added shared public-safety sanitizing for Codex approval cards and failed-turn Discord messages.
+- Hardened main Discord operator commands to show public-safe project path labels instead of full local paths.
 
 ## Open Work
 

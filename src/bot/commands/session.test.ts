@@ -64,7 +64,7 @@ describe("/session", () => {
 
     const payload = interaction.editReply.mock.calls[0][0];
     expect(payload.embeds[0].title).toBe("Current Session");
-    expect(payload.embeds[0].description).toContain("`/projects/app`");
+    expect(payload.embeds[0].description).toContain("`<local-path>/app`");
     expect(payload.embeds[0].description).toContain("`thread-1`");
     expect(payload.embeds[0].description).toContain("**idle**");
   });

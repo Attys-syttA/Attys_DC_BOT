@@ -80,7 +80,7 @@ describe("/dashboard", () => {
 
     const payload = interaction.editReply.mock.calls[0][0];
     const fields = payload.embeds[0].data.fields;
-    expect(fields[0].value).toBe("`/projects/app`");
+    expect(fields[0].value).toBe("`<local-path>/app`");
     expect(fields[1].value).toContain("**idle**");
     expect(fields[1].value).toContain("`abcdefgh...`");
     expect(fields[2].value).toContain("Queue: **2**");

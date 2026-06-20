@@ -76,3 +76,4 @@
 - Log filtering: a `/logs` `contains` opciot kapott, amely a mar scrubbolt public-safe log sorokon szur tavoli diagnosztikahoz.
 - Operator event status filtering: a `/events` `status` opciot kapott, amely public-safe status reszszovegre szur, peldaul `failed` vagy `restart`.
 - Approval public-safety: a Codex approval kartyak es failed turn uzenetek kozos sanitizerrel maszkoljak a privat pathokat, raw ID-kat es secret-szeru ertekeket.
+- Project path display safety: a fo Discord operator parancsok a teljes lokalis project path helyett public-safe `<local-path>/nev` cimket mutatnak.

@@ -6,6 +6,7 @@ import {
 import { unregisterProject, getProject } from "../../db/database.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 export const data = new SlashCommandBuilder()
   .setName("unregister")
@@ -39,10 +40,10 @@ export async function execute(
 
   await interaction.editReply({
     embeds: [
-      {
-        title: L("Project Unregistered", "프로젝트 등록 해제됨"),
-        description: L(`Removed <#${channelId}> link to \`${project.project_path}\``, `<#${channelId}>의 \`${project.project_path}\` 연결이 해제되었습니다`),
-        color: 0xff0000,
+        {
+          title: L("Project Unregistered", "프로젝트 등록 해제됨"),
+          description: L(`Removed <#${channelId}> link to \`${sanitizePublicFileLabel(project.project_path)}\``, `<#${channelId}>의 \`${sanitizePublicFileLabel(project.project_path)}\` 연결이 해제되었습니다`),
+          color: 0xff0000,
       },
     ],
   });

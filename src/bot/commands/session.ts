@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { getProject, getSession, upsertSession } from "../../db/database.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 export const data = new SlashCommandBuilder()
   .setName("session")
@@ -42,7 +43,7 @@ export async function execute(
         {
           title: L("Current Session", "현재 세션"),
           description: [
-            `${L("Project", "프로젝트")}: \`${project.project_path}\``,
+            `${L("Project", "프로젝트")}: \`${sanitizePublicFileLabel(project.project_path)}\``,
             `${L("Thread", "스레드")}: ${session?.session_id ? `\`${session.session_id}\`` : L("new session on next prompt", "다음 프롬프트에서 새 세션")}`,
             `${L("Status", "상태")}: **${session?.status ?? "offline"}**`,
             `${L("Active turn", "활성 작업")}: **${sessionManager.isActive(channelId) ? "yes" : "no"}**`,

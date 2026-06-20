@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import { getAllProjects, getSession } from "../../db/database.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 const STATUS_EMOJI: Record<string, string> = {
   online: "🟢",
@@ -44,7 +45,7 @@ export async function execute(
     embed.addFields({
       name: `${emoji} <#${project.channel_id}>`,
       value: [
-        `\`${project.project_path}\``,
+        `\`${sanitizePublicFileLabel(project.project_path)}\``,
         `${L("Status", "상태")}: **${status}**`,
         `${L("Auto-approve", "자동 승인")}: ${project.auto_approve ? L("On", "켜짐") : L("Off", "꺼짐")}`,
         `${L("Last activity", "마지막 활동")}: ${lastActivity}`,

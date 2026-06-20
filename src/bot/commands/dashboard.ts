@@ -10,6 +10,7 @@ import { getProject, getSession } from "../../db/database.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { resolveCodexCommand } from "../../codex/command-resolver.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 import { readOperatorStartupLog } from "./tools.js";
 
 export const data = new SlashCommandBuilder()
@@ -54,7 +55,7 @@ export async function execute(
     .addFields(
       {
         name: L("Project", "프로젝트"),
-        value: `\`${project.project_path}\``,
+        value: `\`${sanitizePublicFileLabel(project.project_path)}\``,
         inline: false,
       },
       {

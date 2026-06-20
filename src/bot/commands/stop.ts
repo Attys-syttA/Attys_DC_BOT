@@ -5,6 +5,7 @@ import {
 import { getProject } from "../../db/database.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 export const data = new SlashCommandBuilder()
   .setName("stop")
@@ -29,7 +30,7 @@ export async function execute(
       embeds: [
         {
           title: L("Session Stopped", "세션 중지됨"),
-          description: L(`Stopped Codex session for \`${project.project_path}\``, `\`${project.project_path}\` Codex 세션이 중지되었습니다`),
+          description: L(`Stopped Codex session for \`${sanitizePublicFileLabel(project.project_path)}\``, `\`${sanitizePublicFileLabel(project.project_path)}\` Codex 세션이 중지되었습니다`),
           color: 0xff6600,
         },
       ],

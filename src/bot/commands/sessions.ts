@@ -10,6 +10,7 @@ import readline from "node:readline";
 import { getProject, getSession, upsertSession } from "../../db/database.js";
 import { listStoredThreads } from "../../codex/storage.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 interface SessionInfo {
   sessionId: string;
@@ -145,13 +146,14 @@ export async function execute(
   if (allSessions.length === 0) {
     const { randomUUID } = await import("node:crypto");
     upsertSession(randomUUID(), channelId, null, "idle");
+    const projectLabel = sanitizePublicFileLabel(project.project_path);
     await interaction.editReply({
       embeds: [
         {
           title: L("✨ New Session", "✨ 새 세션"),
           description: L(
-            `No existing Codex sessions found for \`${project.project_path}\`.\nA new session is ready — your next message will start a new conversation.`,
-            `\`${project.project_path}\`에 대한 기존 Codex 세션이 없습니다.\n새 세션이 준비되었습니다 — 다음 메시지부터 새로운 대화가 시작됩니다.`
+            `No existing Codex sessions found for \`${projectLabel}\`.\nA new session is ready — your next message will start a new conversation.`,
+            `\`${projectLabel}\`에 대한 기존 Codex 세션이 없습니다.\n새 세션이 준비되었습니다 — 다음 메시지부터 새로운 대화가 시작됩니다.`
           ),
           color: 0x00ff00,
         },
@@ -201,8 +203,8 @@ export async function execute(
       {
         title: L("Codex Sessions", "Codex 세션"),
         description: L(
-          `Project: \`${project.project_path}\`\nChoose a session to view its last response, resume it, or delete it.`,
-          `프로젝트: \`${project.project_path}\`\n세션을 선택하면 마지막 응답을 보고, 재개하거나, 삭제할 수 있습니다.`
+          `Project: \`${sanitizePublicFileLabel(project.project_path)}\`\nChoose a session to view its last response, resume it, or delete it.`,
+          `프로젝트: \`${sanitizePublicFileLabel(project.project_path)}\`\n세션을 선택하면 마지막 응답을 보고, 재개하거나, 삭제할 수 있습니다.`
         ),
         footer: {
           text: `Showing ${sessions.length} of ${allSessions.length} sessions`,

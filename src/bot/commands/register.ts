@@ -10,6 +10,7 @@ import { registerProject, getProject } from "../../db/database.js";
 import { validateProjectPath } from "../../security/guard.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 import { listProjectAutocompleteChoices } from "./register-paths.js";
 
 export const data = new SlashCommandBuilder()
@@ -39,8 +40,9 @@ export async function execute(
   // Check if already registered
   const existing = getProject(channelId);
   if (existing) {
+    const existingLabel = sanitizePublicFileLabel(existing.project_path);
     await interaction.editReply({
-      content: L(`This channel is already registered to \`${existing.project_path}\`. Use \`/unregister\` first.`, `이 채널은 이미 \`${existing.project_path}\`에 등록되어 있습니다. 먼저 \`/unregister\`를 사용하세요.`),
+      content: L(`This channel is already registered to \`${existingLabel}\`. Use \`/unregister\` first.`, `이 채널은 이미 \`${existingLabel}\`에 등록되어 있습니다. 먼저 \`/unregister\`를 사용하세요.`),
     });
     return;
   }
@@ -50,7 +52,7 @@ export async function execute(
     const resolved = path.resolve(projectPath);
     const baseDir = path.resolve(config.BASE_PROJECT_DIR);
     if (!resolved.startsWith(baseDir + path.sep) && resolved !== baseDir) {
-      await interaction.editReply({ content: L(`Invalid path: Path must be within ${baseDir}`, `잘못된 경로: ${baseDir} 내에 있어야 합니다`) });
+      await interaction.editReply({ content: L(`Invalid path: Path must be within ${sanitizePublicFileLabel(baseDir)}`, `잘못된 경로: ${sanitizePublicFileLabel(baseDir)} 내에 있어야 합니다`) });
       return;
     }
     if (projectPath.includes("..")) {
@@ -68,12 +70,13 @@ export async function execute(
   }
 
   registerProject(channelId, projectPath, guildId);
+  const projectLabel = sanitizePublicFileLabel(projectPath);
 
   await interaction.editReply({
     embeds: [
       {
         title: L("Project Registered", "프로젝트 등록됨"),
-        description: L(`This channel is now linked to:\n\`${projectPath}\``, `이 채널이 연결되었습니다:\n\`${projectPath}\``),
+        description: L(`This channel is now linked to:\n\`${projectLabel}\``, `이 채널이 연결되었습니다:\n\`${projectLabel}\``),
         color: 0x00ff00,
         fields: [
           { name: L("Status", "상태"), value: L("🔴 Offline", "🔴 오프라인"), inline: true },
