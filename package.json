@@ -10,6 +10,8 @@
     "start": "node dist/index.js",
     "doctor:local": "tsx src/cli/preflight.ts",
     "plans:check": "tsx src/cli/plans-check.ts",
+    "safe-update:status": "tsx src/cli/safe-update.ts --status",
+    "safe-update:apply": "tsx src/cli/safe-update.ts --apply",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

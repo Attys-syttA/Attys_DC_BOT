@@ -161,6 +161,15 @@ The update status area is intentionally conservative:
 - It does not run `git reset --hard`.
 - It does not run `git stash`.
 
+The cross-platform CLI uses the same policy:
+
+```bash
+npm run safe-update:status
+npm run safe-update:apply
+```
+
+Use `safe-update:status` first on Linux/macOS. `safe-update:apply` does not hide local changes; dirty, ahead, or diverged repositories stop for manual review.
+
 If local changes are present, the panel stops and asks for manual cleanup. This keeps your uncommitted work visible instead of hiding it in a stash or deleting it.
 
 The Windows login startup toggle creates or removes `Attys DC BOT.lnk` in the current user's Startup folder. The shortcut points to `win-start.bat` and is never tracked by Git.

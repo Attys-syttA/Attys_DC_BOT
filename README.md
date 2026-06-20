@@ -211,6 +211,15 @@ The panel provides:
 
 `Check Updates` is read-only apart from `git fetch`. `Safe Update` is enabled only for clean repositories and uses `git pull --ff-only`; it does not run `git stash`, `git reset --hard`, or history rewriting.
 
+The same safe-update policy is available from any platform:
+
+```bash
+npm run safe-update:status
+npm run safe-update:apply
+```
+
+`safe-update:apply` runs only when the repo is clean and behind `origin/main`. It uses `git pull --ff-only`, runs `npm install` only when package files changed, then runs `npm run build` and `npm run check`. It writes local output to ignored `update.log`.
+
 ## Linux And macOS Launchers
 
 The repository includes initial cross-platform host launchers:

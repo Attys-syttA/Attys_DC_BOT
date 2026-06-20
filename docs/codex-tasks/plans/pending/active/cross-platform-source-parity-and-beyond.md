@@ -15,13 +15,15 @@ Status: active
 - Fazon 5 usage/cache canonical helper frissites elindult: cache payload normalizalas, cache age formatting, pontosabb unavailable allapot.
 - Fazon 5 usage/cache helper lezarva es pusholva (`9cfcb4e`).
 - Fazon 6 public docs/assets closeout elindult: Linux/macOS public-safe SVG illusztraciok, README/SETUP/RELEASE_CHECKLIST platform frissites.
+- Fazon 6 public docs/assets closeout lezarva es pusholva (`dd394ac`).
+- Fazon 7 safe update lifecycle elindult: `safe-update:status`, `safe-update:apply`, git-state helper es tests.
 
 ## Nyitott reszek
 
-- Fazon 6 teljes validacio, commit es push.
+- Fazon 7 teljes validacio, commit es push.
 - Linux tray/control panel GUI runtime smoke tenyleges Linux desktop hoston kesobb platformtesztet igenyelhet.
 - macOS menubar Swift build/runtime smoke tenyleges macOS hoston kesobb platformtesztet igenyelhet.
-- Fazon 7-8 meg nincs implementalva.
+- Fazon 8 meg nincs implementalva.
 
 ## Cel
 

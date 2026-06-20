@@ -25,9 +25,14 @@ npm run typecheck
 npm test
 npm run build
 npm run check
+npm run safe-update:status
 git diff --check
 ggshield secret scan path --recursive --yes --use-gitignore .
 ```
+
+Confirm:
+
+- `npm run safe-update:status` is public-safe and does not mutate local work beyond `git fetch`
 
 ## Windows Smoke
 
