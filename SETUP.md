@@ -172,7 +172,7 @@ Optional local commands:
 - `/queue remove` removes one queued prompt without using buttons.
 - `/tools run` runs the VS Code-free operator tools preflight from Discord.
 - `/tools status` shows the last public-safe operator tools status lines.
-- `/events` shows recent public-safe startup, lifecycle, attention, and task outcome events; use `kind` and `summary` for filtered views.
+- `/events` shows recent public-safe startup, lifecycle, attention, and task outcome events; use `kind`, `status`, and `summary` for filtered views.
 - `/logs` shows a scrubbed tail from `bot.log`, `bot.err.log`, `operator-startup.log`, `operator-events.log`, or `update.log`; use `contains` to filter the scrubbed lines.
 - `/dashboard` shows pending operator action state for approvals, Codex questions, custom answers, and queue confirmations.
 - `/health` shows the bot runtime health: process uptime, error log, operator tools, usage cache, and bot repo sync state.
@@ -192,7 +192,7 @@ Optional local commands:
 - If approval or question cards appear in a project channel but no central attention message arrives, check `DISCORD_NOTIFICATION_CHANNEL_ID`; duplicate notifications are skipped when it points to the same channel.
 - If task completion appears in a project channel but no central completion message arrives, check that the notification channel is separate and sendable.
 - If the bot seems alive but behavior is odd, run `/health` first, then `/doctor` if config or Codex login readiness needs checking.
-- If you missed a notification while away, run `/events`, `/events kind: task`, or `/events summary: true` to see the recent public-safe operator timeline.
+- If you missed a notification while away, run `/events`, `/events kind: task`, `/events status: failed`, `/events status: restart`, or `/events summary: true` to see the recent public-safe operator timeline.
 - If you need a read-only log peek while away, run `/logs source: error`, `/logs source: bot`, or `/logs source: operator-tools contains: failed`; the response is scrubbed before Discord output.
 - If `Safe Update` is disabled, check whether the repo is clean and behind origin.
 - If `Safe Update` stops, read `update.log`; it is local and ignored by Git.

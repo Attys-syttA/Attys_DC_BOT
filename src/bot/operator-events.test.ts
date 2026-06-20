@@ -79,6 +79,20 @@ describe("operator events", () => {
     ]);
   });
 
+  it("filters event reads by public-safe status text", () => {
+    const dir = makeTempDir();
+    recordOperatorEvent({ kind: "lifecycle", status: "windows-launcher-restart" }, dir);
+    recordOperatorEvent({ kind: "task", status: "failed" }, dir);
+    recordOperatorEvent({ kind: "task", status: "completed" }, dir);
+
+    expect(readOperatorEvents(dir, 10, "all", "restart")).toEqual([
+      expect.stringContaining("lifecycle windows-launcher-restart"),
+    ]);
+    expect(readOperatorEvents(dir, 10, "task", "fail")).toEqual([
+      expect.stringContaining("task failed"),
+    ]);
+  });
+
   it("summarizes event lines without private details", () => {
     const summary = summarizeOperatorEvents([
       "2026-06-20T18:40:00.000Z startup online",

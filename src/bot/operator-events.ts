@@ -23,7 +23,7 @@ function eventLogPath(repoRoot = process.cwd()): string {
   return path.join(repoRoot, "operator-events.log");
 }
 
-function safeToken(value: string): string {
+export function safeOperatorEventToken(value: string): string {
   const normalized = value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.slice(0, 48) || "unknown";
 }
@@ -41,7 +41,7 @@ export function formatOperatorEvent(
   const base = [
     now.toISOString(),
     input.kind,
-    safeToken(input.status),
+    safeOperatorEventToken(input.status),
   ].join(" ");
   const channel = safeChannel(input.channelId);
   return channel ? `${base} channel=${channel}` : base;
@@ -69,13 +69,16 @@ export function readOperatorEvents(
   repoRoot = process.cwd(),
   maxLines = 10,
   kind: OperatorEventKind | "all" = "all",
+  status = "",
 ): string[] {
   try {
+    const statusFilter = status ? safeOperatorEventToken(status) : "";
     const lines = fs.readFileSync(eventLogPath(repoRoot), "utf8")
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => EVENT_LINE_PATTERN.test(line))
-      .filter((line) => kind === "all" || parseOperatorEventKind(line) === kind);
+      .filter((line) => kind === "all" || parseOperatorEventKind(line) === kind)
+      .filter((line) => !statusFilter || (parseOperatorEventStatus(line)?.includes(statusFilter) ?? false));
     return lines.slice(-Math.max(1, Math.min(25, maxLines)));
   } catch {
     return [];

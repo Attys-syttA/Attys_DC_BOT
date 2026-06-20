@@ -66,7 +66,7 @@ Confirm the panel shows:
 - central approval/question attention notification when `DISCORD_NOTIFICATION_CHANNEL_ID` points to a separate channel
 - central task completed/failed notification when `DISCORD_NOTIFICATION_CHANNEL_ID` points to a separate channel
 - `/health` runtime report does not expose private paths, tokens, raw Discord IDs, or config values
-- `/events` timeline reads only public-safe `operator-events.log` lines, supports `kind` filtering and `summary`, and does not expose prompts or error details
+- `/events` timeline reads only public-safe `operator-events.log` lines, supports `kind` and `status` filtering plus `summary`, and does not expose prompts or error details
 - `/logs` reads only allowlisted bot log files and scrubs local paths, raw IDs, IPs, and secret-looking fragments before Discord output
 - `/bot status` is read-only, and `/bot restart` stays gated behind `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/help` and `/sugo` list commands by category so the full operator surface stays discoverable

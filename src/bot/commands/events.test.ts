@@ -7,18 +7,23 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../operator-events.js", () => ({
   readOperatorEvents: mocks.readOperatorEvents,
+  safeOperatorEventToken: (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "unknown",
   summarizeOperatorEvents: mocks.summarizeOperatorEvents,
 }));
 
 import { buildEventsReply, execute } from "./events.js";
 
 function makeInteraction(
-  options: { limit?: number | null; kind?: string | null; summary?: boolean | null } = {},
+  options: { limit?: number | null; kind?: string | null; status?: string | null; summary?: boolean | null } = {},
 ) {
   return {
     options: {
       getInteger: vi.fn().mockReturnValue(options.limit ?? null),
-      getString: vi.fn().mockReturnValue(options.kind ?? null),
+      getString: vi.fn((name: string) => {
+        if (name === "kind") return options.kind ?? null;
+        if (name === "status") return options.status ?? null;
+        return null;
+      }),
       getBoolean: vi.fn().mockReturnValue(options.summary ?? null),
     },
     editReply: vi.fn(),
@@ -59,21 +64,21 @@ describe("/events", () => {
     const reply = buildEventsReply([
       "2026-06-20T18:40:00.000Z startup online",
       "2026-06-20T18:41:00.000Z task completed",
-    ], { kind: "task", summary: true });
+    ], { kind: "task", status: "completed", summary: true });
 
     expect(reply).toContain("Attys DC BOT Events");
-    expect(reply).toContain("(task)");
+    expect(reply).toContain("(kind:task status:completed)");
     expect(reply).toContain("summary: total:2 startup:1 task:1");
     expect(reply).toContain("statuses:");
   });
 
-  it("reads the requested number of event lines", async () => {
+  it("reads the requested filtered event lines", async () => {
     mocks.readOperatorEvents.mockReturnValue(["2026-06-20T18:40:00.000Z startup online"]);
-    const interaction = makeInteraction({ limit: 5, kind: "task", summary: true });
+    const interaction = makeInteraction({ limit: 5, kind: "task", status: "restart", summary: true });
 
     await execute(interaction as never);
 
-    expect(mocks.readOperatorEvents).toHaveBeenCalledWith(expect.any(String), 5, "task");
+    expect(mocks.readOperatorEvents).toHaveBeenCalledWith(expect.any(String), 5, "task", "restart");
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("startup online"),
     });

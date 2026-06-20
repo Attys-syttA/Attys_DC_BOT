@@ -5,6 +5,7 @@ import {
 import {
   OperatorEventKind,
   readOperatorEvents,
+  safeOperatorEventToken,
   summarizeOperatorEvents,
 } from "../operator-events.js";
 
@@ -28,6 +29,9 @@ export const data = new SlashCommandBuilder()
       { name: "attention", value: "attention" },
       { name: "task", value: "task" },
     ))
+  .addStringOption((option) => option
+    .setName("status")
+    .setDescription("Filter by public-safe status text, for example failed or restart"))
   .addBooleanOption((option) => option
     .setName("summary")
     .setDescription("Include a compact event summary"));
@@ -52,11 +56,13 @@ function formatSummary(lines: string[]): string {
 
 export function buildEventsReply(
   lines: string[],
-  options: { kind?: EventKindOption; summary?: boolean } = {},
+  options: { kind?: EventKindOption; status?: string | null; summary?: boolean } = {},
 ): string {
   const kind = options.kind ?? "all";
+  const status = options.status ? safeOperatorEventToken(options.status) : "";
+  const filters = [`kind:${kind}`, status ? `status:${status}` : null].filter(Boolean).join(" ");
   return [
-    `**Attys DC BOT Events** (${kind})`,
+    `**Attys DC BOT Events** (${filters})`,
     options.summary ? formatSummary(lines) : null,
     lines.length > 0
       ? `\`\`\`text\n${lines.join("\n")}\n\`\`\``
@@ -69,8 +75,9 @@ export async function execute(
 ): Promise<void> {
   const limit = interaction.options.getInteger("limit") ?? 10;
   const kind = (interaction.options.getString("kind") ?? "all") as EventKindOption;
+  const status = interaction.options.getString("status");
   const summary = interaction.options.getBoolean("summary") ?? false;
   await interaction.editReply({
-    content: buildEventsReply(readOperatorEvents(process.cwd(), limit, kind), { kind, summary }),
+    content: buildEventsReply(readOperatorEvents(process.cwd(), limit, kind, status ?? ""), { kind, status, summary }),
   });
 }

@@ -126,7 +126,7 @@ When the sibling `codex-ai-tools-mcp-link` repository is present next to this re
 - `/queue remove <number>`: remove one queued prompt by its list number
 - `/git-status`: run `git status --short --branch` in the registered local project
 - `/bot`: show launcher status or restart the local bot when `DISCORD_ENABLE_BOT_LIFECYCLE=true`
-- `/events`: show recent public-safe operator events from the local event log, with optional type filtering and summary
+- `/events`: show recent public-safe operator events from the local event log, with optional type/status filtering and summary
 - `/help`: show categorized Hungarian help for known bot commands
 - `/sugo`: Hungarian alias for `/help`
 - `/health`: show public-safe bot runtime health
@@ -187,7 +187,7 @@ The tray settings editor writes only the local ignored `.env` file. Keep real va
 - startup notifications go only to `DISCORD_NOTIFICATION_CHANNEL_ID` when it is configured, and the message does not include secrets or raw IDs
 - approval/question attention notifications go to `DISCORD_NOTIFICATION_CHANNEL_ID` only when it is a separate sendable channel
 - task completed/failed notifications also go to `DISCORD_NOTIFICATION_CHANNEL_ID` only when it is a separate sendable channel
-- operator events are also written to ignored `operator-events.log` and can be inspected with `/events`; use `kind` and `summary` when you need a shorter filtered view
+- operator events are also written to ignored `operator-events.log` and can be inspected with `/events`; use `kind`, `status`, and `summary` when you need a shorter filtered view
 - `/logs` reads only allowlisted local bot log files and scrubs path, ID, IP, and secret-looking fragments before replying in Discord
 
 ## Validation

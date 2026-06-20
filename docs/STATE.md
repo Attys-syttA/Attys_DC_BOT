@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: logs filtering in progress
-- Git state: local `main` tracks `origin/main`; `/logs contains` filtering prepared for validation
+- Phase: operator events status filtering in progress
+- Git state: local `main` tracks `origin/main`; `/events status` filtering prepared for validation
 
 ## Current Goal
 
@@ -84,6 +84,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Reused `/last` rollout fallback in `/sessions` selected-session inspection.
 - Added known slash command surface count to `/health`.
 - Added `/logs contains` filtering on scrubbed public-safe log lines.
+- Added `/events status` filtering on public-safe operator event status text.
 
 ## Open Work
 

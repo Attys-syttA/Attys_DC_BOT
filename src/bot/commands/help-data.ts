@@ -76,11 +76,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "events",
     category: "ops",
-    usage: "/events limit: <1-25> kind: all|startup|lifecycle|attention|task summary: true|false",
+    usage: "/events limit: <1-25> kind: all|startup|lifecycle|attention|task status: <opcionalis> summary: true|false",
     short: "Megmutatja es szuri a legutobbi public-safe operator eventeket.",
     details: [
       "A startup, lifecycle, approval/question es task outcome esemenyek rovid helyi timeline-ja.",
-      "A `kind` opcioval csak egy event tipusra szurhetsz, a `summary` pedig rovid darabszam-osszefoglalot ad.",
+      "A `kind` opcioval event tipusra, a `status` opcioval public-safe status reszszovegre szurhetsz, peldaul `failed` vagy `restart`.",
+      "A `summary` rovid darabszam-osszefoglalot ad az aktualis szurt talalatokra.",
       "Az adat az ignored `operator-events.log` fajlbol jon.",
       "Nem tartalmaz promptot, error detailt, tokent, privat pathot vagy config erteket.",
     ],
