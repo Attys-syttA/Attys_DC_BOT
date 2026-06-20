@@ -65,6 +65,7 @@ describe("/health report", () => {
     expect(report).toContain("Attys DC BOT Health");
     expect(report).toContain("OK bot process");
     expect(report).toContain("OK bot version: 0.1.0");
+    expect(report).toContain("OK slash command surface:");
     expect(report).toContain("OK bot error log: empty");
     expect(report).toContain("OK operator tools: ready");
     expect(report).toContain("OK Codex usage cache");

@@ -72,3 +72,4 @@
 - Session list filtering: a `/sessions` `query`, `source`, es `limit` opciokat kapott, hogy nagy helyi Codex thread lista mellett is gyorsan szukitheto legyen a valaszthato sessionok koze.
 - Health version visibility: a `/health` public-safe riport megmutatja a futtatott bot package verziot is.
 - Session inspect fallback: a `/sessions` select reszletnezet is a kozos `/last` fallback logikat hasznalja, igy live app-server olvasas hiba eseten is megprobal helyi rollout JSONL-bol utolso valaszt mutatni.
+- Health command surface: a `/health` riport mutatja az ismert slash command surface darabszamat is.

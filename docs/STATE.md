@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: session inspect fallback in progress
-- Git state: local `main` tracks `origin/main`; `/sessions` inspect fallback prepared for validation
+- Phase: health command surface visibility in progress
+- Git state: local `main` tracks `origin/main`; `/health` command surface visibility prepared for validation
 
 ## Current Goal
 
@@ -82,6 +82,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `/sessions query/source/limit` filtering for large local Codex session lists.
 - Added bot package version visibility to `/health`.
 - Reused `/last` rollout fallback in `/sessions` selected-session inspection.
+- Added known slash command surface count to `/health`.
 
 ## Open Work
 

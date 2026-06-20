@@ -112,7 +112,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     usage: "/health",
     short: "Public-safe bot runtime health riportot mutat.",
     details: [
-      "A bot process, package version, Node runtime, error log, operator tools, usage cache es sajat repo sync allapotat mutatja.",
+      "A bot process, package version, slash command surface, Node runtime, error log, operator tools, usage cache es sajat repo sync allapotat mutatja.",
       "Nem ir ki tokent, raw Discord ID-t vagy privat lokalis pathot.",
       "Gyors mobilos operator ellenorzeshez valo, amikor azt akarod latni, hogy maga a bot jol fut-e.",
     ],
