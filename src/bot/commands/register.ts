@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt
       .setName("path")
-      .setDescription(`Project folder name (${getConfig().BASE_PROJECT_DIR})`)
+      .setDescription("Project folder name under BASE_PROJECT_DIR")
       .setRequired(true)
       .setAutocomplete(true),
   )

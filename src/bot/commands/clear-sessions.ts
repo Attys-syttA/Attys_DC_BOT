@@ -7,6 +7,7 @@ import { getProject } from "../../db/database.js";
 import { deleteStoredThread, listStoredThreads } from "../../codex/storage.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 export const data = new SlashCommandBuilder()
   .setName("clear-sessions")
@@ -54,7 +55,7 @@ export async function execute(
       {
         title: L("Sessions Cleared", "세션 정리됨"),
         description: [
-          `Project: \`${project.project_path}\``,
+          `Project: \`${sanitizePublicFileLabel(project.project_path)}\``,
           L(`Deleted **${deleted}** session(s)`, `**${deleted}**개의 세션이 삭제되었습니다`),
         ].join("\n"),
         color: 0xff6b6b,

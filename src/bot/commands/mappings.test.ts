@@ -63,6 +63,7 @@ describe("/mappings", () => {
     expect(embed.data.description).toContain("Duplicate project paths");
     expect(embed.data.description).toContain("**1**");
     expect(embed.data.fields[0].name).toContain("DUPLICATE");
+    expect(embed.data.fields[0].name).toContain("<local-path>/app");
     expect(embed.data.fields[0].value).toContain("1. <#current-channel> current");
     expect(embed.data.fields[0].value).toContain("2. <#legacy-forum>");
     expect(components[0].components[0].data.custom_id).toBe("mapping-remove:legacy-forum");
@@ -74,6 +75,7 @@ describe("/mappings", () => {
     ]);
 
     expect(fields[0].name).toContain("OK");
+    expect(fields[0].name).toContain("<local-path>/app");
     expect(fields[0].value).toContain("<#channel-1> auto-approve");
     expect(fields[0].value).toContain("Single mapping.");
   });

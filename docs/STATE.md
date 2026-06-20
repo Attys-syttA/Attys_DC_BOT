@@ -87,6 +87,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `/events status` filtering on public-safe operator event status text.
 - Added shared public-safety sanitizing for Codex approval cards and failed-turn Discord messages.
 - Hardened main Discord operator commands to show public-safe project path labels instead of full local paths.
+- Hardened `/register` metadata/autocomplete, `/mappings`, and `/clear-sessions` path displays with the same public-safe labels.
 
 ## Open Work
 

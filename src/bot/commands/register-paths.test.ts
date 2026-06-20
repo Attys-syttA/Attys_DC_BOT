@@ -22,7 +22,7 @@ describe("register path autocomplete", () => {
   it("lists root directories and the base dir option", () => {
     const choices = listProjectAutocompleteChoices(baseDir, "");
 
-    expect(choices[0]).toEqual({ name: `. (${baseDir})`, value: baseDir });
+    expect(choices[0]).toEqual({ name: expect.stringContaining("<local-path>/"), value: baseDir });
     expect(choices).toContainEqual({ name: "frontend", value: "frontend" });
     expect(choices).toContainEqual({ name: "apps", value: "apps" });
     expect(choices.find((choice) => choice.value === ".hidden")).toBeUndefined();

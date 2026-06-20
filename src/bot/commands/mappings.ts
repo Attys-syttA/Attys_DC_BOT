@@ -9,6 +9,7 @@ import {
 import type { Project } from "../../db/types.js";
 import { getAllProjects } from "../../db/database.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 interface MappingGroup {
   projectPath: string;
@@ -56,7 +57,7 @@ export function renderMappingFields(projects: Project[], currentChannelId?: stri
       .join("\n");
 
     return {
-      name: `${duplicate ? "DUPLICATE" : "OK"} ${truncate(group.projectPath, 180)}`,
+      name: `${duplicate ? "DUPLICATE" : "OK"} ${truncate(sanitizePublicFileLabel(group.projectPath), 180)}`,
       value: [
         `${L("Channels", "채널")}: ${group.projects.length}`,
         channels,

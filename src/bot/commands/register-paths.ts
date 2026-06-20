@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
 export interface RegisterAutocompleteChoice {
   name: string;
@@ -30,7 +31,7 @@ export function listProjectAutocompleteChoices(
 
   const choices: RegisterAutocompleteChoice[] = [];
   if (!parentPart && (!focused || ".".includes(focused.toLowerCase()) || baseDir.toLowerCase().includes(focused.toLowerCase()))) {
-    choices.push({ name: `. (${baseDir})`, value: baseDir });
+    choices.push({ name: `. (${sanitizePublicFileLabel(baseDir)})`, value: baseDir });
   }
 
   choices.push(

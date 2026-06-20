@@ -67,6 +67,7 @@ describe("/clear-sessions", () => {
     expect(mocks.deleteStoredThread).toHaveBeenCalledWith("thread-1");
     expect(mocks.deleteStoredThread).toHaveBeenCalledWith("thread-2");
     const payload = interaction.editReply.mock.calls[0][0];
+    expect(payload.embeds[0].description).toContain("Project: `<local-path>/app`");
     expect(payload.embeds[0].description).toContain("Deleted **2** session(s)");
   });
 });
