@@ -6,6 +6,7 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 import { L } from "../utils/i18n.js";
+import { sanitizePublicFileLabel, sanitizePublicText } from "../utils/public-safety.js";
 
 const MAX_DISCORD_LENGTH = 1900; // leave room for formatting
 
@@ -96,14 +97,16 @@ export function createToolApprovalEmbed(
 
   // Add relevant fields based on tool type
   if (toolName === "Edit" || toolName === "Write") {
-    const filePath = (input.file_path as string) ?? "unknown";
+    const filePath = sanitizePublicFileLabel(input.file_path);
     embed.addFields({ name: L("File", "파일"), value: `\`${filePath}\``, inline: false });
 
     if (input.old_string && input.new_string) {
-      const diff = `\`\`\`diff\n- ${String(input.old_string).slice(0, 500)}\n+ ${String(input.new_string).slice(0, 500)}\n\`\`\``;
+      const oldText = sanitizePublicText(input.old_string, 500);
+      const newText = sanitizePublicText(input.new_string, 500);
+      const diff = `\`\`\`diff\n- ${oldText}\n+ ${newText}\n\`\`\``;
       embed.addFields({ name: L("Changes", "변경 사항"), value: diff, inline: false });
     } else if (input.content) {
-      const preview = String(input.content).slice(0, 500);
+      const preview = sanitizePublicText(input.content, 500);
       embed.addFields({
         name: L("Content Preview", "내용 미리보기"),
         value: `\`\`\`\n${preview}\n\`\`\``,
@@ -111,8 +114,8 @@ export function createToolApprovalEmbed(
       });
     }
   } else if (toolName === "Bash") {
-    const command = (input.command as string) ?? "unknown";
-    const description = (input.description as string) ?? "";
+    const command = sanitizePublicText(input.command ?? "unknown", 800);
+    const description = sanitizePublicText(input.description ?? "", 400);
     embed.addFields(
       { name: L("Command", "명령어"), value: `\`\`\`bash\n${command}\n\`\`\``, inline: false },
     );
@@ -121,7 +124,7 @@ export function createToolApprovalEmbed(
     }
   } else {
     // Generic tool display - skip empty input
-    const summary = JSON.stringify(input, null, 2);
+    const summary = sanitizePublicText(JSON.stringify(input, null, 2), 800);
     if (summary && summary !== "{}") {
       embed.addFields({
         name: L("Input", "입력"),

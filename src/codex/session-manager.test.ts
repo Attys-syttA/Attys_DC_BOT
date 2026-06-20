@@ -263,11 +263,19 @@ describe("SessionManager streaming output", () => {
         threadId: "thread-4",
         turn: {
           status: "failed",
-          error: { message: "private failure details" },
+          error: { message: "private failure details C:\\Users\\someone\\repo DISCORD_BOT_TOKEN=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" },
         },
       },
     });
 
+    expect(firstMessage.edit).toHaveBeenCalledWith({
+      content: expect.not.stringContaining("someone"),
+      components: [],
+    });
+    expect(firstMessage.edit).toHaveBeenCalledWith({
+      content: expect.stringContaining("DISCORD_BOT_TOKEN=<redacted>"),
+      components: [],
+    });
     expect(mocks.sendOperatorTaskOutcomeNotification).toHaveBeenCalledWith(
       channel,
       expect.any(Object),

@@ -129,12 +129,13 @@ describe("createToolApprovalEmbed", () => {
   it("creates embed with File field for Edit tool", () => {
     const result = createToolApprovalEmbed(
       "Edit",
-      { file_path: "/src/index.ts", old_string: "foo", new_string: "bar" },
+      { file_path: "C:\\Users\\someone\\repo\\src\\index.ts", old_string: "foo", new_string: "bar" },
       "req-123",
     );
     expect(result.embed.data.title).toBe("🔧 Tool Use: Edit");
     const fileField = result.embed.data.fields?.find((f) => f.name === "File");
     expect(fileField?.value).toContain("index.ts");
+    expect(fileField?.value).not.toContain("someone");
     const changesField = result.embed.data.fields?.find((f) => f.name === "Changes");
     expect(changesField).toBeDefined();
   });
@@ -142,13 +143,14 @@ describe("createToolApprovalEmbed", () => {
   it("creates embed with Command field for Bash tool", () => {
     const { embed } = createToolApprovalEmbed(
       "Bash",
-      { command: "ls -la", description: "List files" },
+      { command: "node script.js DISCORD_BOT_TOKEN=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", description: "List files in C:\\Users\\someone\\repo" },
       "req-456",
     );
     const cmdField = embed.data.fields?.find((f) => f.name === "Command");
-    expect(cmdField?.value).toContain("ls -la");
+    expect(cmdField?.value).toContain("DISCORD_BOT_TOKEN=<redacted>");
+    expect(cmdField?.value).not.toContain("abcdefghijklmnopqrstuvwxyz");
     const descField = embed.data.fields?.find((f) => f.name === "Description");
-    expect(descField?.value).toBe("List files");
+    expect(descField?.value).toBe("List files in <local-path>");
   });
 
   it("creates three buttons: approve, deny, approve-all", () => {
@@ -169,11 +171,12 @@ describe("createToolApprovalEmbed", () => {
   it("shows Content Preview for Write tool with content", () => {
     const { embed } = createToolApprovalEmbed(
       "Write",
-      { file_path: "/a.ts", content: "x".repeat(1000) },
+      { file_path: "/a.ts", content: `secret C:\\Users\\someone\\repo ${"x".repeat(1000)}` },
       "req-w",
     );
     const preview = embed.data.fields?.find((f) => f.name === "Content Preview");
     expect(preview).toBeDefined();
+    expect(preview!.value).not.toContain("someone");
     // Content sliced to 500 + fence chars
     expect(preview!.value!.length).toBeLessThanOrEqual(520);
   });

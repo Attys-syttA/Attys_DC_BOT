@@ -65,6 +65,7 @@ Confirm the panel shows:
 - `/dashboard` pending operator action row for approval/question/custom answer/queue confirmation state
 - central approval/question attention notification when `DISCORD_NOTIFICATION_CHANNEL_ID` points to a separate channel
 - central task completed/failed notification when `DISCORD_NOTIFICATION_CHANNEL_ID` points to a separate channel
+- Codex approval cards and failed-turn Discord messages scrub private paths, raw IDs, and secret-looking values
 - `/health` runtime report does not expose private paths, tokens, raw Discord IDs, or config values
 - `/events` timeline reads only public-safe `operator-events.log` lines, supports `kind` and `status` filtering plus `summary`, and does not expose prompts or error details
 - `/logs` reads only allowlisted bot log files and scrubs local paths, raw IDs, IPs, and secret-looking fragments before Discord output

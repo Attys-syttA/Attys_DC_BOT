@@ -9,6 +9,7 @@ import {
 } from "../db/database.js";
 import { getConfig } from "../utils/config.js";
 import { L } from "../utils/i18n.js";
+import { sanitizePublicText } from "../utils/public-safety.js";
 import { codexAppServer } from "./app-server-client.js";
 import {
   createAskUserQuestionEmbed,
@@ -302,7 +303,7 @@ export class SessionManager {
               ? `${turn.error.message ?? "Turn failed"}\n${turn.error.additionalDetails}`
               : turn?.error?.message ?? stream?.lastError ?? "Turn failed";
           if (stream) {
-            await stream.messages.at(-1)?.edit({ content: `❌ ${message}`, components: [] }).catch(() => {});
+            await stream.messages.at(-1)?.edit({ content: `❌ ${sanitizePublicText(message, 900)}`, components: [] }).catch(() => {});
           }
           await sendOperatorTaskOutcomeNotification(active.channel, getConfig(), "failed").catch(() => {});
           updateSessionStatus(channelId, "offline");
