@@ -4,8 +4,13 @@ const mocks = vi.hoisted(() => ({
   getProject: vi.fn(),
   checkRateLimit: vi.fn(),
   sendMessage: vi.fn(),
+  isActive: vi.fn(),
+  hasQueue: vi.fn(),
+  isQueueFull: vi.fn(),
+  setPendingQueue: vi.fn(),
   downloadAttachment: vi.fn(),
   buildAttachmentPromptSuffix: vi.fn(),
+  getConfig: vi.fn(),
 }));
 
 vi.mock("../../db/database.js", () => ({
@@ -19,7 +24,15 @@ vi.mock("../../security/guard.js", () => ({
 vi.mock("../../codex/session-manager.js", () => ({
   sessionManager: {
     sendMessage: mocks.sendMessage,
+    isActive: mocks.isActive,
+    hasQueue: mocks.hasQueue,
+    isQueueFull: mocks.isQueueFull,
+    setPendingQueue: mocks.setPendingQueue,
   },
+}));
+
+vi.mock("../../utils/config.js", () => ({
+  getConfig: mocks.getConfig,
 }));
 
 vi.mock("../attachments.js", () => ({
@@ -50,6 +63,10 @@ describe("/ask", () => {
     vi.clearAllMocks();
     mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "/projects/app" });
     mocks.checkRateLimit.mockReturnValue(true);
+    mocks.getConfig.mockReturnValue({ DISCORD_QUEUE_MAX_ITEMS: 10 });
+    mocks.isActive.mockReturnValue(false);
+    mocks.hasQueue.mockReturnValue(false);
+    mocks.isQueueFull.mockReturnValue(false);
     mocks.downloadAttachment.mockResolvedValue({
       filePath: "/projects/app/.codex-uploads/note.txt",
       isImage: false,
@@ -120,5 +137,48 @@ describe("/ask", () => {
       content: "Prompt sent to local Codex.\nBlocked: `tool.exe` (dangerous file type)\n```text\nignore unsafe file\n```",
     });
     expect(mocks.sendMessage).toHaveBeenCalledWith(interaction.channel, "ignore unsafe file");
+  });
+
+  it("offers queue confirmation instead of starting another turn when active", async () => {
+    mocks.isActive.mockReturnValue(true);
+    const interaction = makeInteraction("queue this");
+
+    await execute(interaction as never);
+
+    expect(mocks.setPendingQueue).toHaveBeenCalledWith("channel-1", interaction.channel, "queue this");
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "⏳ A previous task is in progress. Process this automatically when done?",
+      components: [expect.any(Object)],
+    });
+  });
+
+  it("does not replace an existing pending queue confirmation", async () => {
+    mocks.isActive.mockReturnValue(true);
+    mocks.hasQueue.mockReturnValue(true);
+    const interaction = makeInteraction("queue this");
+
+    await execute(interaction as never);
+
+    expect(mocks.setPendingQueue).not.toHaveBeenCalled();
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "⏳ A message is already waiting to be queued. Please press the button first.",
+    });
+  });
+
+  it("reports full queue for slash prompts", async () => {
+    mocks.isActive.mockReturnValue(true);
+    mocks.isQueueFull.mockReturnValue(true);
+    mocks.getConfig.mockReturnValue({ DISCORD_QUEUE_MAX_ITEMS: 2 });
+    const interaction = makeInteraction("queue this");
+
+    await execute(interaction as never);
+
+    expect(mocks.setPendingQueue).not.toHaveBeenCalled();
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "⏳ Queue is full (max 2). Please wait for the current task to finish.",
+    });
   });
 });

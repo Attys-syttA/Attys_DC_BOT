@@ -71,6 +71,7 @@ Confirm the panel shows:
 - `/bot status` is read-only, and `/bot restart` stays gated behind `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/help` and `/sugo` list commands by category so the full operator surface stays discoverable
 - `/ask file:` saves one slash attachment for Codex without echoing the local saved path to Discord
+- `/ask` uses queue confirmation instead of starting a parallel turn when the channel already has active Codex work
 
 `Safe Update` must stay guarded:
 

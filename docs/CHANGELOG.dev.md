@@ -66,3 +66,4 @@
 - Discord bot lifecycle: bekerult a `/bot status|restart`; a status read-only, a restart pedig explicit `DISCORD_ENABLE_BOT_LIFECYCLE=true` flag mogott marad.
 - Help discoverability: a `/help` es `/sugo` listanezet kategoriakba rendezve mutatja a megnott parancskeszletet, rovid kezdo parancs javaslattal.
 - Slash attachment parity: a `/ask` opcionális `file` attachmentet kapott, a kozos attachment helper pedig a message es slash flow kozott is ugyanazt a sanitize/download logikat hasznalja.
+- Slash queue parity: a `/ask` aktiv Codex futas kozben ugyanazt a queue confirmation flow-t hasznalja, mint a normal message prompt, igy nem indit masodik parhuzamos turnt ugyanabban a channelben.

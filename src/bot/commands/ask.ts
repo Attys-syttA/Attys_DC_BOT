@@ -1,5 +1,8 @@
 import {
+  ActionRowBuilder,
   ChatInputCommandInteraction,
+  ButtonBuilder,
+  ButtonStyle,
   SlashCommandBuilder,
   TextChannel,
   type Attachment,
@@ -9,6 +12,7 @@ import { checkRateLimit } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { L } from "../../utils/i18n.js";
 import { buildAttachmentPromptSuffix, downloadAttachment } from "../attachments.js";
+import { getConfig } from "../../utils/config.js";
 
 export const data = new SlashCommandBuilder()
   .setName("ask")
@@ -71,6 +75,44 @@ export async function execute(
       finalPrompt += buildAttachmentPromptSuffix([result]);
       attachmentNotes.push(`Attachment saved for Codex: \`${result.safeName}\``);
     }
+  }
+
+  if (sessionManager.isActive(interaction.channelId)) {
+    if (sessionManager.hasQueue(interaction.channelId)) {
+      await interaction.editReply({
+        content: L("⏳ A message is already waiting to be queued. Please press the button first.", "⏳ 이미 큐 추가 대기 중인 메시지가 있습니다. 버튼을 먼저 눌러주세요."),
+      });
+      return;
+    }
+    if (sessionManager.isQueueFull(interaction.channelId)) {
+      await interaction.editReply({
+        content: L(`⏳ Queue is full (max ${getConfig().DISCORD_QUEUE_MAX_ITEMS}). Please wait for the current task to finish.`, `⏳ 큐가 가득 찼습니다 (최대 ${getConfig().DISCORD_QUEUE_MAX_ITEMS}개). 현재 작업 완료를 기다려주세요.`),
+      });
+      return;
+    }
+
+    sessionManager.setPendingQueue(interaction.channelId, interaction.channel as TextChannel, finalPrompt);
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`queue-yes:${interaction.channelId}`)
+        .setLabel(L("Add to Queue", "큐에 추가"))
+        .setStyle(ButtonStyle.Success)
+        .setEmoji("✅"),
+      new ButtonBuilder()
+        .setCustomId(`queue-no:${interaction.channelId}`)
+        .setLabel(L("Cancel", "취소"))
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji("❌"),
+    );
+
+    await interaction.editReply({
+      content: [
+        L("⏳ A previous task is in progress. Process this automatically when done?", "⏳ 이전 작업이 진행 중입니다. 완료 후 자동으로 처리할까요?"),
+        ...attachmentNotes,
+      ].join("\n"),
+      components: [row],
+    });
+    return;
   }
 
   await interaction.editReply({
