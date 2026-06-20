@@ -26,6 +26,14 @@ function safeLaunchReason(value: string | undefined): string {
       return "Windows tray restart";
     case "windows-safe-update":
       return "Windows safe update restart";
+    case "linux-launcher":
+      return "Linux launcher start";
+    case "linux-foreground":
+      return "Linux foreground diagnostics";
+    case "macos-launcher":
+      return "macOS launcher start";
+    case "macos-foreground":
+      return "macOS foreground diagnostics";
     default:
       return "manual or external start";
   }

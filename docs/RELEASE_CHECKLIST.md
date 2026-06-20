@@ -1,6 +1,6 @@
 # Release Checklist
 
-This repository is Windows-first and local-first. A release should prove that the Discord bot, launcher, tray panel, and public docs are safe to publish.
+This repository is local-first with a Windows-first desktop baseline and initial Linux/macOS host launchers. A release should prove that the Discord bot, launcher, tray panel, and public docs are safe to publish.
 
 ## Preflight
 
@@ -46,6 +46,49 @@ Confirm:
 - tray process starts when `tray/CodexBotTray.exe` can be built
 - `tray-error.log` is not created
 - `bot.log`, `bot.err.log`, `update.log`, `CodexBot.exe`, and `tray/CodexBotTray.exe` remain ignored
+
+## Linux Launcher Smoke
+
+On a Linux host:
+
+```bash
+bash -n install.sh
+bash -n linux-start.sh
+./install.sh --help
+./linux-start.sh --status
+./linux-start.sh
+./linux-start.sh --status
+./linux-start.sh --stop
+```
+
+Confirm:
+
+- `--status` does not require secrets
+- normal start uses `systemd --user` when available
+- fallback start uses `nohup` when user systemd is not available
+- `bot.log` and `bot.err.log` remain ignored
+- no `.env` value is printed
+
+## macOS Launcher Smoke
+
+On a macOS host:
+
+```bash
+bash -n install.sh
+bash -n mac-start.sh
+./install.sh --help
+./mac-start.sh --status
+./mac-start.sh
+./mac-start.sh --status
+./mac-start.sh --stop
+```
+
+Confirm:
+
+- `--status` does not require secrets
+- normal start uses `launchd`
+- `bot.log` and `bot.err.log` remain ignored
+- no `.env` value is printed
 
 ## Tray Panel Smoke
 

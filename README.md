@@ -1,12 +1,12 @@
 # Attys DC BOT
 
-Control local Codex workspaces from Discord on a Windows machine.
+Control local Codex workspaces from Discord on your own machine.
 
-Attys DC BOT is a Windows-first, local-first Discord control surface for Codex CLI. It runs on the same PC as your local repositories, your Git tools, your `codex login` session, and your optional local operator tooling. One Discord channel can be mapped to one local project, so you can start, resume, inspect, and stop Codex work from Discord without exposing a remote execution server.
+Attys DC BOT is a local-first Discord control surface for Codex CLI. It runs on the same host as your local repositories, your Git tools, your `codex login` session, and your optional local operator tooling. One Discord channel can be mapped to one local project, so you can start, resume, inspect, and stop Codex work from Discord without exposing a remote execution server.
 
 **No manually pasted OpenAI API key is required for normal use.** The bot uses your local `codex login` session.
 
-This project follows the local-first direction of [chadingTV/codex-discord](https://github.com/chadingTV/codex-discord), with Windows-specific launcher, tray, operator tooling, and public-safety hardening added for this repository.
+This project follows the local-first direction of [chadingTV/codex-discord](https://github.com/chadingTV/codex-discord), with Attys-specific Windows tooling, explicit file handoff, operator preflight, and public-safety hardening added for this repository.
 
 > Setup guide: [SETUP.md](SETUP.md)<br>
 > Public support notes: [docs/PUBLIC_SUPPORT.md](docs/PUBLIC_SUPPORT.md)<br>
@@ -14,7 +14,7 @@ This project follows the local-first direction of [chadingTV/codex-discord](http
 
 ## What This Project Is
 
-`Attys_DC_BOT` is a self-hosted Discord bot that sits beside Codex CLI on your own Windows PC.
+`Attys_DC_BOT` is a self-hosted Discord bot that sits beside Codex CLI on your own machine.
 
 It gives you a Discord-native operator surface for Codex:
 
@@ -49,6 +49,7 @@ Because it reads local Codex thread storage where supported, sessions created fr
 - `/ask` attachment support for up to three files
 - Public-safe `/health`, `/events`, `/logs`, `/doctor`, and `/dashboard`
 - Windows launcher, tray/control panel, and desktop lifecycle controls
+- Linux and macOS launcher scripts for background host operation
 - Codex usage cache display in Discord and the Windows panel
 - Optional VS Code-free operator tools preflight for local MCP/Docker/Obsidian readiness
 - Allowed-user or allowed-role access control
@@ -60,7 +61,7 @@ Because it reads local Codex thread storage where supported, sessions created fr
 [Discord]
     |
     v
-[discord.js bot on Windows]
+[discord.js bot on your host machine]
     |
     v
 [local Codex session manager]
@@ -80,7 +81,7 @@ Because it reads local Codex thread storage where supported, sessions created fr
 
 ## Requirements
 
-- Windows
+- Windows, Linux, or macOS host
 - Node.js 20+
 - Codex CLI installed
 - Local `codex login`
@@ -96,6 +97,14 @@ Normal use does **not** require `OPENAI_API_KEY`; the bot uses the local Codex l
 git clone https://github.com/Attys-syttA/Attys_DC_BOT.git
 cd Attys_DC_BOT
 cmd /c install.bat
+```
+
+Linux or macOS:
+
+```bash
+git clone https://github.com/Attys-syttA/Attys_DC_BOT.git
+cd Attys_DC_BOT
+./install.sh
 ```
 
 Manual setup:
@@ -144,11 +153,25 @@ DISCORD_REGISTER_COMMANDS=true
 DISCORD_ENABLE_MESSAGE_PROMPTS=false
 ```
 
-3. Start the bot and tray panel.
+3. Start the bot.
 
 ```powershell
 cmd /c win-start.bat
 cmd /c win-start.bat --status
+```
+
+Linux:
+
+```bash
+./linux-start.sh
+./linux-start.sh --status
+```
+
+macOS:
+
+```bash
+./mac-start.sh
+./mac-start.sh --status
 ```
 
 4. In Discord, run:
@@ -186,6 +209,16 @@ The panel provides:
 - Windows login startup toggle
 
 `Check Updates` is read-only apart from `git fetch`. `Safe Update` is enabled only for clean repositories and uses `git pull --ff-only`; it does not run `git stash`, `git reset --hard`, or history rewriting.
+
+## Linux And macOS Launchers
+
+The repository includes initial cross-platform host launchers:
+
+- `install.sh` checks Node.js 20+, notes Codex CLI availability, runs `npm install`, and builds the project.
+- `linux-start.sh` starts the bot through `systemd --user` when available, with a `nohup` fallback for simpler sessions.
+- `mac-start.sh` starts the bot through `launchd`, with foreground diagnostics through `--fg`.
+
+These launchers use the same local `.env`, `bot.log`, `bot.err.log`, and `dist/index.js` entrypoint as Windows. They do not provide the Windows tray/control panel yet; Linux tray and macOS menu bar parity are tracked in the cross-platform parity plan.
 
 ## Commands
 
@@ -253,7 +286,7 @@ When you attach files through `/ask`:
 - project registration is restricted to `BASE_PROJECT_DIR`
 - executable attachments are blocked
 - no custom HTTP execution server is opened by this project
-- message prompts require Discord's privileged Message Content intent; slash commands can run without it
+- message prompts require Discord's privileged Message Content intent; slash commands and the explicit `Send to Codex` file handoff can run without normal message prompts
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
@@ -305,6 +338,26 @@ cmd /c win-start.bat --status
 cmd /c win-start.bat --stop
 ```
 
+Launcher smoke test on Linux:
+
+```bash
+./linux-start.sh --help
+./linux-start.sh --status
+./linux-start.sh
+./linux-start.sh --status
+./linux-start.sh --stop
+```
+
+Launcher smoke test on macOS:
+
+```bash
+./mac-start.sh --help
+./mac-start.sh --status
+./mac-start.sh
+./mac-start.sh --status
+./mac-start.sh --stop
+```
+
 ## CI And Repository Protection
 
 - GitHub Actions CI runs lint, plan check, typecheck, tests, and build on Node.js 20 and 22.
@@ -317,6 +370,7 @@ cmd /c win-start.bat --stop
 In scope:
 
 - Windows/local-first Codex control
+- initial Linux/macOS launcher support
 - Discord operator UX
 - local SQLite mapping state
 - local Codex login/session usage
@@ -328,7 +382,7 @@ Out of scope:
 - custom HTTP execution agent
 - multi-machine state sharing
 - network-share or portable-drive workflow
-- Linux/macOS launcher parity for this repository
+- Linux tray and macOS menu bar desktop parity until the cross-platform plan is completed
 
 ## License
 

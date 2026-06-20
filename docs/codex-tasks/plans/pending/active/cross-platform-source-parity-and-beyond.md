@@ -1,6 +1,18 @@
 # Cross-platform source parity and beyond
 
-Status: not-started
+Status: active
+
+## Elkeszult reszek
+
+- Fazon 0 baseline lezarva: a `Send to Codex` file handoff/application command valtozasok validalva, commitolva es pusholva (`a89a2f8`).
+- Fazon 1 cross-platform launcher alap elindult: `install.sh`, `linux-start.sh`, `mac-start.sh` hozzaadva.
+- Fazon 1 dokumentacios frissites folyamatban: `README.md`, `SETUP.md`, `docs/RELEASE_CHECKLIST.md`.
+
+## Nyitott reszek
+
+- Fazon 1 teljes validacio, executable bit staging, commit es push.
+- Linux/macOS runtime smoke tenyleges Linux/macOS hoston kesobb platformtesztet igenyelhet.
+- Fazon 2-8 meg nincs implementalva.
 
 ## Cel
 

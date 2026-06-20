@@ -88,6 +88,13 @@ describe("startup notifications", () => {
     expect(message).toContain("operator tools: running");
   });
 
+  it("names Linux and macOS launcher reasons without exposing paths", () => {
+    expect(buildStartupNotification(makeConfig(), { launchReason: "linux-launcher" }))
+      .toContain("launch reason: Linux launcher start");
+    expect(buildStartupNotification(makeConfig(), { launchReason: "macos-foreground" }))
+      .toContain("launch reason: macOS foreground diagnostics");
+  });
+
   it("skips sending when no notification channel is configured", async () => {
     const fetch = vi.fn();
     await sendStartupNotification({ channels: { fetch } } as never, makeConfig());

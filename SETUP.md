@@ -1,6 +1,6 @@
 # Setup
 
-This setup is for one Windows machine: Discord bot, Codex CLI, Git, and repositories all live on the same PC.
+This setup is for one local host machine: Discord bot, Codex CLI, Git, and repositories all live on the same Windows, Linux, or macOS host.
 
 ## 1. Install Prerequisites
 
@@ -34,6 +34,13 @@ npm install
 Copy-Item .env.example .env
 ```
 
+Linux/macOS:
+
+```bash
+./install.sh
+cp .env.example .env
+```
+
 Edit `.env` locally. Use a narrow workspace root such as `C:\workspace`. Do not use your whole home directory as the base.
 
 The Windows installer can do the first-pass dependency setup and desktop shortcut creation:
@@ -53,7 +60,7 @@ Do not commit:
 - real Discord IDs in docs/tests/examples
 - local runtime SQLite files
 
-## 4. Start With Windows Launcher
+## 4. Start With A Platform Launcher
 
 Recommended Windows start:
 
@@ -71,6 +78,48 @@ cmd /c win-start.bat --fg
 
 - `--status` reports the real local bot process for this repository.
 - `--stop` stops only this repository's bot process and clears stale `.bot.lock`.
+- `--fg` starts in foreground for diagnosis.
+- normal start writes `bot.log` and `bot.err.log`.
+
+Recommended Linux start:
+
+```bash
+./linux-start.sh
+./linux-start.sh --status
+```
+
+Useful Linux launcher commands:
+
+```bash
+./linux-start.sh --status
+./linux-start.sh --stop
+./linux-start.sh --fg
+```
+
+- normal start uses `systemd --user` when available and falls back to `nohup`.
+- `--status` reports whether the bot is running.
+- `--stop` stops this bot instance and clears `.bot.lock`.
+- `--fg` starts in foreground for diagnosis.
+- normal start writes `bot.log` and `bot.err.log`.
+
+Recommended macOS start:
+
+```bash
+./mac-start.sh
+./mac-start.sh --status
+```
+
+Useful macOS launcher commands:
+
+```bash
+./mac-start.sh --status
+./mac-start.sh --stop
+./mac-start.sh --fg
+```
+
+- normal start uses `launchd`.
+- `--status` reports whether the bot is running.
+- `--stop` stops this bot instance and clears `.bot.lock`.
 - `--fg` starts in foreground for diagnosis.
 - normal start writes `bot.log` and `bot.err.log`.
 
@@ -116,6 +165,8 @@ If local changes are present, the panel stops and asks for manual cleanup. This 
 
 The Windows login startup toggle creates or removes `Attys DC BOT.lnk` in the current user's Startup folder. The shortcut points to `win-start.bat` and is never tracked by Git.
 
+Linux tray/control panel and macOS menu bar parity are tracked in the cross-platform parity plan. The current Linux/macOS launchers are host lifecycle scripts, not full desktop panels yet.
+
 ## 6. Operator Tools Preflight
 
 When the sibling `<CODEX_WORKS>\codex-ai-tools-mcp-link` repository exists, `win-start.bat` and the tray `Tools` button can run:
@@ -143,6 +194,15 @@ The same notification channel also receives short attention messages when Codex 
 npm run build
 npm run doctor:local
 npm start
+```
+
+Linux/macOS foreground diagnostics:
+
+```bash
+npm run build
+./linux-start.sh --fg
+# or on macOS:
+./mac-start.sh --fg
 ```
 
 Development mode:
@@ -211,6 +271,14 @@ ggshield secret scan path --recursive --yes --use-gitignore .
 ```
 
 No `git push` should happen until the local-first cleanup and secret scan are reviewed.
+
+Launcher syntax checks where Bash is available:
+
+```bash
+bash -n install.sh
+bash -n linux-start.sh
+bash -n mac-start.sh
+```
 
 For public-safe reports and releases, also see:
 
