@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: public repo polish implemented
-- Git state: local `main` tracks `origin/main`; public support/release docs prepared for validation
+- Phase: Windows installer hardening implemented
+- Git state: local `main` tracks `origin/main`; installer hardening prepared for validation
 
 ## Current Goal
 
@@ -58,6 +58,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Extended the Windows tray/control panel with package version, local/upstream commit display, clean/dirty/ahead/behind git status, read-only update check through `git fetch`, and Windows login startup toggle.
 - Added guarded `Safe Update` to the Windows tray: clean checkout only, `git pull --ff-only`, dependency install only when package files changed, build/check, and bot restart without stash/reset.
 - Added public repo polish: issue templates, PR checklist, release checklist, and public support guide with secret-hygiene reminders.
+- Hardened the Windows installer restart path, step labels, Attys desktop shortcut branding, and shortcut icon fallback so it no longer points at a missing tracked icon.
 
 ## Open Work
 

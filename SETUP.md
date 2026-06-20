@@ -36,6 +36,14 @@ Copy-Item .env.example .env
 
 Edit `.env` locally. Use a narrow workspace root such as `C:\workspace`. Do not use your whole home directory as the base.
 
+The Windows installer can do the first-pass dependency setup and desktop shortcut creation:
+
+```powershell
+cmd /c install.bat
+```
+
+The installer checks Node.js 20+, Codex CLI availability, npm dependencies, project build, and then creates an `Attys DC BOT` desktop shortcut to `win-start.bat`. If Node.js must be installed or upgraded, it restarts itself from the repository folder. The shortcut icon uses the tray executable when available, then the local bot executable, then a Windows system icon fallback.
+
 Do not commit:
 
 - `.env`
@@ -142,6 +150,7 @@ Optional local commands:
 - If `--status` says `Stopped`, run `Get-Content bot.log -Tail 80` and `Get-Content bot.err.log -Tail 80`.
 - If `.bot.lock` is stale, run `cmd /c win-start.bat --stop`, then `cmd /c win-start.bat --status`.
 - If the tray does not appear, check whether `tray/CodexBotTray.exe` exists and whether Windows/.NET C# compiler tooling is installed.
+- If the desktop shortcut icon is generic, start the bot once so the launcher can build `tray/CodexBotTray.exe`, then recreate the shortcut by running `cmd /c install.bat`.
 - If usage is unavailable, check `codex.cmd login status` and try the panel's `Refresh Usage` button again.
 - If update status is unavailable, check whether `git` is on PATH and whether the repo has an `origin/main` upstream.
 - If `Safe Update` is disabled, check whether the repo is clean and behind origin.

@@ -51,3 +51,4 @@
 - Lifecycle closeout: launcher/tray smoke, read-only update check, autostart shortcut create/remove smoke, npm validacio es ggshield secret scan zold; a lifecycle terv `done` ala kerult.
 - Safe update: a tray `Safe Update` gombot kapott clean checkout es behind origin eseten; `git pull --ff-only`, szukseg szerinti `npm install`, `npm run build`, `npm run check`, majd bot restart fut, de nincs stash/reset/history rewrite.
 - Public polish: bekerult bug/feature issue template, PR checklist, Windows release checklist es public support guide, mind secret-hygiene es Windows local-first fokuszban.
+- Windows installer hardening: az `install.bat` koran allitja a repo gyokeret, stabilan inditja ujra magat Node telepites/upgrade utan, Attys brandinget hasznal, es desktop shortcut ikonnal tray/bot/system fallbacket alkalmaz hianyzo public ico helyett.

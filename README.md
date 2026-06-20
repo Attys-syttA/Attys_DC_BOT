@@ -36,6 +36,12 @@ Copy-Item .env.example .env
 
 Edit `.env` with real local values. Never commit `.env`.
 
+For the Windows first-pass installer and desktop shortcut:
+
+```powershell
+cmd /c install.bat
+```
+
 Recommended Codex login check on Windows:
 
 ```powershell

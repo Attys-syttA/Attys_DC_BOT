@@ -2,15 +2,20 @@
 chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
+set "SCRIPT_DIR=%~dp0"
+set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+set "PROJECT_NAME=Attys DC BOT"
+set "SHORTCUT_NAME=Attys DC BOT.lnk"
+
 echo ===================================
-echo  Codex Discord Controller Installer
+echo  Attys DC BOT Installer
 echo ===================================
 echo.
 
 set NEED_LOGIN=0
 
 :: --- 1. Node.js ---
-echo [1/4] Checking Node.js...
+echo [1/6] Checking Node.js...
 where node >nul 2>&1
 if %errorlevel% neq 0 (
     echo   Node.js not found. Installing...
@@ -18,7 +23,7 @@ if %errorlevel% neq 0 (
     if %errorlevel% equ 0 (
         winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
         echo   Node.js installed. Restarting in new terminal...
-        start cmd /c "cd /d "%SCRIPT_DIR%" && install.bat"
+        start "Attys DC BOT Installer" /D "%SCRIPT_DIR%" cmd /c install.bat
         exit /b 0
     )
     echo   winget not available. Downloading Node.js installer...
@@ -29,7 +34,7 @@ if %errorlevel% neq 0 (
         msiexec /i "!NODE_MSI!" /passive /norestart
         del "!NODE_MSI!" >nul 2>&1
         echo   Node.js installed. Restarting in new terminal...
-        start cmd /c "cd /d "%SCRIPT_DIR%" && install.bat"
+        start "Attys DC BOT Installer" /D "%SCRIPT_DIR%" cmd /c install.bat
         exit /b 0
     ) else (
         echo   X Download failed.
@@ -49,7 +54,7 @@ if %NODE_MAJOR% lss 20 (
     if %errorlevel% equ 0 (
         winget upgrade OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
         echo   Node.js upgraded. Restarting in new terminal...
-        start cmd /c "cd /d "%SCRIPT_DIR%" && install.bat"
+        start "Attys DC BOT Installer" /D "%SCRIPT_DIR%" cmd /c install.bat
         exit /b 0
     )
     echo   winget not available. Downloading Node.js installer...
@@ -60,7 +65,7 @@ if %NODE_MAJOR% lss 20 (
         msiexec /i "!NODE_MSI!" /passive /norestart
         del "!NODE_MSI!" >nul 2>&1
         echo   Node.js upgraded. Restarting in new terminal...
-        start cmd /c "cd /d "%SCRIPT_DIR%" && install.bat"
+        start "Attys DC BOT Installer" /D "%SCRIPT_DIR%" cmd /c install.bat
         exit /b 0
     ) else (
         echo   X Download failed. Download from https://nodejs.org
@@ -74,7 +79,7 @@ echo   OK
 echo.
 
 :: --- 2. Codex CLI ---
-echo [2/4] Checking Codex CLI...
+echo [2/6] Checking Codex CLI...
 :: Ensure npm global bin is in PATH
 set "PATH=%PATH%;%APPDATA%\npm"
 where codex >nul 2>&1
@@ -91,7 +96,7 @@ if %errorlevel% neq 0 (
     echo   OK Codex installed
     echo.
     echo   ! Codex login required!
-    echo   Run 'codex login' once to complete ChatGPT login.
+    echo   Run 'codex.cmd login' once to complete ChatGPT login.
     set NEED_LOGIN=1
 ) else (
     echo   OK Found Codex
@@ -135,24 +140,25 @@ echo.
 
 :: --- 6. Desktop shortcut ---
 echo [6/6] Creating desktop shortcut...
-set "SCRIPT_DIR=%~dp0"
-set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "SHORTCUT_VBS=%TEMP%\create-shortcut.vbs"
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP=%%D"
+set "ICON_LOCATION=%SCRIPT_DIR%\tray\CodexBotTray.exe, 0"
+if not exist "%SCRIPT_DIR%\tray\CodexBotTray.exe" set "ICON_LOCATION=%SCRIPT_DIR%\CodexBot.exe, 0"
+if not exist "%SCRIPT_DIR%\CodexBot.exe" set "ICON_LOCATION=%SystemRoot%\System32\shell32.dll, 220"
 
 echo Set oWS = WScript.CreateObject("WScript.Shell") > "%SHORTCUT_VBS%"
-echo sLinkFile = "%DESKTOP%\Codex Discord Bot.lnk" >> "%SHORTCUT_VBS%"
+echo sLinkFile = "%DESKTOP%\%SHORTCUT_NAME%" >> "%SHORTCUT_VBS%"
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> "%SHORTCUT_VBS%"
 echo oLink.TargetPath = "%SCRIPT_DIR%\win-start.bat" >> "%SHORTCUT_VBS%"
 echo oLink.WorkingDirectory = "%SCRIPT_DIR%" >> "%SHORTCUT_VBS%"
-echo oLink.Description = "Codex Discord Bot" >> "%SHORTCUT_VBS%"
-echo oLink.IconLocation = "%SCRIPT_DIR%\docs\icon.ico, 0" >> "%SHORTCUT_VBS%"
+echo oLink.Description = "%PROJECT_NAME%" >> "%SHORTCUT_VBS%"
+echo oLink.IconLocation = "%ICON_LOCATION%" >> "%SHORTCUT_VBS%"
 echo oLink.WindowStyle = 7 >> "%SHORTCUT_VBS%"
 echo oLink.Save >> "%SHORTCUT_VBS%"
 cscript //nologo "%SHORTCUT_VBS%" >nul 2>&1
 del "%SHORTCUT_VBS%" >nul 2>&1
 
-if exist "%DESKTOP%\Codex Discord Bot.lnk" (
+if exist "%DESKTOP%\%SHORTCUT_NAME%" (
     echo   OK Desktop shortcut created
 ) else (
     echo   ! Could not create desktop shortcut
@@ -166,10 +172,10 @@ echo ===================================
 echo.
 if %NEED_LOGIN%==1 (
     echo Next steps:
-    echo   1. Run 'codex login' to log in to Codex
+    echo   1. Run 'codex.cmd login' to log in to Codex
     echo   2. Configure settings from the tray icon
 ) else (
-    echo Starting Codex Discord Bot...
+    echo Starting Attys DC BOT...
     echo.
     start "" "%SCRIPT_DIR%\win-start.bat"
 )
