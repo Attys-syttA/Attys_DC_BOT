@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { L } from "../../utils/i18n.js";
-import { fetchCodexUsage, getCodexUsageRows, getUsagePercentLeft, loadCodexUsageCache, type CodexUsageData } from "../../codex/usage.js";
+import { fetchCodexUsage, formatUsageCacheAge, getCodexUsageRows, getUsagePercentLeft, loadCodexUsageCache, type CodexUsageData } from "../../codex/usage.js";
 
 export const data = new SlashCommandBuilder()
   .setName("usage")
@@ -55,11 +55,7 @@ function footerText(fetchedAt: number | null, now = Date.now()): string {
   const suffix = "chatgpt.com/codex/settings/usage";
   if (!fetchedAt) return suffix;
 
-  const diffMin = Math.floor((now - fetchedAt) / 60000);
-  if (diffMin < 1) {
-    return `${L("Just now", "방금 갱신")}  ·  ${suffix}`;
-  }
-  return `${L(`${diffMin}m ago`, `${diffMin}분 전 갱신`)}  ·  ${suffix}`;
+  return `${formatUsageCacheAge(fetchedAt, now)}  ·  ${suffix}`;
 }
 
 function describeUsage(usage: CodexUsageData): string {
@@ -108,8 +104,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   if (!usage || getCodexUsageRows(usage).length === 0) {
     await interaction.editReply({
       content: L(
-        "Could not fetch Codex usage data. Make sure `codex login status` shows a logged-in account.",
-        "Codex 사용량 정보를 가져오지 못했습니다. `codex login status`에서 로그인된 계정을 확인하세요.",
+        "Codex usage unavailable: app-server did not return usable data and the local cache is missing or unreadable. Check `codex login status`, then try Refresh Usage again.",
+        "Codex 사용량 정보를 가져오지 못했습니다. app-server 응답이나 로컬 캐시를 사용할 수 없습니다. `codex login status`를 확인한 뒤 다시 시도하세요.",
       ),
     });
     return;

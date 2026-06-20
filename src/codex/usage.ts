@@ -133,25 +133,44 @@ export function saveCodexUsageCache(usage: CodexUsageData, fetchedAt = Date.now(
   fs.writeFileSync(cachePath, JSON.stringify({ fetchedAt, usage }));
 }
 
+export function normalizeCodexUsageCachePayload(value: unknown): CachedCodexUsage | null {
+  if (!isObject(value)) return null;
+
+  const fetchedAt = normalizeFetchedAt(value.fetchedAt);
+  if (fetchedAt === null || !value.usage || !isObject(value.usage)) {
+    return null;
+  }
+
+  const usage = readUsageData(value.usage);
+  if (!usage) return null;
+
+  return {
+    fetchedAt,
+    usage,
+  };
+}
+
 export function loadCodexUsageCache(): CachedCodexUsage | null {
   try {
     const raw = fs.readFileSync(usageCachePath(), "utf-8");
-    const parsed = JSON.parse(raw) as { fetchedAt?: unknown; usage?: unknown };
-    const fetchedAt = normalizeFetchedAt(parsed.fetchedAt);
-    if (fetchedAt === null || !parsed.usage || !isObject(parsed.usage)) {
-      return null;
-    }
-
-    const usage = readUsageData(parsed.usage);
-    if (!usage) return null;
-
-    return {
-      fetchedAt,
-      usage,
-    };
+    return normalizeCodexUsageCachePayload(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+export function formatUsageCacheAge(fetchedAt: number | null, now = Date.now()): string {
+  if (!fetchedAt) return "cache missing";
+
+  const diffMs = Math.max(0, now - fetchedAt);
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 48) return `${diffHours}h ago`;
+
+  return `${Math.floor(diffHours / 24)}d ago`;
 }
 
 export function getCodexUsageRows(usage: CodexUsageData): Array<{ bucketTitle: string | null; window: CodexRateLimitWindow }> {

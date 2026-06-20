@@ -11,13 +11,15 @@ Status: active
 - Fazon 3 macOS menubar adaptacio elindult: `menubar/CodexBotMenu.swift` Attys brandinggel, read-only update modellel, `mac-start.sh`/launchd contracttal.
 - Fazon 3 macOS menubar lezarva es pusholva (`085c795`).
 - Fazon 4 Discord attachment/message prompt parity elindult: `DISCORD_ENABLE_ATTACHMENT_MESSAGES` flag, doctor/help/docs, normal text+attachment message flow.
+- Fazon 4 attachment/message prompt parity lezarva es pusholva (`40f2ce4`).
+- Fazon 5 usage/cache canonical helper frissites elindult: cache payload normalizalas, cache age formatting, pontosabb unavailable allapot.
 
 ## Nyitott reszek
 
-- Fazon 4 teljes validacio, commit es push.
+- Fazon 5 teljes validacio, commit es push.
 - Linux tray/control panel GUI runtime smoke tenyleges Linux desktop hoston kesobb platformtesztet igenyelhet.
 - macOS menubar Swift build/runtime smoke tenyleges macOS hoston kesobb platformtesztet igenyelhet.
-- Fazon 5-8 meg nincs implementalva.
+- Fazon 6-8 meg nincs implementalva.
 
 ## Cel
 

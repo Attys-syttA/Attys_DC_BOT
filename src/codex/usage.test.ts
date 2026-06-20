@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { getCodexUsageRows, getUsagePercentLeft, normalizeCodexUsage } from "./usage.js";
+import {
+  formatUsageCacheAge,
+  getCodexUsageRows,
+  getUsagePercentLeft,
+  normalizeCodexUsage,
+  normalizeCodexUsageCachePayload,
+} from "./usage.js";
 
 describe("codex usage helpers", () => {
   it("normalizes the codex rate limit snapshot", () => {
@@ -62,5 +68,29 @@ describe("codex usage helpers", () => {
     expect(getUsagePercentLeft({ usedPercent: 35 })).toBe(65);
     expect(getUsagePercentLeft({ usedPercent: 140 })).toBe(0);
     expect(getUsagePercentLeft({ usedPercent: -20 })).toBe(100);
+  });
+
+  it("normalizes valid cache payloads and rejects broken cache payloads", () => {
+    const payload = normalizeCodexUsageCachePayload({
+      fetchedAt: 1_700_000_000,
+      usage: {
+        planType: "pro",
+        buckets: [{ title: "Codex", primary: { usedPercent: 10 } }],
+      },
+    });
+
+    expect(payload?.fetchedAt).toBe(1_700_000_000_000);
+    expect(payload?.usage.buckets[0].primary?.usedPercent).toBe(10);
+    expect(normalizeCodexUsageCachePayload({ fetchedAt: "bad", usage: {} })).toBeNull();
+    expect(normalizeCodexUsageCachePayload({ fetchedAt: Date.now(), usage: { buckets: [] } })).toBeNull();
+  });
+
+  it("formats usage cache ages without exposing local paths", () => {
+    const now = 1_700_000_000_000;
+    expect(formatUsageCacheAge(null, now)).toBe("cache missing");
+    expect(formatUsageCacheAge(now - 5_000, now)).toBe("just now");
+    expect(formatUsageCacheAge(now - 10 * 60_000, now)).toBe("10m ago");
+    expect(formatUsageCacheAge(now - 3 * 60 * 60_000, now)).toBe("3h ago");
+    expect(formatUsageCacheAge(now - 3 * 24 * 60 * 60_000, now)).toBe("3d ago");
   });
 });

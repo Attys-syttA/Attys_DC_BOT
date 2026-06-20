@@ -77,7 +77,7 @@ describe("/usage", () => {
     await execute(interaction as never);
 
     expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Could not fetch Codex usage data. Make sure `codex login status` shows a logged-in account.",
+      content: "Codex usage unavailable: app-server did not return usable data and the local cache is missing or unreadable. Check `codex login status`, then try Refresh Usage again.",
     });
   });
 });
