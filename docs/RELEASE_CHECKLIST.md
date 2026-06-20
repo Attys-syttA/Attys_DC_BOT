@@ -16,6 +16,7 @@ Expected:
 - local and `origin/main` are synced before tagging
 - `.env` stays local and ignored
 - no runtime database, logs, generated executables, or Codex auth state are staged
+- `docs/SOURCE_PARITY_MATRIX.md` reflects the current source-parity status
 
 ## Validation
 

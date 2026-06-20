@@ -17,13 +17,18 @@ Status: active
 - Fazon 6 public docs/assets closeout elindult: Linux/macOS public-safe SVG illusztraciok, README/SETUP/RELEASE_CHECKLIST platform frissites.
 - Fazon 6 public docs/assets closeout lezarva es pusholva (`dd394ac`).
 - Fazon 7 safe update lifecycle elindult: `safe-update:status`, `safe-update:apply`, git-state helper es tests.
+- Fazon 7 safe update lifecycle lezarva es pusholva (`f8f047c`).
+- Fazon 8 local acceptance elindult: source parity matrix, lokalis validation/smoke futtatas.
+- Fazon 8 local validation kesz: `npm run check`, `git diff --check`, shell syntax, Python compile, `npm run safe-update:status`, secret scan zold.
+- Windows launcher smoke kesz: `--status`, start, `--status`, `--stop`, final `--status`; a bot leallt. Megjegyzes: tray exe rebuild kozben `CS0016` lock hiba volt, mert a tray binaryt mas folyamat fogta, de a bot launcher smoke sikeresen lefutott.
+- Source parity matrix elkeszult: `docs/SOURCE_PARITY_MATRIX.md`.
 
 ## Nyitott reszek
 
-- Fazon 7 teljes validacio, commit es push.
+- Fazon 8 local validation/source parity matrix commit es push.
 - Linux tray/control panel GUI runtime smoke tenyleges Linux desktop hoston kesobb platformtesztet igenyelhet.
 - macOS menubar Swift build/runtime smoke tenyleges macOS hoston kesobb platformtesztet igenyelhet.
-- Fazon 8 meg nincs implementalva.
+- iPad/mobile Discord file handoff es live Discord command smoke emberi acceptance-et igenyel.
 
 ## Cel
 

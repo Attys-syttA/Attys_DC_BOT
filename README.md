@@ -10,6 +10,7 @@ This project follows the local-first direction of [chadingTV/codex-discord](http
 
 > Setup guide: [SETUP.md](SETUP.md)<br>
 > Public support notes: [docs/PUBLIC_SUPPORT.md](docs/PUBLIC_SUPPORT.md)<br>
+> Source parity matrix: [docs/SOURCE_PARITY_MATRIX.md](docs/SOURCE_PARITY_MATRIX.md)<br>
 > Release checklist: [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 
 ## What This Project Is
