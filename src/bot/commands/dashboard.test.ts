@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   getQueueSize: vi.fn(),
   getOperatorRuntimeSnapshot: vi.fn(),
   resolveCodexCommand: vi.fn(),
+  readOperatorEvents: vi.fn(),
+  describeOperatorEventLine: vi.fn(),
 }));
 
 vi.mock("../../db/database.js", () => ({
@@ -24,6 +26,11 @@ vi.mock("../../codex/session-manager.js", () => ({
 
 vi.mock("../../codex/command-resolver.js", () => ({
   resolveCodexCommand: mocks.resolveCodexCommand,
+}));
+
+vi.mock("../operator-events.js", () => ({
+  readOperatorEvents: mocks.readOperatorEvents,
+  describeOperatorEventLine: mocks.describeOperatorEventLine,
 }));
 
 import { execute } from "./dashboard.js";
@@ -49,6 +56,8 @@ describe("/dashboard", () => {
       pendingQueuePrompt: false,
       queueSize: 0,
     });
+    mocks.readOperatorEvents.mockReturnValue([]);
+    mocks.describeOperatorEventLine.mockImplementation((line: string) => line.replace(/^timestamp /, ""));
   });
 
   it("prompts unregistered channels to register first", async () => {
@@ -86,7 +95,29 @@ describe("/dashboard", () => {
     expect(fields[2].value).toContain("Queue: **2**");
     expect(fields[2].value).toContain("Pending operator action: **none**");
     expect(fields[2].value).toContain("`codex.cmd`");
+    expect(fields[3].name).toBe("Recent operator events");
+    expect(fields[3].value).toBe("none");
     expect(payload.components).toHaveLength(1);
+  });
+
+  it("shows recent public-safe operator events newest first", async () => {
+    mocks.getProject.mockReturnValue({
+      channel_id: "channel-1",
+      project_path: "/projects/app",
+      auto_approve: 0,
+    });
+    mocks.getSession.mockReturnValue(undefined);
+    mocks.readOperatorEvents.mockReturnValue([
+      "timestamp lifecycle session-new",
+      "timestamp task completed",
+    ]);
+    const interaction = makeInteraction();
+
+    await execute(interaction as never);
+
+    const payload = interaction.editReply.mock.calls[0][0];
+    const fields = payload.embeds[0].data.fields;
+    expect(fields[3].value).toBe("- task completed\n- lifecycle session-new");
   });
 
   it("shows pending Codex user-input state", async () => {

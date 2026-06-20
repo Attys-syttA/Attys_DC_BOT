@@ -81,3 +81,4 @@
 - Error public-safety: a path-validacio es Codex thread/turn start hibak Discord elott maszkolt, path-mentes uzenetre szukulnek.
 - User-input and queue preview safety: a Codex kerdeskartyak, queue preview-k es `/ask` Discord prompt preview-k public-safe sanitizerrel jelennek meg.
 - Operator lifecycle events: a session stop/new/delete, queue add/clear/remove, mapping remove es Discordbol inditott bot restart public-safe eventkent bekerul az `/events` timeline-ba.
+- Operator visibility rollup: a `/dashboard` friss operator eventeket, a `/status` runtime/queue/pending allapotot, a `/health` pedig latest operator event sort mutat public-safe modon.

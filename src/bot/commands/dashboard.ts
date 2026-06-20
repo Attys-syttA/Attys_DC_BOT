@@ -12,6 +12,7 @@ import { resolveCodexCommand } from "../../codex/command-resolver.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 import { readOperatorStartupLog } from "./tools.js";
+import { describeOperatorEventLine, readOperatorEvents } from "../operator-events.js";
 
 export const data = new SlashCommandBuilder()
   .setName("dashboard")
@@ -47,6 +48,9 @@ export async function execute(
   const operatorToolsStatus = operatorToolsLog.length > 0
     ? operatorToolsLog[0].replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\s+/, "")
     : "no local tools preflight yet";
+  const recentEvents = readOperatorEvents(process.cwd(), 3)
+    .map(describeOperatorEventLine)
+    .reverse();
 
   const embed = new EmbedBuilder()
     .setTitle(L("Local Codex Dashboard", "로컬 Codex 대시보드"))
@@ -77,6 +81,13 @@ export async function execute(
           `${L("Codex command", "Codex 명령")}: \`${codexCommand}\``,
           `${L("Operator tools", "Operator tools")}: **${operatorToolsStatus}**`,
         ].join("\n"),
+        inline: false,
+      },
+      {
+        name: L("Recent operator events", "최근 operator 이벤트"),
+        value: recentEvents.length > 0
+          ? recentEvents.map((line) => `- ${line}`).join("\n")
+          : "none",
         inline: false,
       },
     );

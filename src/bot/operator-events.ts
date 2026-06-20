@@ -85,6 +85,11 @@ export function readOperatorEvents(
   }
 }
 
+export function describeOperatorEventLine(line: string): string {
+  if (!EVENT_LINE_PATTERN.test(line)) return "unknown";
+  return line.replace(/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z /, "");
+}
+
 export function summarizeOperatorEvents(lines: string[]): OperatorEventSummary {
   const byKind = Object.fromEntries(EVENT_KINDS.map((kind) => [kind, 0])) as Record<OperatorEventKind, number>;
   const byStatus: Record<string, number> = {};

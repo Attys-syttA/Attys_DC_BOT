@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   formatOperatorEvent,
   readOperatorEvents,
+  describeOperatorEventLine,
   recordOperatorEvent,
   summarizeOperatorEvents,
 } from "./operator-events.js";
@@ -95,6 +96,12 @@ describe("operator events", () => {
     expect(readOperatorEvents(dir, 10, "lifecycle", "queue")).toEqual([
       expect.stringContaining("lifecycle queue-clear"),
     ]);
+  });
+
+  it("describes public-safe event lines without timestamps", () => {
+    expect(describeOperatorEventLine("2026-06-20T18:40:00.000Z lifecycle session-new channel=<#123456789012345678>"))
+      .toBe("lifecycle session-new channel=<#123456789012345678>");
+    expect(describeOperatorEventLine("private path C:\\Users\\someone")).toBe("unknown");
   });
 
   it("summarizes event lines without private details", () => {

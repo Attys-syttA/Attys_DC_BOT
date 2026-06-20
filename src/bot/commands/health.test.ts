@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   runLocalCommand: vi.fn(),
   readOperatorStartupLog: vi.fn(),
   operatorToolsStatusFromLog: vi.fn(),
+  readOperatorEvents: vi.fn(),
+  describeOperatorEventLine: vi.fn(),
 }));
 
 vi.mock("node:fs", () => ({
@@ -27,6 +29,11 @@ vi.mock("./local-command.js", () => ({
 vi.mock("./tools.js", () => ({
   readOperatorStartupLog: mocks.readOperatorStartupLog,
   operatorToolsStatusFromLog: mocks.operatorToolsStatusFromLog,
+}));
+
+vi.mock("../operator-events.js", () => ({
+  readOperatorEvents: mocks.readOperatorEvents,
+  describeOperatorEventLine: mocks.describeOperatorEventLine,
 }));
 
 import { buildHealthReport, formatHealthAge, parseAheadBehind } from "./health.js";
@@ -53,6 +60,8 @@ describe("/health report", () => {
     mocks.loadCodexUsageCache.mockReturnValue({ fetchedAt: Date.now(), usage: { buckets: [] } });
     mocks.readOperatorStartupLog.mockReturnValue(["2026-06-20T18:00:00 OK: operator tools preflight completed."]);
     mocks.operatorToolsStatusFromLog.mockReturnValue("ready");
+    mocks.readOperatorEvents.mockReturnValue(["2026-06-20T18:00:00.000Z lifecycle session-new channel=<#12345>"]);
+    mocks.describeOperatorEventLine.mockReturnValue("lifecycle session-new channel=<#12345>");
     mocks.runLocalCommand
       .mockResolvedValueOnce({ exitCode: 0, timedOut: false, output: "main\n" })
       .mockResolvedValueOnce({ exitCode: 0, timedOut: false, output: "" })
@@ -68,6 +77,7 @@ describe("/health report", () => {
     expect(report).toContain("OK slash command surface:");
     expect(report).toContain("OK bot error log: empty");
     expect(report).toContain("OK operator tools: ready");
+    expect(report).toContain("INFO latest operator event: lifecycle session-new channel=<#12345>");
     expect(report).toContain("OK Codex usage cache");
     expect(report).toContain("OK bot repo branch: main");
     expect(report).toContain("OK bot repo sync: origin/main parity");
@@ -79,6 +89,7 @@ describe("/health report", () => {
     mocks.statSync.mockReturnValue({ size: 128 });
     mocks.loadCodexUsageCache.mockReturnValue(null);
     mocks.operatorToolsStatusFromLog.mockReturnValue("failed");
+    mocks.readOperatorEvents.mockReturnValue([]);
     mocks.runLocalCommand
       .mockReset()
       .mockResolvedValueOnce({ exitCode: 0, timedOut: false, output: "feature/test\n" })
@@ -89,6 +100,7 @@ describe("/health report", () => {
 
     expect(report).toContain("INFO bot error log: has content");
     expect(report).toContain("FAIL operator tools: failed");
+    expect(report).toContain("INFO latest operator event: none");
     expect(report).toContain("INFO Codex usage cache: missing or unreadable");
     expect(report).toContain("INFO bot repo sync: upstream count unavailable");
     expect(report).toContain("INFO bot repo worktree: local changes present");

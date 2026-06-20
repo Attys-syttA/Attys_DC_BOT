@@ -8,6 +8,7 @@ import { loadCodexUsageCache } from "../../codex/usage.js";
 import { runLocalCommand } from "./local-command.js";
 import { operatorToolsStatusFromLog, readOperatorStartupLog } from "./tools.js";
 import { HELP_ENTRIES } from "./help-data.js";
+import { describeOperatorEventLine, readOperatorEvents } from "../operator-events.js";
 
 type HealthLineLevel = "OK" | "INFO" | "FAIL";
 
@@ -111,6 +112,13 @@ function operatorToolsHealthLine(repoRoot: string): string {
   return healthLine("INFO", "operator tools", status);
 }
 
+function latestOperatorEventLine(repoRoot: string): string {
+  const latest = readOperatorEvents(repoRoot, 1)[0];
+  return latest
+    ? healthLine("INFO", "latest operator event", describeOperatorEventLine(latest))
+    : healthLine("INFO", "latest operator event", "none");
+}
+
 export async function buildHealthReport(repoRoot: string): Promise<string> {
   const uptimeSec = Math.max(0, Math.floor(process.uptime()));
   const lines = [
@@ -120,6 +128,7 @@ export async function buildHealthReport(repoRoot: string): Promise<string> {
     healthLine("OK", "node runtime", process.version),
     botLogHealthLine(repoRoot),
     operatorToolsHealthLine(repoRoot),
+    latestOperatorEventLine(repoRoot),
     usageHealthLine(),
     ...(await gitHealthLines(repoRoot)),
   ];
