@@ -2,11 +2,11 @@
 
 ## Current Status
 
-- Date: 2026-06-17
+- Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: local-first redesign bootstrap
-- Git state: local folder was not a git repository at redesign start
+- Phase: local-first baseline accepted
+- Git state: local `main` tracks `origin/main`; current changes are documentation closeout only
 
 ## Current Goal
 
@@ -57,6 +57,6 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 
 ## Open Work
 
-1. Decide whether to remove the remaining legacy forum/thread mappings through `/mappings` cleanup buttons.
-2. Continue operator UX improvements under `docs/codex-tasks/plans/pending/active/ujratervezes.md`.
-3. Move `ujratervezes.md` to `done` only after the current local-first control-center baseline is accepted as complete.
+1. Start the next operator UX / future-work plan after baseline closeout.
+2. Keep using `/mappings` and `/doctor` for future legacy mapping drift checks; no duplicate mapping group was present during the 2026-06-20 audit.
+3. Treat `docs/codex-tasks/plans/done/ujratervezes.md` as the accepted local-first redesign baseline record.

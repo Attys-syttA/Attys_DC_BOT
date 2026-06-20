@@ -34,3 +34,12 @@
 - Plan hygiene: a local-first redesign reszterv `done` ala kerult; az aktiv `ujratervezes.md` geppel ellenorizheto elkeszult/nyitott allapotblokkot kapott.
 - Plan check gate: az `npm run check` es a GitHub CI is futtatja a `plans:check` ellenorzest az aktiv tervfajlokra.
 - Mapping cleanup safety: a `/mappings` Remove gombokat csak a nem aktualis duplikalt mappingekre ad, az aktualis munkacsatornat `current` jelolessel mutatja.
+
+## 2026-06-20
+
+- Baseline acceptance: a user elfogadta, hogy az `Attys_DC_BOT` local-first mukodesi baseline kesz.
+- Plan closeout: az `ujratervezes.md` terv `docs/codex-tasks/plans/pending/active/` alol `docs/codex-tasks/plans/done/` ala kerult.
+- Audit eredmeny: a lokalis SQLite mapping auditban 4 project mapping volt es `DUPLICATE_GROUPS=0`, ezert nem kellett legacy forum/thread mapping torlesi dontes.
+- Operator UX baseline: a Discord guildben pontosan a canonical 19 slash command volt regisztralva, hianyzo vagy extra parancs nelkul.
+- Validacio: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run check`, `git diff --check`, es `ggshield secret scan path --recursive --yes --use-gitignore .` sikeresen lefutott.
+- Kovetkezo irany: uj future-work terv kidolgozasa a baseline-ra epulo operator UX vagy tovabbi kenyelmi fejlesztesekhez.
