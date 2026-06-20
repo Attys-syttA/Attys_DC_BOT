@@ -2,11 +2,13 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
   TextChannel,
+  type Attachment,
 } from "discord.js";
 import { getProject } from "../../db/database.js";
 import { checkRateLimit } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { L } from "../../utils/i18n.js";
+import { buildAttachmentPromptSuffix, downloadAttachment } from "../attachments.js";
 
 export const data = new SlashCommandBuilder()
   .setName("ask")
@@ -16,6 +18,12 @@ export const data = new SlashCommandBuilder()
       .setName("prompt")
       .setDescription("Prompt for local Codex")
       .setRequired(true),
+  )
+  .addAttachmentOption((opt) =>
+    opt
+      .setName("file")
+      .setDescription("Optional image or file for Codex to inspect")
+      .setRequired(false),
   );
 
 function formatPromptForDiscord(prompt: string): string {
@@ -52,13 +60,27 @@ export async function execute(
     return;
   }
 
+  const attachment = interaction.options.getAttachment("file", false);
+  let finalPrompt = prompt;
+  const attachmentNotes: string[] = [];
+  if (attachment) {
+    const result = await downloadAttachment(attachment as Attachment, project.project_path);
+    if ("skipped" in result) {
+      attachmentNotes.push(result.skipped);
+    } else {
+      finalPrompt += buildAttachmentPromptSuffix([result]);
+      attachmentNotes.push(`Attachment saved for Codex: \`${result.safeName}\``);
+    }
+  }
+
   await interaction.editReply({
     content: [
       L("Prompt sent to local Codex.", "로컬 Codex로 프롬프트를 보냈습니다."),
+      ...attachmentNotes,
       "```text",
       formatPromptForDiscord(prompt),
       "```",
     ].join("\n"),
   });
-  await sessionManager.sendMessage(interaction.channel as TextChannel, prompt);
+  await sessionManager.sendMessage(interaction.channel as TextChannel, finalPrompt);
 }

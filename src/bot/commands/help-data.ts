@@ -10,11 +10,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "ask",
     category: "codex",
-    usage: "/ask prompt: <szoveg>",
-    short: "Promptot kuld a csatornahoz rendelt helyi Codex sessionbe.",
+    usage: "/ask prompt: <szoveg> file: <opcionalis>",
+    short: "Promptot es opcionális fajlt kuld a csatornahoz rendelt helyi Codex sessionbe.",
     details: [
       "A megadott promptot a regisztralt local project Codex sessionje kapja meg.",
       "A bot visszairja a prompt szoveget, hogy kesobb latszodjon, mire erkezett a valasz.",
+      "A `file` attachmentet a project `.codex-uploads` mappajaba menti, de a Discord valasz nem ir ki lokalis pathot.",
       "Ha mar fut egy feladat, a bot sorba tudja allitani a kovetkezo promptot.",
     ],
   },

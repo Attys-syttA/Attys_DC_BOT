@@ -3,73 +3,14 @@ import { getProject } from "../../db/database.js";
 import { isAllowedPrincipal, checkRateLimit } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { getConfig } from "../../utils/config.js";
-import fs from "node:fs";
-import path from "node:path";
-import { pipeline } from "node:stream/promises";
-import { Readable } from "node:stream";
 import { L } from "../../utils/i18n.js";
-
-const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
-const BLOCKED_EXTENSIONS = new Set([
-  ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".pif",
-  ".dll", ".sys", ".drv",
-  ".vbs", ".vbe", ".wsf", ".wsh",
-]);
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+import { buildAttachmentPromptSuffix, downloadAttachment, safeAttachmentFileName } from "../attachments.js";
 
 function messageRoleIds(message: Message): string[] {
   return message.member ? [...message.member.roles.cache.keys()] : [];
 }
 
-export function safeAttachmentFileName(name: string | null | undefined): string {
-  const baseName = (name ?? "attachment").split(/[\\/]+/).pop() ?? "attachment";
-  const cleaned = baseName
-    .replace(/[\x00-\x1f<>:"/\\|?*]+/g, "_")
-    .replace(/\s+/g, "_")
-    .replace(/^\.+/, "")
-    .slice(0, 120);
-  return cleaned || "attachment";
-}
-
-async function downloadAttachment(
-  attachment: Attachment,
-  projectPath: string,
-): Promise<{ filePath: string; isImage: boolean } | { skipped: string } | null> {
-  const safeName = safeAttachmentFileName(attachment.name);
-  const ext = path.extname(safeName).toLowerCase();
-
-  if (BLOCKED_EXTENSIONS.has(ext)) {
-    return { skipped: L(`Blocked: \`${safeName}\` (dangerous file type)`, `차단됨: \`${safeName}\` (위험한 파일 형식)`) };
-  }
-
-  if (attachment.size > MAX_FILE_SIZE) {
-    const sizeMB = (attachment.size / 1024 / 1024).toFixed(1);
-    return { skipped: L(`Skipped: \`${safeName}\` (${sizeMB}MB exceeds 25MB limit)`, `건너뜀: \`${safeName}\` (${sizeMB}MB, 25MB 제한 초과)`) };
-  }
-
-  const uploadDir = path.join(projectPath, ".codex-uploads");
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-
-  const fileName = `${Date.now()}-${safeName}`;
-  const filePath = path.join(uploadDir, fileName);
-
-  try {
-    const response = await fetch(attachment.url);
-    if (!response.ok || !response.body) {
-      return { skipped: L(`Failed to download: \`${attachment.name}\``, `다운로드 실패: \`${attachment.name}\``) };
-    }
-
-    const fileStream = fs.createWriteStream(filePath);
-    await pipeline(Readable.fromWeb(response.body as never), fileStream);
-  } catch (e) {
-    console.warn(`[download] Failed to download attachment ${attachment.name}:`, e instanceof Error ? e.message : e);
-    return { skipped: L(`Failed to download: \`${attachment.name}\``, `다운로드 실패: \`${attachment.name}\``) };
-  }
-
-  return { filePath, isImage: IMAGE_EXTENSIONS.has(ext) };
-}
+export { safeAttachmentFileName };
 
 export async function handleMessage(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
@@ -99,34 +40,23 @@ export async function handleMessage(message: Message): Promise<void> {
   if (!getConfig().DISCORD_ENABLE_MESSAGE_PROMPTS) return;
 
   let prompt = message.content.trim();
-  const imagePaths: string[] = [];
-  const filePaths: string[] = [];
+  const downloadedAttachments: Array<{ filePath: string; isImage: boolean; safeName: string }> = [];
   const skippedMessages: string[] = [];
 
   for (const [, attachment] of message.attachments) {
-    const result = await downloadAttachment(attachment, project.project_path);
-    if (!result) continue;
+    const result = await downloadAttachment(attachment as Attachment, project.project_path);
     if ("skipped" in result) {
       skippedMessages.push(result.skipped);
       continue;
     }
-    if (result.isImage) {
-      imagePaths.push(result.filePath);
-    } else {
-      filePaths.push(result.filePath);
-    }
+    downloadedAttachments.push(result);
   }
 
   if (skippedMessages.length > 0) {
     await message.reply(skippedMessages.join("\n"));
   }
 
-  if (imagePaths.length > 0) {
-    prompt += `\n\n[Attached images - inspect these local files]\n${imagePaths.join("\n")}`;
-  }
-  if (filePaths.length > 0) {
-    prompt += `\n\n[Attached files - inspect these local files]\n${filePaths.join("\n")}`;
-  }
+  prompt += buildAttachmentPromptSuffix(downloadedAttachments);
 
   if (!prompt) return;
 

@@ -70,6 +70,7 @@ Confirm the panel shows:
 - `/logs` reads only allowlisted bot log files and scrubs local paths, raw IDs, IPs, and secret-looking fragments before Discord output
 - `/bot status` is read-only, and `/bot restart` stays gated behind `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/help` and `/sugo` list commands by category so the full operator surface stays discoverable
+- `/ask file:` saves one slash attachment for Codex without echoing the local saved path to Discord
 
 `Safe Update` must stay guarded:
 

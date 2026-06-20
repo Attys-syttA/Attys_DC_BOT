@@ -33,7 +33,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("Kezdeshez: `/dashboard`, `/health`, `/sessions`, `/events`, `/logs`.");
     expect(content).toContain("**Codex work**");
     expect(content).toContain("**Operator diagnostics**");
-    expect(content).toContain("`/ask` - Promptot kuld");
+    expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Reszletes sugo: `/help parancs: ask`");
   });
@@ -46,7 +46,7 @@ describe("/help and /sugo", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("**/ask**");
     expect(content).toContain("Kategoria: Codex work");
-    expect(content).toContain("Hasznalat: `/ask prompt: <szoveg>`");
+    expect(content).toContain("Hasznalat: `/ask prompt: <szoveg> file: <opcionalis>`");
     expect(content).toContain("A megadott promptot");
   });
 

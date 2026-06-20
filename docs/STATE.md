@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: help discoverability in progress
-- Git state: local `main` tracks `origin/main`; categorized help prepared for validation
+- Phase: slash attachment parity in progress
+- Git state: local `main` tracks `origin/main`; slash attachment support prepared for validation
 
 ## Current Goal
 
@@ -75,6 +75,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added `/logs` for scrubbed Discord-side tails of allowlisted local bot logs while operating away from the Windows desktop.
 - Added `/bot status|restart`, with restart gated behind `DISCORD_ENABLE_BOT_LIFECYCLE=true`.
 - Grouped `/help` and `/sugo` list output into operator-friendly command categories.
+- Extended `/ask` with one optional `file` attachment using the shared attachment sanitize/download helper.
 
 ## Open Work
 

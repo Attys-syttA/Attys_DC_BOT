@@ -155,14 +155,14 @@ npm run dev
 
 1. In a Discord channel, run `/register`.
 2. Select or type a folder under `BASE_PROJECT_DIR`.
-3. Send a normal message or use the available slash commands.
+3. Send a normal message or use the available slash commands; `/ask` can include one optional file or image.
 4. Use `/dashboard`, `/sessions`, `/last`, `/queue list`, and `/stop` to inspect or control the local Codex work.
 5. Use `/dashboard` to see whether Codex is waiting for approval, a question answer, custom input, or queue confirmation.
 6. Use `/doctor` if the bot starts but Codex or channel routing does not behave as expected.
 
 Optional local commands:
 
-- `/ask` gives a slash-command prompt path in addition to normal messages.
+- `/ask` gives a slash-command prompt path in addition to normal messages and can include one `file` attachment.
 - `/git-status` reports the registered local project's git state.
 - `/bot status` checks the Windows launcher status from Discord.
 - `/bot restart` restarts the local bot only when `DISCORD_ENABLE_BOT_LIFECYCLE=true`.

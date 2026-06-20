@@ -134,7 +134,7 @@ When the sibling `codex-ai-tools-mcp-link` repository is present next to this re
 - `/run-tests`: run `npm test` in the registered local project when `DISCORD_ENABLE_RUN_TESTS=true`
 - `/tools`: run or inspect the VS Code-free local operator tools preflight
 - `/usage`: show local Codex account usage when the app-server exposes rate limits
-- `/ask <prompt>`: send an explicit prompt to the registered local Codex session
+- `/ask <prompt> [file]`: send an explicit prompt and optional file/image attachment to the registered local Codex session
 - `/auto-approve`: toggle approval bypass for the current channel when `DISCORD_ENABLE_AUTO_APPROVE=true`
 
 ## Configuration
@@ -171,6 +171,7 @@ The tray settings editor writes only the local ignored `.env` file. Keep real va
 - access is limited to `ALLOWED_USER_IDS`
 - project registration is restricted to `BASE_PROJECT_DIR`
 - executable attachment types are blocked
+- slash `/ask` attachments are saved under project-local `.codex-uploads/` and local paths are not echoed back to Discord
 - runtime SQLite and upload state are ignored
 - no custom HTTP execution server is opened by this project
 - no network-share or portable-drive workflow is part of the target architecture
