@@ -5,12 +5,21 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: slash command registration doctor complete
-- Git state: local `main` tracks `origin/main`; live slash command registration diagnostics prepared for validation
+- Phase: cross-platform source parity implementation locally complete; waiting for external platform acceptance
+- Git state: local `main` tracks `origin/main`; last verified synced at `8cccd82`
+- Active plan: `docs/codex-tasks/plans/pending/active/cross-platform-source-parity-and-beyond.md`
 
 ## Current Goal
 
-Build a clean Windows local-first Discord bot that controls local Codex CLI sessions on the same machine, without remote execution architecture.
+Finish the cross-platform source-parity closeout without weakening the local-first safety model. The implementation work is complete locally; the next step is human/platform acceptance for Linux desktop tray, macOS menu bar, and iPad/mobile Discord file handoff.
+
+## Current Cross-Platform Parity Status
+
+- Implemented and pushed through `8cccd82`: Linux/macOS launchers, Linux Python tray/control panel, macOS Swift menu bar source, opt-in normal text+attachment message flow, canonical usage cache helpers, public-safe cross-platform docs/assets, cross-platform `safe-update:status/apply`, and `docs/SOURCE_PARITY_MATRIX.md`.
+- Local validation passed: `npm run check`, `git diff --check`, shell syntax checks for `install.sh`, `linux-start.sh`, `mac-start.sh`, Python compile for Linux tray/panel, `npm run safe-update:status`, `npm run secret:scan`, and Windows launcher smoke.
+- Windows launcher smoke result: bot status/start/status/stop/status completed and final state was `Stopped`. Non-blocking note: tray rebuild reported `CS0016` because `tray/CodexBotTray.exe` was locked by another process, but the bot lifecycle smoke completed.
+- Known blocker before moving the active plan to `done`: real platform acceptance is still needed for Linux desktop tray/control panel, macOS `swiftc` menu bar build/runtime, and iPad/mobile Discord file handoff.
+- Practical next step: test Linux under WSL2/WSLg or a Linux VM; test macOS via a real Mac or macOS CI build for compile-only evidence; test iPad/mobile directly in Discord against the live bot/server.
 
 ## Audit Summary
 

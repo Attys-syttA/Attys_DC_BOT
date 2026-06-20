@@ -29,6 +29,17 @@ Status: active
 - Linux tray/control panel GUI runtime smoke tenyleges Linux desktop hoston kesobb platformtesztet igenyelhet.
 - macOS menubar Swift build/runtime smoke tenyleges macOS hoston kesobb platformtesztet igenyelhet.
 - iPad/mobile Discord file handoff es live Discord command smoke emberi acceptance-et igenyel.
+- Linux acceptance Windowsrol realisan WSL2/WSLg vagy Linux VM alatt kozelitheto:
+  - headless/script smoke: WSL2 Ubuntu;
+  - GUI tray/control panel smoke: WSLg vagy teljes Linux VM;
+  - Docker csak headless build/testre eleg, tray desktop smoke-ra nem.
+- macOS acceptance Windows sandboxban nem realis/jogtiszta cel:
+  - Swift compile bizonyitekhez macOS GitHub Actions runner vagy remote Mac hasznalhato;
+  - menu bar runtime smokehoz valodi macOS desktop kell.
+- Kovetkezo konkret lepes:
+  1. Linux smoke dontes: WSL2/WSLg vagy Linux VM legyen-e a helyi acceptance kornyezet.
+  2. macOS smoke dontes: macOS CI compile-only eleg-e ideiglenesen, vagy kell valodi Mac runtime smoke.
+  3. iPad/mobile smoke: live Discordon `Send to Codex` file handoff modalos prompttal, majd `/last`, `/events`, `/logs`, `/usage`.
 
 ## Cel
 

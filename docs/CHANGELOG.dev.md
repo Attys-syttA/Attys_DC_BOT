@@ -78,6 +78,16 @@
 - Approval public-safety: a Codex approval kartyak es failed turn uzenetek kozos sanitizerrel maszkoljak a privat pathokat, raw ID-kat es secret-szeru ertekeket.
 - Project path display safety: a fo Discord operator parancsok a teljes lokalis project path helyett public-safe `<local-path>/nev` cimket mutatnak.
 - Register/mapping path metadata safety: a `/register` command metadata, autocomplete base label, `/mappings` es `/clear-sessions` kimenet sem ir teljes lokalis pathot Discordra.
+- Cross-platform launcher parity: bekerult az `install.sh`, `linux-start.sh`, es `mac-start.sh`; a Linux launcher `systemd --user` mellett `nohup` fallbacket is tud, a macOS launcher pedig `launchd` alapra epul.
+- Linux desktop parity: bekerult a source-derived, Attys-branded `tray/codex_tray.py` es `tray/codex_control_panel.py`; Start/Stop/Restart a `linux-start.sh` contracton megy, update action read-only marad.
+- macOS desktop parity: bekerult a source-derived, Attys-branded `menubar/CodexBotMenu.swift`; a menu bar app `mac-start.sh`/launchd contractot hasznal, usage/status/settings/log/folder felulettel, destruktiv auto-update nelkul.
+- Discord attachment parity: bekerult a default-off `DISCORD_ENABLE_ATTACHMENT_MESSAGES`; normal text+attachment message flow csak opt-in modban indul, prompt nelkuli attachmentnel a bot guidance-t ad a `Send to Codex` vagy `/ask` utra.
+- Usage hardening: a canonical usage helper normalizalja a live es cache payloadot, formatalt cache age-et ad, es public-safe unavailable uzeneteket hasznal.
+- Public docs closeout: README/SETUP/RELEASE_CHECKLIST frissult Windows/Linux/macOS host hasznalatra, bekerult public-safe Linux es macOS SVG illusztracio, valamint `docs/SOURCE_PARITY_MATRIX.md`.
+- Safe update parity: bekerult a cross-platform `npm run safe-update:status` es `npm run safe-update:apply`; clean-only, behind-only, `git pull --ff-only`, package file valtozasnal `npm install`, majd build/check, stash/reset nelkul.
+- Local acceptance: `npm run check`, `git diff --check`, shell syntax, Python compile, `npm run safe-update:status`, `npm run secret:scan`, es Windows launcher smoke zold; origin/main parity `0 0`.
+- Acceptance blocker: a cross-platform terv nem zarhato `done` ala, amig nincs valos Linux desktop tray/control panel smoke, macOS Swift menubar build/runtime smoke, es iPad/mobile Discord file handoff smoke.
+- Platform note: Linux acceptance Windowsrol WSL2/WSLg vagy Linux VM alatt ertelmesen kozelitheto; macOS menu bar runtime smoke jogtisztan es megbizhatoan valodi Macen, remote Macen vagy legalabb macOS CI builddel igazolhato.
 - Error public-safety: a path-validacio es Codex thread/turn start hibak Discord elott maszkolt, path-mentes uzenetre szukulnek.
 - User-input and queue preview safety: a Codex kerdeskartyak, queue preview-k es `/ask` Discord prompt preview-k public-safe sanitizerrel jelennek meg.
 - Operator lifecycle events: a session stop/new/delete, queue add/clear/remove, mapping remove es Discordbol inditott bot restart public-safe eventkent bekerul az `/events` timeline-ba.
