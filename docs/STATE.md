@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: local-first baseline accepted
-- Git state: local `main` tracks `origin/main`; current changes are documentation closeout only
+- Phase: Windows-first minimum parity implemented
+- Git state: local `main` tracks `origin/main`; launcher/tray/docs closeout prepared for validation
 
 ## Current Goal
 
@@ -54,9 +54,10 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Extended `/unregister` with an optional `channel` argument so legacy forum/thread mappings can be removed from the current operator channel.
 - Added read-only `/mappings` overview for project-channel mappings, with duplicate project path groups called out before cleanup.
 - Extended `/mappings` with cleanup buttons for duplicate mappings; each button stops that channel session, removes the mapping, and refreshes the overview.
+- Added Windows launcher/status stabilization and a local tray/control panel with start/stop/restart, settings editor, log/folder open, and Codex usage cache display.
 
 ## Open Work
 
-1. Start the next operator UX / future-work plan after baseline closeout.
-2. Keep using `/mappings` and `/doctor` for future legacy mapping drift checks; no duplicate mapping group was present during the 2026-06-20 audit.
-3. Treat `docs/codex-tasks/plans/done/ujratervezes.md` as the accepted local-first redesign baseline record.
+1. Consider a later explicit auto-update/lifecycle plan only after deciding the desired git safety model.
+2. Consider Linux/macOS launcher parity only if the project stops being Windows-first.
+3. Keep using `/mappings` and `/doctor` for future legacy mapping drift checks.

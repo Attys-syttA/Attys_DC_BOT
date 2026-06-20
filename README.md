@@ -46,6 +46,17 @@ If `codex.cmd` is not available, test the command that works on this machine bef
 
 ## Run
 
+Windows launcher and tray control panel:
+
+```powershell
+cmd /c win-start.bat
+cmd /c win-start.bat --status
+cmd /c win-start.bat --stop
+cmd /c win-start.bat --fg
+```
+
+Default launch builds the project when needed, starts the tray app when the local C# compiler is available, and writes bot output to `bot.log` plus `bot.err.log`.
+
 ```powershell
 npm run build
 npm start
@@ -62,6 +73,23 @@ Local preflight without starting the Discord bot:
 ```powershell
 npm run doctor:local
 ```
+
+## Windows Control Panel
+
+The Windows tray app opens an operator control panel for the same local bot instance.
+
+![Public-safe Windows control panel illustration](docs/windows-control-panel-public-safe.svg)
+
+It provides:
+
+- visual bot status
+- `Start`, `Stop`, and `Restart`
+- local `.env` settings editor based on `.env.example`
+- `bot.log` opener
+- repository folder opener
+- Codex usage cache view with a refresh button
+
+The usage panel reads `~/.codex/rate-limits-cache.json` and can refresh it through the local Codex app-server. If Codex usage is unavailable, the panel shows a local error state without printing tokens, Discord IDs, or private configuration values.
 
 ## Commands
 
@@ -114,6 +142,8 @@ Important `.env` keys:
 
 No remote execution keys are required. Do not add custom execution-agent secrets, private hostnames, private IPs, or machine-specific private examples to tracked files.
 
+The tray settings editor writes only the local ignored `.env` file. Keep real values local; tracked docs and examples must use placeholders only.
+
 ## Security Model
 
 - `.env` is ignored and must stay local
@@ -141,6 +171,16 @@ npm run build
 npm run check
 npm run doctor:local
 ggshield secret scan path --recursive --yes --use-gitignore .
+```
+
+Launcher smoke test on Windows:
+
+```powershell
+cmd /c win-start.bat --stop
+cmd /c win-start.bat --status
+cmd /c win-start.bat
+cmd /c win-start.bat --status
+cmd /c win-start.bat --stop
 ```
 
 ## Repository Protection

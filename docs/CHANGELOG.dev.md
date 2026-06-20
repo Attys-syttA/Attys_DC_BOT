@@ -43,3 +43,6 @@
 - Operator UX baseline: a Discord guildben pontosan a canonical 19 slash command volt regisztralva, hianyzo vagy extra parancs nelkul.
 - Validacio: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run check`, `git diff --check`, es `ggshield secret scan path --recursive --yes --use-gitignore .` sikeresen lefutott.
 - Kovetkezo irany: uj future-work terv kidolgozasa a baseline-ra epulo operator UX vagy tovabbi kenyelmi fejlesztesekhez.
+- Windows parity: bekerult a `win-start.bat --status` process-detektalas javitasa, a repohoz kotott stop/status logika, a `bot.err.log` background stderr kimenet, es a Windows tray/control panel.
+- Tray/control panel: a panel tud start/stop/restart vezerlest, vizualis allapotot, lokalis `.env` settings editort, `bot.log` es folder megnyitast, valamint Codex usage cache megjelenitest/frissitest.
+- Public docs: a README es SETUP Windows launcher/tray/control panel leirast kapott public-safe illusztracioval; auto-update es cross-platform parity tovabbra is kulon future-work.

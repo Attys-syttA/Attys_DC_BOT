@@ -9,6 +9,7 @@ set "TRAY_EXE=%SCRIPT_DIR%\tray\CodexBotTray.exe"
 set "TRAY_SRC=%SCRIPT_DIR%\tray\CodexBotTray.cs"
 set "BOT_EXE=%SCRIPT_DIR%\CodexBot.exe"
 set "LOG_FILE=%SCRIPT_DIR%\bot.log"
+set "ERR_LOG_FILE=%SCRIPT_DIR%\bot.err.log"
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -41,9 +42,9 @@ if "%~1"=="--fg" (
     call :stop_bot >nul 2>&1
     echo Starting in foreground...
     if exist "%BOT_EXE%" (
-        "%BOT_EXE%" dist/index.js
+        "%BOT_EXE%" "%SCRIPT_DIR%\dist\index.js"
     ) else (
-        node dist/index.js
+        node "%SCRIPT_DIR%\dist\index.js"
     )
     exit /b %errorlevel%
 )
@@ -56,7 +57,7 @@ call :build_tray_if_needed
 
 if exist "%TRAY_EXE%" (
     taskkill /im CodexBotTray.exe /f >nul 2>&1
-    start "" "%TRAY_EXE%" --show
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%TRAY_EXE%' -ArgumentList '--show' -WorkingDirectory '%SCRIPT_DIR%'"
 )
 
 if not exist "%ENV_FILE%" (
@@ -119,17 +120,23 @@ if not "!NEED_TRAY_BUILD!"=="1" exit /b 0
 if not exist "%TRAY_SRC%" exit /b 0
 
 set "CSC="
-for /f "delims=" %%i in ('dir /b /s "%WINDIR%\Microsoft.NET\Framework64\csc.exe" 2^>nul') do (
-    if not defined CSC set "CSC=%%i"
+if exist "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" (
+    set "CSC=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 )
 if not defined CSC (
-    for /f "delims=" %%i in ('dir /b /s "%WINDIR%\Microsoft.NET\Framework\csc.exe" 2^>nul') do (
-        if not defined CSC set "CSC=%%i"
+    if exist "%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe" (
+        set "CSC=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe"
     )
+)
+if not defined CSC (
+    for /f "delims=" %%i in ('dir /b /s "%WINDIR%\Microsoft.NET\Framework64\csc.exe" 2^>nul') do if not defined CSC set "CSC=%%i"
+)
+if not defined CSC (
+    for /f "delims=" %%i in ('dir /b /s "%WINDIR%\Microsoft.NET\Framework\csc.exe" 2^>nul') do if not defined CSC set "CSC=%%i"
 )
 if not defined CSC exit /b 0
 
-"%CSC%" /nologo /target:winexe /out:"%TRAY_EXE%" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll "%TRAY_SRC%"
+"%CSC%" /nologo /target:winexe /out:"%TRAY_EXE%" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.Management.dll "%TRAY_SRC%"
 exit /b 0
 
 :start_background
@@ -138,27 +145,50 @@ if exist "%BOT_EXE%" set "RUNNER=%BOT_EXE%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$wd = '%SCRIPT_DIR%';" ^
     "$runner = '%RUNNER%';" ^
-    "$cmd = 'cd /d ""' + $wd + '"" && ""' + $runner + '"" dist/index.js >> bot.log 2>&1';" ^
-    "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $cmd -WorkingDirectory $wd -WindowStyle Hidden"
+    "$entry = Join-Path $wd 'dist\index.js';" ^
+    "$out = Join-Path $wd 'bot.log';" ^
+    "$err = Join-Path $wd 'bot.err.log';" ^
+    "Start-Process -FilePath $runner -ArgumentList @($entry) -WorkingDirectory $wd -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err"
 exit /b 0
 
 :stop_bot
-taskkill /im CodexBot.exe /f >nul 2>&1
-taskkill /im node.exe /fi "WINDOWTITLE eq CodexDiscordBot" /f >nul 2>&1
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ws = [regex]::Escape('%SCRIPT_DIR%');" ^
+    "$ws = [regex]::Escape('%SCRIPT_DIR%'.TrimEnd('\'));" ^
     "$procs = Get-CimInstance Win32_Process | Where-Object {" ^
-    "  ($_.Name -in @('node.exe','CodexBot.exe')) -and $_.CommandLine -and ($_.CommandLine -match $ws) -and ($_.CommandLine -like '*dist\\index.js*')" ^
+    "  $cmd = ($_.CommandLine -replace '/', '\');" ^
+    "  ($_.Name -in @('node.exe','CodexBot.exe')) -and $cmd -and ($cmd -match $ws) -and ($cmd -like '*dist\index.js*')" ^
     "};" ^
-    "$procs | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    "$procs | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue };" ^
+    "$lock = Join-Path '%SCRIPT_DIR%' '.bot.lock';" ^
+    "if (Test-Path $lock) {" ^
+    "  $raw = (Get-Content -LiteralPath $lock -ErrorAction SilentlyContinue | Select-Object -First 1);" ^
+    "  $lockProcessId = 0;" ^
+    "  if ([int]::TryParse($raw, [ref]$lockProcessId)) {" ^
+    "    $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$lockProcessId\" -ErrorAction SilentlyContinue;" ^
+    "    if ($p -and ($p.Name -in @('node.exe','CodexBot.exe')) -and (($p.CommandLine -replace '/', '\') -like '*dist\index.js*')) { Stop-Process -Id $lockProcessId -Force -ErrorAction SilentlyContinue }" ^
+    "  }" ^
+    "}"
 del "%SCRIPT_DIR%\.bot.lock" >nul 2>&1
 exit /b 0
 
 :is_running
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ws = [regex]::Escape('%SCRIPT_DIR%');" ^
+    "$lock = Join-Path '%SCRIPT_DIR%' '.bot.lock';" ^
+    "$ws = [regex]::Escape('%SCRIPT_DIR%'.TrimEnd('\'));" ^
     "$procs = Get-CimInstance Win32_Process | Where-Object {" ^
-    "  ($_.Name -in @('node.exe','CodexBot.exe')) -and $_.CommandLine -and ($_.CommandLine -match $ws) -and ($_.CommandLine -like '*dist\\index.js*')" ^
+    "  $cmd = ($_.CommandLine -replace '/', '\');" ^
+    "  ($_.Name -in @('node.exe','CodexBot.exe')) -and $cmd -and ($cmd -match $ws) -and ($cmd -like '*dist\index.js*')" ^
     "};" ^
-    "if ($procs) { exit 0 } else { exit 1 }"
+    "if ($procs) { exit 0 }" ^
+    "if (Test-Path $lock) {" ^
+    "  $raw = (Get-Content -LiteralPath $lock -ErrorAction SilentlyContinue | Select-Object -First 1);" ^
+    "  $lockProcessId = 0;" ^
+    "  if (-not [int]::TryParse($raw, [ref]$lockProcessId)) { Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue }" ^
+    "  else {" ^
+    "    $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$lockProcessId\" -ErrorAction SilentlyContinue;" ^
+    "    if ($p -and ($p.Name -in @('node.exe','CodexBot.exe')) -and (($p.CommandLine -replace '/', '\') -like '*dist\index.js*')) { exit 0 }" ^
+    "    Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue" ^
+    "  }" ^
+    "}" ^
+    "exit 1"
 exit /b %errorlevel%

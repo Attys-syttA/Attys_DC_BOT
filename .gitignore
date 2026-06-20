@@ -8,6 +8,11 @@ coverage/
 .cache/
 .cache_ggshield/
 .turbo/
+.serena/
+
+CodexBot.exe
+tray/CodexBotTray.exe
+tray/*.pdb
 
 .discord-bot-state/
 *.sqlite
@@ -19,6 +24,8 @@ coverage/
 
 logs/
 *.log
+*.err
+tray-error.log
 *.pid
 .bot.lock
 

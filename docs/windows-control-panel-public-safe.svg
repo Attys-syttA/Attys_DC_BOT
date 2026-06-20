@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Public-safe Windows control panel illustration</title>
+  <desc id="desc">Synthetic illustration of the Attys DC BOT Windows control panel without real tokens, IDs, or local paths.</desc>
+  <rect width="960" height="560" fill="#151922"/>
+  <rect x="80" y="64" width="800" height="432" rx="8" fill="#202632" stroke="#3b4658" stroke-width="2"/>
+  <text x="118" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#ffffff">Attys DC BOT</text>
+  <circle cx="126" cy="164" r="10" fill="#10b981"/>
+  <text x="150" y="172" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#dbeafe">Bot status: Running</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">
+    <rect x="118" y="210" width="150" height="48" rx="6" fill="#2d3a4e"/>
+    <text x="169" y="241">Stop</text>
+    <rect x="292" y="210" width="150" height="48" rx="6" fill="#2d3a4e"/>
+    <text x="334" y="241">Restart</text>
+    <rect x="466" y="210" width="150" height="48" rx="6" fill="#2d3a4e"/>
+    <text x="504" y="241">Settings</text>
+    <rect x="640" y="210" width="150" height="48" rx="6" fill="#2d3a4e"/>
+    <text x="681" y="241">Open Log</text>
+  </g>
+  <rect x="118" y="300" width="724" height="142" rx="6" fill="#1f2430"/>
+  <text x="146" y="338" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">Codex Usage</text>
+  <text x="146" y="374" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#cbd5e1">5-hour limit - 74% left</text>
+  <rect x="146" y="392" width="560" height="18" rx="4" fill="#363d4a"/>
+  <rect x="146" y="392" width="414" height="18" rx="4" fill="#10b981"/>
+  <text x="146" y="430" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#94a3b8">Synthetic preview - no real account data</text>
+</svg>

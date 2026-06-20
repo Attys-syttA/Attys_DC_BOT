@@ -45,7 +45,50 @@ Do not commit:
 - real Discord IDs in docs/tests/examples
 - local runtime SQLite files
 
-## 4. Start
+## 4. Start With Windows Launcher
+
+Recommended Windows start:
+
+```powershell
+cmd /c win-start.bat
+```
+
+Useful launcher commands:
+
+```powershell
+cmd /c win-start.bat --status
+cmd /c win-start.bat --stop
+cmd /c win-start.bat --fg
+```
+
+- `--status` reports the real local bot process for this repository.
+- `--stop` stops only this repository's bot process and clears stale `.bot.lock`.
+- `--fg` starts in foreground for diagnosis.
+- normal start writes `bot.log` and `bot.err.log`.
+
+If a C# compiler from Windows/.NET build tooling is available, the launcher also builds and opens the tray control panel. If the compiler is missing, the bot can still start from the launcher, but the tray app will not be rebuilt until the tooling exists.
+
+## 5. Tray Control Panel
+
+The tray/control panel is a local Windows operator surface.
+
+It can:
+
+- show whether the bot is running
+- start, stop, or restart the bot
+- edit the local ignored `.env`
+- open `bot.log`
+- open the repository folder
+- show Codex usage from `~/.codex/rate-limits-cache.json`
+- refresh usage through the local Codex app-server
+
+Public-safe preview:
+
+![Windows control panel illustration](docs/windows-control-panel-public-safe.svg)
+
+The settings editor is for local values only. Do not paste real tokens, real Discord IDs, or private local paths into tracked docs, issues, commits, or screenshots.
+
+## 6. Manual Node Start
 
 ```powershell
 npm run build
@@ -59,7 +102,7 @@ Development mode:
 npm run dev
 ```
 
-## 5. First Discord Flow
+## 7. First Discord Flow
 
 1. In a Discord channel, run `/register`.
 2. Select or type a folder under `BASE_PROJECT_DIR`.
@@ -75,7 +118,15 @@ Optional local commands:
 - `/queue remove` removes one queued prompt without using buttons.
 - `/run-tests` is disabled unless `DISCORD_ENABLE_RUN_TESTS=true` is set in `.env`.
 
-## 6. Validate Before Commit
+## 8. Troubleshooting
+
+- If `--status` says `Stopped`, run `Get-Content bot.log -Tail 80` and `Get-Content bot.err.log -Tail 80`.
+- If `.bot.lock` is stale, run `cmd /c win-start.bat --stop`, then `cmd /c win-start.bat --status`.
+- If the tray does not appear, check whether `tray/CodexBotTray.exe` exists and whether Windows/.NET C# compiler tooling is installed.
+- If usage is unavailable, check `codex.cmd login status` and try the panel's `Refresh Usage` button again.
+- If Discord commands are missing, set `DISCORD_REGISTER_COMMANDS=true` once, start the bot, then turn it back off if you do not want command registration on every boot.
+
+## 9. Validate Before Commit
 
 ```powershell
 npm run lint
