@@ -18,6 +18,16 @@ export async function handleMessage(message: Message): Promise<void> {
   const project = getProject(message.channelId);
   if (!project) return;
 
+  const config = getConfig();
+  const text = message.content.trim();
+  const hasAttachments = message.attachments.size > 0;
+  const hasPendingCustomInput = sessionManager.hasPendingCustomInput(message.channelId);
+  const shouldHandlePrompt =
+    (config.DISCORD_ENABLE_MESSAGE_PROMPTS && Boolean(text)) ||
+    (hasAttachments && (config.DISCORD_ENABLE_MESSAGE_PROMPTS || config.DISCORD_ENABLE_ATTACHMENT_MESSAGES));
+
+  if (!hasPendingCustomInput && !shouldHandlePrompt) return;
+
   if (!isAllowedPrincipal(message.author.id, messageRoleIds(message))) {
     await message.reply(L("You are not authorized to use this bot.", "이 봇을 사용할 권한이 없습니다."));
     return;
@@ -28,8 +38,7 @@ export async function handleMessage(message: Message): Promise<void> {
     return;
   }
 
-  if (sessionManager.hasPendingCustomInput(message.channelId)) {
-    const text = message.content.trim();
+  if (hasPendingCustomInput) {
     if (text) {
       sessionManager.resolveCustomInput(message.channelId, text);
       await message.react("✅");
@@ -37,9 +46,15 @@ export async function handleMessage(message: Message): Promise<void> {
     return;
   }
 
-  if (!getConfig().DISCORD_ENABLE_MESSAGE_PROMPTS) return;
+  if (hasAttachments && !text) {
+    await message.reply(L(
+      "I can see an attachment, but I need an instruction too. Use `Apps` -> `Send to Codex` on this message, or send `/ask prompt:` with file fields.",
+      "첨부 파일은 보이지만 지시문도 필요합니다. 이 메시지에서 `Apps` -> `Send to Codex`를 사용하거나 파일 필드와 함께 `/ask prompt:`를 보내세요.",
+    ));
+    return;
+  }
 
-  let prompt = message.content.trim();
+  let prompt = text;
   const downloadedAttachments: Array<{ filePath: string; isImage: boolean; safeName: string }> = [];
   const skippedMessages: string[] = [];
 

@@ -264,6 +264,9 @@ npm run dev
 Optional local commands:
 
 - `/ask` gives a slash-command prompt path in addition to normal messages and can include `file`, `file2`, and `file3` attachments.
+- For iPad/phone file handoff, the most reliable path is: upload the file as a normal Discord message, then choose `Apps` / `Alkalmazasok` -> `Send to Codex` on that message.
+- Optional source-repo parity: set `DISCORD_ENABLE_ATTACHMENT_MESSAGES=true` to let normal text+attachment messages become Codex prompts in registered channels. Attachment-only messages still ask for an instruction instead of starting blind work.
+- Normal message prompt and attachment-message modes require Discord's privileged Message Content intent.
 - `/last` can fall back to the local Codex rollout log if live app-server thread reading is unavailable.
 - `/sessions query/source/limit` helps narrow large local Codex session lists.
 - `/git-status` reports the registered local project's git state.

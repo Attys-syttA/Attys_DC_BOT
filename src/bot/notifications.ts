@@ -46,6 +46,9 @@ export function buildStartupNotification(
   const messagePromptMode = config.DISCORD_ENABLE_MESSAGE_PROMPTS
     ? "message prompt mode: enabled"
     : "message prompt mode: slash commands only";
+  const attachmentMessageMode = config.DISCORD_ENABLE_ATTACHMENT_MESSAGES
+    ? "attachment message mode: enabled"
+    : "attachment message mode: explicit handoff only";
   const commandRegistration = config.DISCORD_REGISTER_COMMANDS
     ? "application command registration: enabled"
     : "application command registration: skipped";
@@ -62,6 +65,7 @@ export function buildStartupNotification(
     botTag,
     operatorTools,
     messagePromptMode,
+    attachmentMessageMode,
     commandRegistration,
     commandCount,
   ].join("\n");

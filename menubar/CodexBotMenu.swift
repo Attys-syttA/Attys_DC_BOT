@@ -1349,6 +1349,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             (L("Rate Limit Per Minute:", "분당 요청 제한:"), "RATE_LIMIT_PER_MINUTE", "10", "10"),
             (L("Queue Max Items:", "큐 최대 항목 수:"), "DISCORD_QUEUE_MAX_ITEMS", "10", "10"),
             (L("Message Prompts (true/false):", "메시지 프롬프트 (true/false):"), "DISCORD_ENABLE_MESSAGE_PROMPTS", "true", "true"),
+            (L("Attachment Messages (true/false):", "첨부 메시지 (true/false):"), "DISCORD_ENABLE_ATTACHMENT_MESSAGES", "false", "false"),
             (L("Ephemeral Responses (true/false):", "임시 응답 (true/false):"), "DISCORD_EPHEMERAL_RESPONSES", "true", "true"),
             (L("Register Slash Commands (true/false):", "Slash 명령 등록 (true/false):"), "DISCORD_REGISTER_COMMANDS", "false", "false"),
             (L("Enable Run Tests (true/false):", "테스트 실행 활성화 (true/false):"), "DISCORD_ENABLE_RUN_TESTS", "false", "false"),

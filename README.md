@@ -292,12 +292,18 @@ This keeps the Discord UI simple while preventing path traversal outside the all
 
 ## Attachments
 
-When you attach files through `/ask`:
+When you attach files through `/ask` or the explicit `Send to Codex` message command:
 
 - files are downloaded into the project-local `.codex-uploads/` folder
 - images and files are appended to the Codex prompt as local references
 - executable and dangerous file types are rejected
 - local saved paths are not echoed back to Discord
+
+Optional source-repo parity mode:
+
+- `DISCORD_ENABLE_ATTACHMENT_MESSAGES=true` lets normal Discord messages with both text and attachments become Codex prompts in registered channels.
+- Attachment-only normal messages do not start blind work; the bot replies with guidance to use `Send to Codex` or `/ask`.
+- This mode requires Discord's privileged Message Content intent, just like normal message prompts.
 
 ## Security Model
 
@@ -328,7 +334,8 @@ Important `.env` keys:
 | `BASE_PROJECT_DIR` | Workspace root that `/register` may use |
 | `DISCORD_DATABASE_PATH` | Local SQLite state path |
 | `DISCORD_SESSION_STORE_PATH` | Local session store path |
-| `DISCORD_ENABLE_MESSAGE_PROMPTS` | Whether normal messages can become prompts |
+| `DISCORD_ENABLE_MESSAGE_PROMPTS` | Whether normal text messages can become prompts |
+| `DISCORD_ENABLE_ATTACHMENT_MESSAGES` | Whether normal text+attachment messages can become prompts |
 | `DISCORD_REGISTER_COMMANDS` | Whether startup registers slash commands |
 | `DISCORD_ENABLE_RUN_TESTS` | Enables `/run-tests` |
 | `DISCORD_ENABLE_AUTO_APPROVE` | Enables approval bypass toggle |

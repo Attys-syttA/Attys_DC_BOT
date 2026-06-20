@@ -44,6 +44,11 @@ export async function execute(
       ? info("message prompts enabled; Discord Message Content intent must be enabled in Developer Portal")
       : info("message prompts disabled; slash commands work without Message Content intent"),
   );
+  lines.push(
+    config.DISCORD_ENABLE_ATTACHMENT_MESSAGES
+      ? info("attachment messages enabled; normal Discord file messages require Message Content intent and a written instruction")
+      : info("attachment messages disabled; use /ask file fields or Send to Codex"),
+  );
 
   const project = getProject(interaction.channelId);
   lines.push(project ? ok("this channel is registered") : fail("channel registration", "run /register first"));

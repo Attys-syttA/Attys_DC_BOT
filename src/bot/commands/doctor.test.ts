@@ -63,6 +63,7 @@ describe("/doctor", () => {
       ALLOWED_ROLE_IDS: [],
       BASE_PROJECT_DIR: "/projects",
       DISCORD_ENABLE_MESSAGE_PROMPTS: false,
+      DISCORD_ENABLE_ATTACHMENT_MESSAGES: false,
       DISCORD_REGISTER_COMMANDS: true,
     });
     mocks.expectedCommandNames.mockReturnValue(["ask", "doctor", "status"]);
@@ -89,6 +90,7 @@ describe("/doctor", () => {
     expect(content).toContain("INFO startup application command registration enabled");
     expect(content).toContain("OK application command registration 3/3");
     expect(content).toContain("INFO message prompts disabled; slash commands work without Message Content intent");
+    expect(content).toContain("INFO attachment messages disabled; use /ask file fields or Send to Codex");
     expect(content).toContain("OK this channel is registered");
     expect(content).toContain("OK project has one channel mapping");
     expect(content).toContain("OK codex login status");
@@ -136,6 +138,7 @@ describe("/doctor", () => {
       ALLOWED_ROLE_IDS: [],
       BASE_PROJECT_DIR: "/projects",
       DISCORD_ENABLE_MESSAGE_PROMPTS: true,
+      DISCORD_ENABLE_ATTACHMENT_MESSAGES: true,
       DISCORD_REGISTER_COMMANDS: false,
     });
     const interaction = makeInteraction();
@@ -146,5 +149,6 @@ describe("/doctor", () => {
     expect(content).toContain("OK notification channel configured");
     expect(content).toContain("INFO startup application command registration disabled");
     expect(content).toContain("INFO message prompts enabled; Discord Message Content intent must be enabled in Developer Portal");
+    expect(content).toContain("INFO attachment messages enabled; normal Discord file messages require Message Content intent and a written instruction");
   });
 });

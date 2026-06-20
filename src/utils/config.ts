@@ -22,6 +22,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_ATTACHMENT_MESSAGES: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   DISCORD_EPHEMERAL_RESPONSES: z
     .enum(["true", "false"])
     .default("true")

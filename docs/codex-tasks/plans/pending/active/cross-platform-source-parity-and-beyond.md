@@ -9,14 +9,15 @@ Status: active
 - Fazon 2 Linux tray/control panel adaptacio elindult: `tray/codex_tray.py`, `tray/codex_control_panel.py` Attys brandinggel, launcher-alapu Start/Stop/Restart contracttal.
 - Fazon 2 Linux tray/control panel lezarva es pusholva (`d7c53da`).
 - Fazon 3 macOS menubar adaptacio elindult: `menubar/CodexBotMenu.swift` Attys brandinggel, read-only update modellel, `mac-start.sh`/launchd contracttal.
-- Fazon 3 dokumentacios frissites folyamatban: `README.md`, `SETUP.md`, `docs/RELEASE_CHECKLIST.md`.
+- Fazon 3 macOS menubar lezarva es pusholva (`085c795`).
+- Fazon 4 Discord attachment/message prompt parity elindult: `DISCORD_ENABLE_ATTACHMENT_MESSAGES` flag, doctor/help/docs, normal text+attachment message flow.
 
 ## Nyitott reszek
 
-- Fazon 3 teljes validacio, commit es push.
+- Fazon 4 teljes validacio, commit es push.
 - Linux tray/control panel GUI runtime smoke tenyleges Linux desktop hoston kesobb platformtesztet igenyelhet.
 - macOS menubar Swift build/runtime smoke tenyleges macOS hoston kesobb platformtesztet igenyelhet.
-- Fazon 4-8 meg nincs implementalva.
+- Fazon 5-8 meg nincs implementalva.
 
 ## Cel
 

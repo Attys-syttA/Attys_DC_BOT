@@ -19,6 +19,7 @@ describe("config", () => {
     delete process.env.RATE_LIMIT_PER_MINUTE;
     delete process.env.DISCORD_QUEUE_MAX_ITEMS;
     delete process.env.DISCORD_ENABLE_MESSAGE_PROMPTS;
+    delete process.env.DISCORD_ENABLE_ATTACHMENT_MESSAGES;
     delete process.env.DISCORD_EPHEMERAL_RESPONSES;
     delete process.env.DISCORD_REGISTER_COMMANDS;
     delete process.env.DISCORD_ENABLE_RUN_TESTS;
@@ -52,6 +53,7 @@ describe("config", () => {
     expect(config.DISCORD_SESSION_STORE_PATH).toBe(".discord-bot-state/sessions.json");
     expect(config.DISCORD_QUEUE_MAX_ITEMS).toBe(10);
     expect(config.DISCORD_ENABLE_MESSAGE_PROMPTS).toBe(true);
+    expect(config.DISCORD_ENABLE_ATTACHMENT_MESSAGES).toBe(false);
     expect(config.DISCORD_EPHEMERAL_RESPONSES).toBe(true);
     expect(config.DISCORD_REGISTER_COMMANDS).toBe(false);
     expect(config.DISCORD_ENABLE_RUN_TESTS).toBe(false);
@@ -108,6 +110,13 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_ATTACHMENT_MESSAGES as boolean", async () => {
+    process.env.DISCORD_ENABLE_ATTACHMENT_MESSAGES = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_ATTACHMENT_MESSAGES).toBe(true);
   });
 
   it("parses DISCORD_ENABLE_SESSION_DELETE as boolean", async () => {
