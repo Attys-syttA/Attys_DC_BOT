@@ -10,6 +10,7 @@ import { getProject, getSession } from "../../db/database.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { resolveCodexCommand } from "../../codex/command-resolver.js";
 import { L } from "../../utils/i18n.js";
+import { readOperatorStartupLog } from "./tools.js";
 
 export const data = new SlashCommandBuilder()
   .setName("dashboard")
@@ -39,7 +40,12 @@ export async function execute(
     ? L("active turn", "활성 작업")
     : L("idle or stopped", "대기 또는 중지");
   const queueSize = sessionManager.getQueueSize(channelId);
+  const runtime = sessionManager.getOperatorRuntimeSnapshot(channelId);
   const codexCommand = resolveCodexCommand();
+  const operatorToolsLog = readOperatorStartupLog(process.cwd(), 1);
+  const operatorToolsStatus = operatorToolsLog.length > 0
+    ? operatorToolsLog[0].replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\s+/, "")
+    : "no local tools preflight yet";
 
   const embed = new EmbedBuilder()
     .setTitle(L("Local Codex Dashboard", "로컬 Codex 대시보드"))
@@ -65,8 +71,10 @@ export async function execute(
         name: L("Controls", "컨트롤"),
         value: [
           `${L("Queue", "큐")}: **${queueSize}**`,
+          `${L("Pending operator action", "대기 중인 operator 작업")}: **${describePendingOperatorAction(runtime)}**`,
           `${L("Auto-approve", "자동 승인")}: **${project.auto_approve ? "on" : "off"}**`,
           `${L("Codex command", "Codex 명령")}: \`${codexCommand}\``,
+          `${L("Operator tools", "Operator tools")}: **${operatorToolsStatus}**`,
         ].join("\n"),
         inline: false,
       },
@@ -96,4 +104,17 @@ export async function execute(
       ? [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
       : [],
   });
+}
+
+function describePendingOperatorAction(runtime: {
+  pendingApproval: boolean;
+  pendingQuestion: boolean;
+  pendingCustomInput: boolean;
+  pendingQueuePrompt: boolean;
+}): string {
+  if (runtime.pendingCustomInput) return "custom answer";
+  if (runtime.pendingQuestion) return "question";
+  if (runtime.pendingApproval) return "approval";
+  if (runtime.pendingQueuePrompt) return "queue confirmation";
+  return "none";
 }

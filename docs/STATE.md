@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: Windows installer hardening implemented
-- Git state: local `main` tracks `origin/main`; installer hardening prepared for validation
+- Phase: operator tools and Codex user-input UX hardening in progress
+- Git state: local `main` tracks `origin/main`; operator tools and user-input UX changes prepared for validation
 
 ## Current Goal
 
@@ -59,6 +59,14 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Added guarded `Safe Update` to the Windows tray: clean checkout only, `git pull --ff-only`, dependency install only when package files changed, build/check, and bot restart without stash/reset.
 - Added public repo polish: issue templates, PR checklist, release checklist, and public support guide with secret-hygiene reminders.
 - Hardened the Windows installer restart path, step labels, Attys desktop shortcut branding, and shortcut icon fallback so it no longer points at a missing tracked icon.
+- Expanded startup Discord notifications with launch reason, bot user, prompt mode, command registration state, and loaded slash command count.
+- Added best-effort lifecycle notifications before Windows tray/launcher stop or restart actions.
+- Added VS Code-free operator tools preflight through `scripts/operator-startup.ps1`, `win-start.bat`, and the tray `Tools` button for own MCP, Docker Desktop, and Obsidian MCP preparation.
+- Added `/tools run|status` so the operator tools preflight can be triggered or inspected from Discord without exposing raw local paths.
+- Added an ignored `.discord-bot-state` lock for operator tools preflight so repeated tray/startup/Discord requests do not run the same local preparation in parallel.
+- Fixed custom typed Codex question answers so they route back to the active question id.
+- Allowed pending custom Codex answers through the message handler even when normal message prompts are disabled.
+- Extended `/dashboard` with pending operator action visibility for approvals, questions, custom answers, and queue confirmations.
 
 ## Open Work
 

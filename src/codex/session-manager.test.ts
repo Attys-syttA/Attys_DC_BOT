@@ -270,3 +270,56 @@ describe("SessionManager approval safety", () => {
     expect(mocks.codexAppServer.respond).toHaveBeenCalledWith(46, { decision: "accept" });
   });
 });
+
+describe("SessionManager user input routing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getConfig.mockReturnValue({
+      SHOW_COST: false,
+      DISCORD_ENABLE_AUTO_APPROVE: false,
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+    });
+  });
+
+  it("routes custom typed answers back to the active Codex question id", async () => {
+    const manager = new SessionManager();
+    const channel = {
+      send: vi.fn().mockResolvedValue({}),
+    } as any;
+
+    const answerPromise = (manager as any).askUserInput(
+      channel,
+      "channel-1",
+      77,
+      [
+        {
+          id: "question-project-choice",
+          header: "Project",
+          question: "Which project should I use?",
+          options: [{ label: "Current", description: "Use current project" }],
+        },
+      ],
+    );
+
+    await vi.waitFor(() => {
+      expect(channel.send).toHaveBeenCalled();
+    });
+
+    manager.enableCustomInput("77", "channel-1");
+    expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+      pendingQuestion: true,
+      pendingCustomInput: true,
+    });
+
+    const resolved = manager.resolveCustomInput("channel-1", "Use the active repo");
+
+    await expect(answerPromise).resolves.toEqual({
+      "question-project-choice": { answers: ["Use the active repo"] },
+    });
+    expect(resolved).toBe(true);
+    expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+      pendingQuestion: false,
+      pendingCustomInput: false,
+    });
+  });
+});

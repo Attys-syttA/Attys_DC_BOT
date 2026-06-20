@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     clearQueue: vi.fn(),
     resolveApproval: vi.fn(),
     resolveQuestion: vi.fn(),
+    enableCustomInput: vi.fn(),
   },
   getConfig: vi.fn(),
   upsertSession: vi.fn(),
@@ -266,6 +267,19 @@ describe("interaction handlers", () => {
     expect(mocks.sessionManager.resolveQuestion).toHaveBeenCalledWith("req-1", "Option A");
     expect(interaction.update).toHaveBeenCalledWith({
       content: "✅ Selected: **Option A**",
+      embeds: [],
+      components: [],
+    });
+  });
+
+  it("enables custom typed answers for Codex questions", async () => {
+    const interaction = makeButton("ask-other:req-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.sessionManager.enableCustomInput).toHaveBeenCalledWith("req-1", "channel-1");
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "✏️ Type your answer...",
       embeds: [],
       components: [],
     });

@@ -153,6 +153,17 @@ export const HELP_ENTRIES: HelpEntry[] = [
     ],
   },
   {
+    name: "tools",
+    usage: "/tools action: run|status",
+    short: "Elinditja vagy megnezi a VSC nelkuli operator tools preflight allapotat.",
+    details: [
+      "`run` lefuttatja a helyi `scripts/operator-startup.ps1` preflightot.",
+      "A preflight a sajat MCP, Docker Desktop es Obsidian MCP elokeszitesere valo VS Code megnyitasa nelkul.",
+      "`status` csak a helyi `operator-startup.log` rovid, public-safe allapot sorait mutatja.",
+      "A parancs nem ir ki tokent, raw Discord ID-t vagy privat pathot Discordra.",
+    ],
+  },
+  {
     name: "stop",
     usage: "/stop",
     short: "Leallitja az adott channel aktiv Codex futasat.",

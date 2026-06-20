@@ -60,7 +60,9 @@ Confirm the panel shows:
 - clean/dirty/ahead/behind status
 - `Check Updates`
 - guarded `Safe Update`
+- `Tools` operator preflight button
 - Windows login startup toggle
+- `/dashboard` pending operator action row for approval/question/custom answer/queue confirmation state
 
 `Safe Update` must stay guarded:
 
@@ -69,6 +71,15 @@ Confirm the panel shows:
 - diverged: stop for manual review
 - no `git stash`
 - no `git reset --hard`
+
+Operator tools preflight should be checked on a machine that has the sibling `codex-ai-tools-mcp-link` repository:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\operator-startup.ps1
+```
+
+If that sibling repo is absent, the launcher should treat operator tools as `skipped`, not as a release failure.
+If another preflight is active, the script should return the public-safe `RUNNING` status instead of starting a duplicate local preparation.
 
 ## Public-Safe Docs
 

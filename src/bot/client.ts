@@ -32,6 +32,7 @@ import * as sessionCmd from "./commands/session.js";
 import * as mappingsCmd from "./commands/mappings.js";
 import * as helpCmd from "./commands/help.js";
 import * as sugoCmd from "./commands/sugo.js";
+import * as toolsCmd from "./commands/tools.js";
 
 const commands = [
   registerCmd,
@@ -53,6 +54,7 @@ const commands = [
   mappingsCmd,
   helpCmd,
   sugoCmd,
+  toolsCmd,
 ];
 const commandMap = new Collection<
   string,
@@ -82,7 +84,7 @@ export async function startBot(): Promise<Client> {
     intents,
   });
 
-  client.on("ready", async () => {
+  client.on("clientReady", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
     if (config.DISCORD_REGISTER_COMMANDS) {
       try {
@@ -106,7 +108,7 @@ export async function startBot(): Promise<Client> {
       console.log("Slash command registration skipped (DISCORD_REGISTER_COMMANDS=false)");
     }
     try {
-      await sendStartupNotification(client, config);
+      await sendStartupNotification(client, config, { commandCount: commands.length });
     } catch (error) {
       console.error("Failed to send startup notification:", error);
     }

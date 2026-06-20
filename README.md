@@ -97,18 +97,21 @@ It provides:
 - package version, local commit, upstream commit, and clean/dirty/ahead/behind git status
 - read-only `Check Updates` action using `git fetch`
 - guarded `Safe Update` action for clean repositories
+- operator tools preflight for the sibling `codex-ai-tools-mcp-link` launcher when available
 - Windows login startup toggle through the current user's Startup folder
 
 The usage panel reads `~/.codex/rate-limits-cache.json` and can refresh it through the local Codex app-server. If Codex usage is unavailable, the panel shows a local error state without printing tokens, Discord IDs, or private configuration values.
 
 The lifecycle panel separates safe update from destructive recovery. `Check Updates` is read-only apart from `git fetch`. `Safe Update` is enabled only for a clean checkout that is behind origin and runs `git pull --ff-only`, optional `npm install` when dependency files changed, `npm run build`, `npm run check`, and bot restart. It never runs `git stash`, `git reset --hard`, or history rewriting.
 
+When the sibling `codex-ai-tools-mcp-link` repository is present next to this repo, the Windows launcher and tray can run a VS Code-free operator tools preflight. It starts/checks the shared local MCP launcher path with VS Code and Telegram/NAS worker skipped, so the bot can use the same local tool surface more reliably while running by itself. The preflight is guarded by a local lock so duplicate button presses or Discord requests do not start parallel runs. The result is written to the startup Discord message as `operator tools: ready`, `failed`, `skipped`, or `running`.
+
 ## Commands
 
 - `/register <path>`: link the current channel to a local project folder
 - `/unregister [channel]`: remove the current channel mapping, or a selected legacy channel mapping
 - `/status`: show registered project status
-- `/dashboard`: show the channel's local Codex control center
+- `/dashboard`: show the channel's local Codex control center, including pending operator action state
 - `/doctor`: check local Codex, config, and channel readiness without printing secrets
 - `/session current`: show the selected local Codex thread for this channel
 - `/session new`: make the next prompt start a fresh local Codex thread
@@ -125,6 +128,7 @@ The lifecycle panel separates safe update from destructive recovery. `Check Upda
 - `/help`: show Hungarian help for known bot commands
 - `/sugo`: Hungarian alias for `/help`
 - `/run-tests`: run `npm test` in the registered local project when `DISCORD_ENABLE_RUN_TESTS=true`
+- `/tools`: run or inspect the VS Code-free local operator tools preflight
 - `/usage`: show local Codex account usage when the app-server exposes rate limits
 - `/ask <prompt>`: send an explicit prompt to the registered local Codex session
 - `/auto-approve`: toggle approval bypass for the current channel when `DISCORD_ENABLE_AUTO_APPROVE=true`
@@ -171,6 +175,7 @@ The tray settings editor writes only the local ignored `.env` file. Keep real va
 - tray update checks are read-only apart from `git fetch`; safe update is clean-checkout only and does not stash or reset local work
 - `/doctor` reports whether message prompt mode is enabled or slash-command-only mode is active
 - `/doctor` warns when one local project still has multiple Discord channel mappings, such as old forum/thread leftovers
+- `/dashboard` shows whether Codex is waiting for approval, a question answer, custom input, or queue confirmation
 - `/mappings` provides an overview and cleanup buttons before falling back to `/unregister [channel]` for manual legacy mapping removal
 - startup notifications go only to `DISCORD_NOTIFICATION_CHANNEL_ID` when it is configured, and the message does not include secrets or raw IDs
 

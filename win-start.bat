@@ -10,6 +10,7 @@ set "TRAY_SRC=%SCRIPT_DIR%\tray\CodexBotTray.cs"
 set "BOT_EXE=%SCRIPT_DIR%\CodexBot.exe"
 set "LOG_FILE=%SCRIPT_DIR%\bot.log"
 set "ERR_LOG_FILE=%SCRIPT_DIR%\bot.err.log"
+set "ATTYS_OPERATOR_TOOLS_STATUS=skipped"
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -20,6 +21,7 @@ if errorlevel 1 (
 call :prepare_bot_exe
 
 if "%~1"=="--stop" (
+    call :notify_lifecycle_if_running windows-launcher-stop
     call :stop_bot
     echo Stopped.
     exit /b 0
@@ -37,9 +39,12 @@ if "%~1"=="--status" (
 
 if "%~1"=="--fg" (
     cd /d "%SCRIPT_DIR%"
+    call :prepare_operator_tools
     call :build_if_needed
     call :ensure_sqlite
+    call :notify_lifecycle_if_running windows-foreground-restart >nul 2>&1
     call :stop_bot >nul 2>&1
+    set "ATTYS_BOT_LAUNCH_REASON=windows-foreground"
     echo Starting in foreground...
     if exist "%BOT_EXE%" (
         "%BOT_EXE%" "%SCRIPT_DIR%\dist\index.js"
@@ -50,8 +55,10 @@ if "%~1"=="--fg" (
 )
 
 cd /d "%SCRIPT_DIR%"
+call :prepare_operator_tools
 call :build_if_needed
 call :ensure_sqlite
+call :notify_lifecycle_if_running windows-launcher-restart >nul 2>&1
 call :stop_bot >nul 2>&1
 call :build_tray_if_needed
 
@@ -145,10 +152,44 @@ if exist "%BOT_EXE%" set "RUNNER=%BOT_EXE%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$wd = '%SCRIPT_DIR%';" ^
     "$runner = '%RUNNER%';" ^
+    "$env:ATTYS_BOT_LAUNCH_REASON = 'windows-launcher';" ^
+    "$env:ATTYS_OPERATOR_TOOLS_STATUS = '%ATTYS_OPERATOR_TOOLS_STATUS%';" ^
     "$entry = Join-Path $wd 'dist\index.js';" ^
     "$out = Join-Path $wd 'bot.log';" ^
     "$err = Join-Path $wd 'bot.err.log';" ^
     "Start-Process -FilePath $runner -ArgumentList @($entry) -WorkingDirectory $wd -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err"
+exit /b 0
+
+:notify_lifecycle
+if not exist "%SCRIPT_DIR%\node_modules\.bin\tsx.cmd" exit /b 0
+if not exist "%SCRIPT_DIR%\src\cli\lifecycle-notify.ts" exit /b 0
+call "%SCRIPT_DIR%\node_modules\.bin\tsx.cmd" "%SCRIPT_DIR%\src\cli\lifecycle-notify.ts" "%~1" >nul 2>&1
+exit /b 0
+
+:notify_lifecycle_if_running
+call :is_running >nul 2>&1
+if errorlevel 1 exit /b 0
+call :notify_lifecycle "%~1"
+exit /b 0
+
+:prepare_operator_tools
+set "ATTYS_OPERATOR_TOOLS_STATUS=skipped"
+if not exist "%SCRIPT_DIR%\scripts\operator-startup.ps1" exit /b 0
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%\scripts\operator-startup.ps1"
+set "OPERATOR_TOOLS_EXIT=%ERRORLEVEL%"
+if "%OPERATOR_TOOLS_EXIT%"=="3" (
+    set "ATTYS_OPERATOR_TOOLS_STATUS=running"
+    exit /b 0
+)
+if "%OPERATOR_TOOLS_EXIT%"=="2" (
+    set "ATTYS_OPERATOR_TOOLS_STATUS=skipped"
+    exit /b 0
+)
+if not "%OPERATOR_TOOLS_EXIT%"=="0" (
+    set "ATTYS_OPERATOR_TOOLS_STATUS=failed"
+    exit /b 0
+)
+set "ATTYS_OPERATOR_TOOLS_STATUS=ready"
 exit /b 0
 
 :stop_bot

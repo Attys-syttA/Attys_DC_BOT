@@ -28,16 +28,47 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
 
 describe("startup notifications", () => {
   it("builds a public-safe startup message", () => {
-    const message = buildStartupNotification(makeConfig({
-      DISCORD_ENABLE_MESSAGE_PROMPTS: true,
-      DISCORD_REGISTER_COMMANDS: true,
-    }));
+    const message = buildStartupNotification(
+      makeConfig({
+        DISCORD_ENABLE_MESSAGE_PROMPTS: true,
+        DISCORD_REGISTER_COMMANDS: true,
+      }),
+      {
+        botTag: "Codex_Dscrd_BOT#2018",
+        commandCount: 19,
+        launchReason: "windows-tray-restart",
+        operatorToolsStatus: "ready",
+      },
+    );
 
-    expect(message).toContain("Codex Discord Bot online.");
+    expect(message).toContain("Attys DC BOT online.");
+    expect(message).toContain("launch reason: Windows tray restart");
+    expect(message).toContain("bot user: Codex_Dscrd_BOT#2018");
+    expect(message).toContain("operator tools: ready");
     expect(message).toContain("message prompt mode: enabled");
     expect(message).toContain("slash command registration: enabled");
+    expect(message).toContain("slash commands loaded: 19");
     expect(message).not.toContain("token");
     expect(message).not.toContain("guild-id");
+  });
+
+  it("falls back to a generic reason for unknown launch contexts", () => {
+    const message = buildStartupNotification(makeConfig(), {
+      launchReason: "C:\\private\\local\\script.bat",
+      operatorToolsStatus: "C:\\private\\tool.log",
+    });
+
+    expect(message).toContain("launch reason: manual or external start");
+    expect(message).toContain("operator tools: unknown");
+    expect(message).not.toContain("private");
+  });
+
+  it("allows the duplicate-preflight running startup status", () => {
+    const message = buildStartupNotification(makeConfig(), {
+      operatorToolsStatus: "running",
+    });
+
+    expect(message).toContain("operator tools: running");
   });
 
   it("skips sending when no notification channel is configured", async () => {
@@ -59,6 +90,6 @@ describe("startup notifications", () => {
     );
 
     expect(fetch).toHaveBeenCalledWith("notify-channel");
-    expect(send).toHaveBeenCalledWith(expect.stringContaining("Codex Discord Bot online."));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining("Attys DC BOT online."));
   });
 });

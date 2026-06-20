@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   isActive: vi.fn(),
   getQueueSize: vi.fn(),
+  getOperatorRuntimeSnapshot: vi.fn(),
   resolveCodexCommand: vi.fn(),
 }));
 
@@ -17,6 +18,7 @@ vi.mock("../../codex/session-manager.js", () => ({
   sessionManager: {
     isActive: mocks.isActive,
     getQueueSize: mocks.getQueueSize,
+    getOperatorRuntimeSnapshot: mocks.getOperatorRuntimeSnapshot,
   },
 }));
 
@@ -39,6 +41,14 @@ describe("/dashboard", () => {
     mocks.resolveCodexCommand.mockReturnValue("codex.cmd");
     mocks.isActive.mockReturnValue(false);
     mocks.getQueueSize.mockReturnValue(0);
+    mocks.getOperatorRuntimeSnapshot.mockReturnValue({
+      active: false,
+      pendingApproval: false,
+      pendingQuestion: false,
+      pendingCustomInput: false,
+      pendingQueuePrompt: false,
+      queueSize: 0,
+    });
   });
 
   it("prompts unregistered channels to register first", async () => {
@@ -74,7 +84,32 @@ describe("/dashboard", () => {
     expect(fields[1].value).toContain("**idle**");
     expect(fields[1].value).toContain("`abcdefgh...`");
     expect(fields[2].value).toContain("Queue: **2**");
+    expect(fields[2].value).toContain("Pending operator action: **none**");
     expect(fields[2].value).toContain("`codex.cmd`");
     expect(payload.components).toHaveLength(1);
+  });
+
+  it("shows pending Codex user-input state", async () => {
+    mocks.getProject.mockReturnValue({
+      channel_id: "channel-1",
+      project_path: "/projects/app",
+      auto_approve: 0,
+    });
+    mocks.getSession.mockReturnValue(undefined);
+    mocks.getOperatorRuntimeSnapshot.mockReturnValue({
+      active: true,
+      pendingApproval: false,
+      pendingQuestion: true,
+      pendingCustomInput: true,
+      pendingQueuePrompt: false,
+      queueSize: 0,
+    });
+    const interaction = makeInteraction();
+
+    await execute(interaction as never);
+
+    const payload = interaction.editReply.mock.calls[0][0];
+    const fields = payload.embeds[0].data.fields;
+    expect(fields[2].value).toContain("Pending operator action: **custom answer**");
   });
 });

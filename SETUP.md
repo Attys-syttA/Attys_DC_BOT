@@ -92,6 +92,7 @@ It can:
 - show package version, local commit, upstream commit, and git sync state
 - check for updates with a read-only `git fetch`
 - run a guarded `Safe Update` when the checkout is clean and behind origin
+- run the local operator tools preflight from the `Tools` button
 - enable or disable Windows login startup
 
 Public-safe preview:
@@ -115,7 +116,26 @@ If local changes are present, the panel stops and asks for manual cleanup. This 
 
 The Windows login startup toggle creates or removes `Attys DC BOT.lnk` in the current user's Startup folder. The shortcut points to `win-start.bat` and is never tracked by Git.
 
-## 6. Manual Node Start
+## 6. Operator Tools Preflight
+
+When the sibling `<CODEX_WORKS>\codex-ai-tools-mcp-link` repository exists, `win-start.bat` and the tray `Tools` button can run:
+
+```powershell
+scripts\operator-startup.ps1
+```
+
+This uses the shared workspace launcher without opening VS Code:
+
+- own local MCP is started and checked
+- Docker Desktop is started when available
+- Obsidian is started and its MCP endpoint is checked
+- Telegram/NAS worker and VS Code are skipped
+
+The result is written to `operator-startup.log` locally and appears in the startup Discord notification as `operator tools: ready`, `operator tools: failed`, `operator tools: skipped`, or `operator tools: running`.
+
+The script uses an ignored local lock under `.discord-bot-state`, so a tray click, startup run, and `/tools run` cannot create duplicate preflight runs. If a second request arrives while the first one is active, Discord reports `Operator tools already running` and shows only the latest public-safe status lines.
+
+## 7. Manual Node Start
 
 ```powershell
 npm run build
@@ -129,13 +149,14 @@ Development mode:
 npm run dev
 ```
 
-## 7. First Discord Flow
+## 8. First Discord Flow
 
 1. In a Discord channel, run `/register`.
 2. Select or type a folder under `BASE_PROJECT_DIR`.
 3. Send a normal message or use the available slash commands.
 4. Use `/dashboard`, `/sessions`, `/last`, `/queue list`, and `/stop` to inspect or control the local Codex work.
-5. Use `/doctor` if the bot starts but Codex or channel routing does not behave as expected.
+5. Use `/dashboard` to see whether Codex is waiting for approval, a question answer, custom input, or queue confirmation.
+6. Use `/doctor` if the bot starts but Codex or channel routing does not behave as expected.
 
 Optional local commands:
 
@@ -143,9 +164,12 @@ Optional local commands:
 - `/git-status` reports the registered local project's git state.
 - `/session current/new/stop` gives direct per-channel session controls.
 - `/queue remove` removes one queued prompt without using buttons.
+- `/tools run` runs the VS Code-free operator tools preflight from Discord.
+- `/tools status` shows the last public-safe operator tools status lines.
+- `/dashboard` shows pending operator action state for approvals, Codex questions, custom answers, and queue confirmations.
 - `/run-tests` is disabled unless `DISCORD_ENABLE_RUN_TESTS=true` is set in `.env`.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 - If `--status` says `Stopped`, run `Get-Content bot.log -Tail 80` and `Get-Content bot.err.log -Tail 80`.
 - If `.bot.lock` is stale, run `cmd /c win-start.bat --stop`, then `cmd /c win-start.bat --status`.
@@ -153,12 +177,14 @@ Optional local commands:
 - If the desktop shortcut icon is generic, start the bot once so the launcher can build `tray/CodexBotTray.exe`, then recreate the shortcut by running `cmd /c install.bat`.
 - If usage is unavailable, check `codex.cmd login status` and try the panel's `Refresh Usage` button again.
 - If update status is unavailable, check whether `git` is on PATH and whether the repo has an `origin/main` upstream.
+- If `operator tools: failed` appears in Discord, check `Get-Content operator-startup.log -Tail 80`.
+- If `/tools run` says `Operator tools already running`, wait for the active preflight to finish and then use `/tools status`.
 - If `Safe Update` is disabled, check whether the repo is clean and behind origin.
 - If `Safe Update` stops, read `update.log`; it is local and ignored by Git.
 - If Windows login startup cannot be toggled, open `shell:startup` and create or remove a shortcut to `win-start.bat` manually.
 - If Discord commands are missing, set `DISCORD_REGISTER_COMMANDS=true` once, start the bot, then turn it back off if you do not want command registration on every boot.
 
-## 9. Validate Before Commit
+## 10. Validate Before Commit
 
 ```powershell
 npm run lint

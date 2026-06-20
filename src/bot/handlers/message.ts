@@ -73,7 +73,6 @@ async function downloadAttachment(
 
 export async function handleMessage(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
-  if (!getConfig().DISCORD_ENABLE_MESSAGE_PROMPTS) return;
 
   const project = getProject(message.channelId);
   if (!project) return;
@@ -96,6 +95,8 @@ export async function handleMessage(message: Message): Promise<void> {
     }
     return;
   }
+
+  if (!getConfig().DISCORD_ENABLE_MESSAGE_PROMPTS) return;
 
   let prompt = message.content.trim();
   const imagePaths: string[] = [];

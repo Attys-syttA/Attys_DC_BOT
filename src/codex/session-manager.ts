@@ -34,6 +34,15 @@ interface QuestionPayload {
   options?: Array<{ label: string; description: string }>;
 }
 
+export interface OperatorRuntimeSnapshot {
+  active: boolean;
+  pendingApproval: boolean;
+  pendingQuestion: boolean;
+  pendingCustomInput: boolean;
+  pendingQueuePrompt: boolean;
+  queueSize: number;
+}
+
 type ApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
 
 type StreamMessage = Awaited<ReturnType<TextChannel["send"]>>;
@@ -556,7 +565,12 @@ export class SessionManager {
   }
 
   enableCustomInput(requestId: string, channelId: string, questionId = "answer"): void {
-    pendingCustomInputs.set(channelId, { requestId: Number(requestId), questionId });
+    const numericRequestId = Number(requestId);
+    const pending = pendingQuestions.get(numericRequestId);
+    pendingCustomInputs.set(channelId, {
+      requestId: numericRequestId,
+      questionId: pending?.questionId ?? questionId,
+    });
   }
 
   resolveCustomInput(channelId: string, text: string): boolean {
@@ -603,6 +617,17 @@ export class SessionManager {
 
   getQueueSize(channelId: string): number {
     return (this.messageQueue.get(channelId) ?? []).length;
+  }
+
+  getOperatorRuntimeSnapshot(channelId: string): OperatorRuntimeSnapshot {
+    return {
+      active: this.sessions.has(channelId),
+      pendingApproval: [...pendingApprovals.values()].some((entry) => entry.channelId === channelId),
+      pendingQuestion: [...pendingQuestions.values()].some((entry) => entry.channelId === channelId),
+      pendingCustomInput: pendingCustomInputs.has(channelId),
+      pendingQueuePrompt: this.pendingQueuePrompts.has(channelId),
+      queueSize: this.getQueueSize(channelId),
+    };
   }
 
   getQueue(channelId: string): { channel: TextChannel; prompt: string }[] {

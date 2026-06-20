@@ -234,8 +234,8 @@ internal sealed class CodexBotTray : Form
         controlPanel = new Form();
         controlPanel.Text = "Attys DC BOT Control Panel";
         controlPanel.StartPosition = FormStartPosition.CenterScreen;
-        controlPanel.Size = new Size(560, 760);
-        controlPanel.MinimumSize = new Size(520, 660);
+        controlPanel.Size = new Size(640, 760);
+        controlPanel.MinimumSize = new Size(600, 660);
         controlPanel.BackColor = Color.FromArgb(24, 28, 36);
         controlPanel.ForeColor = Color.White;
         controlPanel.FormClosed += delegate { controlPanel = null; };
@@ -295,13 +295,13 @@ internal sealed class CodexBotTray : Form
         Button startStop = MakeButton(IsRunning() ? "Stop" : "Start", 25, y, 140, 42);
         startStop.Click += delegate
         {
-            if (IsRunning()) StopBot(); else StartBot(true);
+            if (IsRunning()) StopBot("windows-tray-stop"); else StartBot(true, "windows-tray-start");
             RebuildControlPanel();
         };
         controlPanel.Controls.Add(startStop);
 
         Button restart = MakeButton("Restart", 185, y, 140, 42);
-        restart.Click += delegate { RestartBot(); RebuildControlPanel(); };
+        restart.Click += delegate { RestartBot("windows-tray-restart"); RebuildControlPanel(); };
         controlPanel.Controls.Add(restart);
 
         Button settings = MakeButton("Settings", 345, y, 140, 42);
@@ -429,6 +429,11 @@ internal sealed class CodexBotTray : Form
         setup.Font = new Font("Segoe UI", 8, FontStyle.Bold);
         setup.Click += delegate { OpenLocalFile(Path.Combine(botDir, "SETUP.md")); };
         lifecyclePanel.Controls.Add(setup);
+
+        Button tools = MakeButton("Tools", 510, 114, 62, 30);
+        tools.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+        tools.Click += delegate { PrepareOperatorTools(true); };
+        lifecyclePanel.Controls.Add(tools);
 
         CheckBox autostart = new CheckBox();
         autostart.Text = "Launch on login";
@@ -604,6 +609,11 @@ internal sealed class CodexBotTray : Form
 
     private void StartBot(bool showErrors)
     {
+        StartBot(showErrors, "windows-tray-start");
+    }
+
+    private void StartBot(bool showErrors, string launchReason)
+    {
         if (IsRunning())
         {
             UpdateStatus();
@@ -620,9 +630,14 @@ internal sealed class CodexBotTray : Form
             return;
         }
 
+        string operatorToolsStatus = PrepareOperatorTools(false);
         string runner = File.Exists(botExePath) ? botExePath : "node";
         string entry = Path.Combine(botDir, "dist", "index.js");
-        string command = "cd /d " + Quote(botDir) + " && " + Quote(runner) + " " + Quote(entry) + " >> " + Quote(logPath) + " 2>> " + Quote(errorLogPath);
+        string command = "cd /d " + Quote(botDir)
+            + " && set ATTYS_BOT_LAUNCH_REASON=" + launchReason
+            + " && set ATTYS_OPERATOR_TOOLS_STATUS=" + operatorToolsStatus
+            + " && " + Quote(runner) + " " + Quote(entry)
+            + " >> " + Quote(logPath) + " 2>> " + Quote(errorLogPath);
         ProcessStartInfo info = new ProcessStartInfo();
         info.FileName = "cmd.exe";
         info.Arguments = "/c " + command;
@@ -637,6 +652,12 @@ internal sealed class CodexBotTray : Form
 
     private void StopBot()
     {
+        StopBot("windows-tray-stop");
+    }
+
+    private void StopBot(string lifecycleEvent)
+    {
+        SendLifecycleNotification(lifecycleEvent);
         foreach (int id in GetBotProcessIds())
         {
             try
@@ -655,10 +676,67 @@ internal sealed class CodexBotTray : Form
         BuildMenu();
     }
 
+    private void SendLifecycleNotification(string lifecycleEvent)
+    {
+        try
+        {
+            string tsx = Path.Combine(botDir, "node_modules", ".bin", "tsx.cmd");
+            string script = Path.Combine(botDir, "src", "cli", "lifecycle-notify.ts");
+            if (!File.Exists(tsx) || !File.Exists(script)) return;
+            RunCommand("cmd.exe", "/c " + Quote(tsx) + " " + Quote(script) + " " + lifecycleEvent, 15000);
+        }
+        catch
+        {
+            // Lifecycle notification must never block local stop/restart.
+        }
+    }
+
+    private string PrepareOperatorTools(bool showResult)
+    {
+        try
+        {
+            string script = Path.Combine(botDir, "scripts", "operator-startup.ps1");
+            if (!File.Exists(script))
+            {
+                if (showResult) MessageBox.Show("Operator startup script is not available.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return "skipped";
+            }
+
+            CommandResult result = RunCommand("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + Quote(script), 90000);
+            if (result.ExitCode == 0)
+            {
+                if (showResult) MessageBox.Show("Operator tools are ready.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return "ready";
+            }
+            if (result.ExitCode == 2)
+            {
+                if (showResult) MessageBox.Show("Operator tools were skipped because the shared launcher was not found.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return "skipped";
+            }
+            if (result.ExitCode == 3)
+            {
+                if (showResult) MessageBox.Show("Operator tools preflight is already running.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return "running";
+            }
+            if (showResult) MessageBox.Show("Operator tools preflight failed. Check operator-startup.log.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return "failed";
+        }
+        catch
+        {
+            if (showResult) MessageBox.Show("Operator tools preflight failed. Check operator-startup.log.", "Operator Tools", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return "failed";
+        }
+    }
+
     private void RestartBot()
     {
-        StopBot();
-        StartBot(true);
+        RestartBot("windows-tray-restart");
+    }
+
+    private void RestartBot(string launchReason)
+    {
+        StopBot(launchReason == "windows-safe-update" ? "windows-safe-update-stop" : "windows-tray-restart");
+        StartBot(true, launchReason);
     }
 
     private void OpenSettings()
@@ -935,7 +1013,7 @@ internal sealed class CodexBotTray : Form
         if (IsRunning())
         {
             AppendUpdateLog("Restarting running bot.");
-            RestartBot();
+            RestartBot("windows-safe-update");
         }
         else
         {
