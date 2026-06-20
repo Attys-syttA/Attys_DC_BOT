@@ -18,13 +18,15 @@ function info(label: string): string {
   return `INFO ${label}`;
 }
 
-function slashList(names: string[]): string {
-  const visible = names.slice(0, 12).map((name) => `/${name}`).join(", ");
+function commandList(names: string[]): string {
+  const visible = names.slice(0, 12).map((name) => (
+    name.includes(" ") ? `"${name}"` : `/${name}`
+  )).join(", ");
   return names.length > 12 ? `${visible}, ...` : visible;
 }
 
 export function expectedCommandNames(): string[] {
-  return [...HELP_ENTRIES.map((entry) => entry.name)].sort();
+  return [...HELP_ENTRIES.map((entry) => entry.name), "Send to Codex"].sort();
 }
 
 export function summarizeRegisteredCommandNames(
@@ -37,15 +39,15 @@ export function summarizeRegisteredCommandNames(
   const extra = registered.filter((name) => !expected.includes(name));
 
   if (missing.length === 0 && extra.length === 0) {
-    return [ok(`slash command registration ${registered.length}/${expected.length}`)];
+    return [ok(`application command registration ${registered.length}/${expected.length}`)];
   }
 
-  const lines = [info(`slash command registration ${registered.length}/${expected.length}`)];
+  const lines = [info(`application command registration ${registered.length}/${expected.length}`)];
   if (missing.length > 0) {
-    lines.push(fail("missing slash commands", slashList(missing)));
+    lines.push(fail("missing application commands", commandList(missing)));
   }
   if (extra.length > 0) {
-    lines.push(info(`extra slash commands: ${slashList(extra)}`));
+    lines.push(info(`extra application commands: ${commandList(extra)}`));
   }
   return lines;
 }
@@ -63,6 +65,6 @@ export async function inspectDiscordCommandRegistration(config: Config): Promise
       .filter((name): name is string => typeof name === "string");
     return summarizeRegisteredCommandNames(names);
   } catch {
-    return [info("slash command registration live check unavailable")];
+    return [info("application command registration live check unavailable")];
   }
 }

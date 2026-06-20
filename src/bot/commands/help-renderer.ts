@@ -12,6 +12,7 @@ const CATEGORY_ORDER = ["codex", "sessions", "repo", "ops", "safety"] as const;
 const HELP_LIST_DESCRIPTION_MAX = 58;
 const TOPIC_CHOICES = [
   { name: "kezdetek", value: "kezdetek" },
+  { name: "fajlfeltoltes", value: "fajlfeltoltes" },
 ];
 
 function compactDescription(value: string): string {
@@ -44,13 +45,18 @@ export function renderHelpList(commandName: string): string {
     "",
     ...lines,
     `Elso lepesek: \`/${commandName} parancs: kezdetek\``,
+    `Fajlfeltoltes: \`/${commandName} parancs: fajlfeltoltes\``,
     `Reszletes parancs: \`/${commandName} parancs: ask\``,
   ].join("\n");
 }
 
 export function renderHelpDetail(entryName: string): string {
-  if (entryName.trim().toLowerCase() === "kezdetek") {
+  const normalizedEntryName = entryName.trim().toLowerCase();
+  if (normalizedEntryName === "kezdetek") {
     return renderGettingStartedHelp();
+  }
+  if (normalizedEntryName === "fajlfeltoltes") {
+    return renderFileUploadHelp();
   }
 
   const entry = findHelpEntry(entryName);
@@ -92,6 +98,7 @@ export function renderGettingStartedHelp(): string {
     "**3. Munka inditasa**",
     "- `/ask prompt: <feladat>` - ezzel indits fejlesztest, hibajavitast vagy vizsgalatot.",
     "- Ha fajlt adsz, hasznald a `file`, `file2`, `file3` mezoket.",
+    "- Ha a Discord kliens nem ajanl fel fajlvalasztot: toltsd fel normal uzenetkent, majd az uzeneten `Apps` -> `Send to Codex`.",
     "- Ha mar fut munka, a bot sorba tudja allitani a kovetkezo promptot.",
     "",
     "**4. Munka kovetese es iranyitasa**",
@@ -109,5 +116,26 @@ export function renderGettingStartedHelp(): string {
     "- Ne kuldj tokeneket vagy privat kulcsokat promptban.",
     "- A bot a helyi gepen dolgozik, a regisztralt repo mappaban.",
     "- Ha bizonytalan vagy: `/health`, aztan `/doctor`, aztan `/dashboard`.",
+  ].join("\n");
+}
+
+export function renderFileUploadHelp(): string {
+  return [
+    "**Fajlfeltoltes Codexnek**",
+    "",
+    "**Ajanlott tavoli modszer**",
+    "- Toltsd fel a fajlt normal Discord uzenetkent.",
+    "- Irhatsz melle szoveget, peldaul: `file: nezd at ezt a logot`.",
+    "- Az elkuldott uzeneten valaszd: `Apps` / `Alkalmazasok` -> `Send to Codex`.",
+    "- A bot a fajlt a repo `.codex-uploads` mappajaba menti, es a helyi pathot csak Codexnek adja at.",
+    "",
+    "**Slash command modszer**",
+    "- `/ask prompt: <utasitas>` utan a `file`, `file2`, `file3` mezokkel is adhatsz attachmentet.",
+    "- Ha csak azt latod, hogy a Discord beirja: `file:`, de nem nyit fajlvalasztot, hasznald inkabb a fenti `Send to Codex` modszert.",
+    "",
+    "**Korlatok**",
+    "- Legfeljebb 25 MB fajlonkent.",
+    "- Veszelyes futtathato tipusokat a bot blokkol.",
+    "- Ne tolts fel tokent, privat kulcsot vagy mas titkot.",
   ].join("\n");
 }

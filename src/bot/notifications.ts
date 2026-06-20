@@ -39,11 +39,11 @@ export function buildStartupNotification(
     ? "message prompt mode: enabled"
     : "message prompt mode: slash commands only";
   const commandRegistration = config.DISCORD_REGISTER_COMMANDS
-    ? "slash command registration: enabled"
-    : "slash command registration: skipped";
+    ? "application command registration: enabled"
+    : "application command registration: skipped";
   const commandCount = typeof options.commandCount === "number"
-    ? `slash commands loaded: ${options.commandCount}`
-    : "slash commands loaded: unknown";
+    ? `application commands loaded: ${options.commandCount}`
+    : "application commands loaded: unknown";
   const botTag = options.botTag ? `bot user: ${options.botTag}` : "bot user: unknown";
   const launchReason = `launch reason: ${safeLaunchReason(options.launchReason)}`;
   const operatorTools = `operator tools: ${safeOperatorToolsStatus(options.operatorToolsStatus)}`;

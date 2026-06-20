@@ -5,6 +5,7 @@ import {
   Routes,
   Collection,
   type ChatInputCommandInteraction,
+  type MessageContextMenuCommandInteraction,
   type Interaction,
 } from "discord.js";
 import { getConfig } from "../utils/config.js";
@@ -37,8 +38,9 @@ import * as healthCmd from "./commands/health.js";
 import * as eventsCmd from "./commands/events.js";
 import * as logsCmd from "./commands/logs.js";
 import * as botCmd from "./commands/bot.js";
+import * as sendToCodexCmd from "./commands/send-to-codex.js";
 
-const commands = [
+const chatCommands = [
   registerCmd,
   unregisterCmd,
   statusCmd,
@@ -64,13 +66,25 @@ const commands = [
   logsCmd,
   botCmd,
 ];
+
+const messageCommands = [
+  sendToCodexCmd,
+];
+const commands = [...chatCommands, ...messageCommands];
 const commandMap = new Collection<
   string,
   { execute: (interaction: ChatInputCommandInteraction) => Promise<void> }
 >();
+const messageCommandMap = new Collection<
+  string,
+  { execute: (interaction: MessageContextMenuCommandInteraction) => Promise<void> }
+>();
 
-for (const cmd of commands) {
+for (const cmd of chatCommands) {
   commandMap.set(cmd.data.name, cmd);
+}
+for (const cmd of messageCommands) {
+  messageCommandMap.set(cmd.data.name, cmd);
 }
 
 function interactionRoleIds(interaction: Interaction): string[] {
@@ -108,9 +122,9 @@ export async function startBot(): Promise<Client> {
           ),
           { body: commandData },
         );
-        console.log(`Registered ${commandData.length} slash commands`);
+        console.log(`Registered ${commandData.length} application commands`);
       } catch (error) {
-        console.error("Failed to register slash commands:", error);
+        console.error("Failed to register application commands:", error);
       }
     } else {
       console.log("Slash command registration skipped (DISCORD_REGISTER_COMMANDS=false)");
@@ -132,6 +146,10 @@ export async function startBot(): Promise<Client> {
         return;
       }
 
+      if (interaction.isModalSubmit()) {
+        if (await sendToCodexCmd.handleModalSubmit(interaction)) return;
+      }
+
       if (interaction.isChatInputCommand()) {
         if (!isAllowedPrincipal(interaction.user.id, interactionRoleIds(interaction))) {
           await interaction.reply({
@@ -144,9 +162,18 @@ export async function startBot(): Promise<Client> {
         await interaction.deferReply();
 
         const command = commandMap.get(interaction.commandName);
-        if (command) {
-          await command.execute(interaction);
+        if (command) await command.execute(interaction);
+      } else if (interaction.isMessageContextMenuCommand()) {
+        if (!isAllowedPrincipal(interaction.user.id, interactionRoleIds(interaction))) {
+          await interaction.reply({
+            content: L("You are not authorized to use this bot.", "이 봇을 사용할 권한이 없습니다."),
+            flags: ["Ephemeral"],
+          });
+          return;
         }
+
+        const command = messageCommandMap.get(interaction.commandName);
+        if (command) await command.execute(interaction);
       } else if (interaction.isButton()) {
         await handleButtonInteraction(interaction);
       } else if (interaction.isStringSelectMenu()) {

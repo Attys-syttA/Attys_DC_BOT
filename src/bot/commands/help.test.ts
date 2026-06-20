@@ -51,6 +51,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Elso lepesek: `/help parancs: kezdetek`");
+    expect(content).toContain("Fajlfeltoltes: `/help parancs: fajlfeltoltes`");
     expect(content).toContain("Reszletes parancs: `/help parancs: ask`");
   });
 
@@ -64,6 +65,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("Kategoria: Codex work");
     expect(content).toContain("Hasznalat: `/ask prompt: <szoveg> file/file2/file3: <opcionalis>`");
     expect(content).toContain("A megadott promptot");
+    expect(content).toContain("Send to Codex");
   });
 
   it("shows a getting-started workflow topic for remote repo work", async () => {
@@ -79,6 +81,19 @@ describe("/help and /sugo", () => {
     expect(content).toContain("/events");
     expect(content).toContain("/session new");
     expect(content).toContain("nem PC-n futo chat sessionhoz csatlakozol");
+  });
+
+  it("shows a file-upload workflow topic", async () => {
+    const interaction = makeInteraction("sugo", "fajlfeltoltes");
+
+    await executeSugo(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content).toContain("Fajlfeltoltes Codexnek");
+    expect(content).toContain("Send to Codex");
+    expect(content).toContain("file: nezd at ezt a logot");
+    expect(content).toContain("25 MB");
   });
 
   it("uses /sugo as a Hungarian alias", async () => {

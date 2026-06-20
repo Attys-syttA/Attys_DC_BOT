@@ -67,7 +67,7 @@ describe("/doctor", () => {
     });
     mocks.expectedCommandNames.mockReturnValue(["ask", "doctor", "status"]);
     mocks.inspectDiscordCommandRegistration.mockResolvedValue([
-      "OK slash command registration 3/3",
+      "OK application command registration 3/3",
     ]);
     mocks.runLocalCommand.mockResolvedValue({
       exitCode: 0,
@@ -85,9 +85,9 @@ describe("/doctor", () => {
     expect(content).toContain("OK DISCORD_APPLICATION_ID configured");
     expect(content).toContain("INFO notification channel not configured");
     expect(content).toContain("OK allowed principals configured");
-    expect(content).toContain("OK known slash command surface 3 commands");
-    expect(content).toContain("INFO startup slash command registration enabled");
-    expect(content).toContain("OK slash command registration 3/3");
+    expect(content).toContain("OK known application command surface 3 commands");
+    expect(content).toContain("INFO startup application command registration enabled");
+    expect(content).toContain("OK application command registration 3/3");
     expect(content).toContain("INFO message prompts disabled; slash commands work without Message Content intent");
     expect(content).toContain("OK this channel is registered");
     expect(content).toContain("OK project has one channel mapping");
@@ -144,7 +144,7 @@ describe("/doctor", () => {
 
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("OK notification channel configured");
-    expect(content).toContain("INFO startup slash command registration disabled");
+    expect(content).toContain("INFO startup application command registration disabled");
     expect(content).toContain("INFO message prompts enabled; Discord Message Content intent must be enabled in Developer Portal");
   });
 });

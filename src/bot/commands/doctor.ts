@@ -36,8 +36,8 @@ export async function execute(
   lines.push(config.DISCORD_NOTIFICATION_CHANNEL_ID ? ok("notification channel configured") : info("notification channel not configured"));
   lines.push(config.ALLOWED_USER_IDS.length > 0 || config.ALLOWED_ROLE_IDS.length > 0 ? ok("allowed principals configured") : fail("allowed principals", "no users or roles configured"));
   lines.push(fs.existsSync(config.BASE_PROJECT_DIR) ? ok("BASE_PROJECT_DIR exists") : fail("BASE_PROJECT_DIR", "path does not exist"));
-  lines.push(ok(`known slash command surface ${expectedCommandNames().length} commands`));
-  lines.push(config.DISCORD_REGISTER_COMMANDS ? info("startup slash command registration enabled") : info("startup slash command registration disabled"));
+  lines.push(ok(`known application command surface ${expectedCommandNames().length} commands`));
+  lines.push(config.DISCORD_REGISTER_COMMANDS ? info("startup application command registration enabled") : info("startup application command registration disabled"));
   lines.push(...await inspectDiscordCommandRegistration(config));
   lines.push(
     config.DISCORD_ENABLE_MESSAGE_PROMPTS

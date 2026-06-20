@@ -63,8 +63,8 @@ describe("startup notifications", () => {
     expect(message).toContain("bot user: Codex_Dscrd_BOT#2018");
     expect(message).toContain("operator tools: ready");
     expect(message).toContain("message prompt mode: enabled");
-    expect(message).toContain("slash command registration: enabled");
-    expect(message).toContain("slash commands loaded: 19");
+    expect(message).toContain("application command registration: enabled");
+    expect(message).toContain("application commands loaded: 19");
     expect(message).not.toContain("token");
     expect(message).not.toContain("guild-id");
   });

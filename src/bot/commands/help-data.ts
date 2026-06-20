@@ -16,6 +16,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "A megadott promptot a regisztralt local project Codex sessionje kapja meg.",
       "A bot visszairja a prompt szoveget, hogy kesobb latszodjon, mire erkezett a valasz.",
       "A `file`, `file2`, `file3` attachmenteket a project `.codex-uploads` mappajaba menti, de a Discord valasz nem ir ki lokalis pathot.",
+      "Ha a Discord kliens nem nyit fajlvalasztot a `file` mezonel, toltsd fel a fajlt normal uzenetkent, majd az uzeneten valaszd: `Apps` -> `Send to Codex`.",
       "Ha mar fut egy feladat, a bot sorba tudja allitani a kovetkezo promptot.",
     ],
   },
