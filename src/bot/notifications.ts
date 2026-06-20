@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import type { Client, TextChannel } from "discord.js";
 import type { Config } from "../utils/config.js";
 
 type StartupNotificationOptions = {
@@ -7,6 +7,8 @@ type StartupNotificationOptions = {
   launchReason?: string;
   operatorToolsStatus?: string;
 };
+
+type OperatorAttentionKind = "approval" | "question";
 
 function safeLaunchReason(value: string | undefined): string {
   if (!value) return "unknown start";
@@ -89,4 +91,35 @@ export async function sendStartupNotification(
     launchReason: process.env.ATTYS_BOT_LAUNCH_REASON,
     operatorToolsStatus: process.env.ATTYS_OPERATOR_TOOLS_STATUS,
   }));
+}
+
+export function buildOperatorAttentionNotification(
+  kind: OperatorAttentionKind,
+  sourceChannelId?: string,
+): string {
+  const action = kind === "approval"
+    ? "tool approval"
+    : "Codex question";
+  const target = sourceChannelId ? `<#${sourceChannelId}>` : "the active project channel";
+
+  return [
+    "Attys DC BOT needs operator attention.",
+    `action: ${action}`,
+    `channel: ${target}`,
+    "Open the project channel and answer the latest Codex card.",
+  ].join("\n");
+}
+
+export async function sendOperatorAttentionNotification(
+  sourceChannel: TextChannel,
+  config: Config,
+  kind: OperatorAttentionKind,
+): Promise<void> {
+  const notifyChannelId = config.DISCORD_NOTIFICATION_CHANNEL_ID;
+  if (!notifyChannelId || notifyChannelId === sourceChannel.id) return;
+
+  const channel = await sourceChannel.client.channels.fetch(notifyChannelId);
+  if (!channel?.isSendable()) return;
+
+  await channel.send(buildOperatorAttentionNotification(kind, sourceChannel.id));
 }

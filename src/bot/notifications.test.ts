@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildStartupNotification, sendStartupNotification } from "./notifications.js";
+import {
+  buildOperatorAttentionNotification,
+  buildStartupNotification,
+  sendOperatorAttentionNotification,
+  sendStartupNotification,
+} from "./notifications.js";
 import type { Config } from "../utils/config.js";
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
@@ -91,5 +96,57 @@ describe("startup notifications", () => {
 
     expect(fetch).toHaveBeenCalledWith("notify-channel");
     expect(send).toHaveBeenCalledWith(expect.stringContaining("Attys DC BOT online."));
+  });
+});
+
+describe("operator attention notifications", () => {
+  it("builds a public-safe attention message", () => {
+    const message = buildOperatorAttentionNotification("approval", "channel-1");
+
+    expect(message).toContain("Attys DC BOT needs operator attention.");
+    expect(message).toContain("action: tool approval");
+    expect(message).toContain("channel: <#channel-1>");
+    expect(message).not.toContain("token");
+    expect(message).not.toContain("C:\\");
+  });
+
+  it("skips sending when notification channel is not configured", async () => {
+    const fetch = vi.fn();
+    await sendOperatorAttentionNotification(
+      { id: "project-channel", client: { channels: { fetch } } } as never,
+      makeConfig(),
+      "question",
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("skips duplicate notifications to the same channel", async () => {
+    const fetch = vi.fn();
+    await sendOperatorAttentionNotification(
+      { id: "notify-channel", client: { channels: { fetch } } } as never,
+      makeConfig({ DISCORD_NOTIFICATION_CHANNEL_ID: "notify-channel" }),
+      "question",
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("sends an attention notification to the configured channel", async () => {
+    const send = vi.fn();
+    const fetch = vi.fn().mockResolvedValue({
+      isSendable: () => true,
+      send,
+    });
+
+    await sendOperatorAttentionNotification(
+      { id: "project-channel", client: { channels: { fetch } } } as never,
+      makeConfig({ DISCORD_NOTIFICATION_CHANNEL_ID: "notify-channel" }),
+      "question",
+    );
+
+    expect(fetch).toHaveBeenCalledWith("notify-channel");
+    expect(send).toHaveBeenCalledWith(expect.stringContaining("action: Codex question"));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining("channel: <#project-channel>"));
   });
 });

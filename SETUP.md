@@ -135,6 +135,8 @@ The result is written to `operator-startup.log` locally and appears in the start
 
 The script uses an ignored local lock under `.discord-bot-state`, so a tray click, startup run, and `/tools run` cannot create duplicate preflight runs. If a second request arrives while the first one is active, Discord reports `Operator tools already running` and shows only the latest public-safe status lines.
 
+The same notification channel also receives short attention messages when Codex is waiting for a tool approval or a question answer in another project channel.
+
 ## 7. Manual Node Start
 
 ```powershell
@@ -179,6 +181,7 @@ Optional local commands:
 - If update status is unavailable, check whether `git` is on PATH and whether the repo has an `origin/main` upstream.
 - If `operator tools: failed` appears in Discord, check `Get-Content operator-startup.log -Tail 80`.
 - If `/tools run` says `Operator tools already running`, wait for the active preflight to finish and then use `/tools status`.
+- If approval or question cards appear in a project channel but no central attention message arrives, check `DISCORD_NOTIFICATION_CHANNEL_ID`; duplicate notifications are skipped when it points to the same channel.
 - If `Safe Update` is disabled, check whether the repo is clean and behind origin.
 - If `Safe Update` stops, read `update.log`; it is local and ignored by Git.
 - If Windows login startup cannot be toggled, open `shell:startup` and create or remove a shortcut to `win-start.bat` manually.

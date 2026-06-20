@@ -18,6 +18,7 @@ import {
   createToolApprovalEmbed,
   splitMessage,
 } from "./output-formatter.js";
+import { sendOperatorAttentionNotification } from "../bot/notifications.js";
 
 interface ActiveSession {
   channelId: string;
@@ -384,6 +385,7 @@ export class SessionManager {
     const { embed, row } = createToolApprovalEmbed(toolName, input as Record<string, unknown>, String(requestId));
     updateSessionStatus(channelId, "waiting");
     await channel.send({ embeds: [embed], components: [row] });
+    await sendOperatorAttentionNotification(channel, getConfig(), "approval").catch(() => {});
 
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
@@ -428,6 +430,7 @@ export class SessionManager {
 
       updateSessionStatus(channelId, "waiting");
       await channel.send({ embeds: [embed], components });
+      await sendOperatorAttentionNotification(channel, getConfig(), "question").catch(() => {});
 
       const answer = await new Promise<Record<string, { answers: string[] }>>((resolve) => {
         const timeout = setTimeout(() => {

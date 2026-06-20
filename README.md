@@ -178,6 +178,7 @@ The tray settings editor writes only the local ignored `.env` file. Keep real va
 - `/dashboard` shows whether Codex is waiting for approval, a question answer, custom input, or queue confirmation
 - `/mappings` provides an overview and cleanup buttons before falling back to `/unregister [channel]` for manual legacy mapping removal
 - startup notifications go only to `DISCORD_NOTIFICATION_CHANNEL_ID` when it is configured, and the message does not include secrets or raw IDs
+- approval/question attention notifications go to `DISCORD_NOTIFICATION_CHANNEL_ID` only when it is a separate sendable channel
 
 ## Validation
 

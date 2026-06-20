@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: operator tools and Codex user-input UX hardening in progress
-- Git state: local `main` tracks `origin/main`; operator tools and user-input UX changes prepared for validation
+- Phase: operator attention notification hardening in progress
+- Git state: local `main` tracks `origin/main`; attention notification changes prepared for validation
 
 ## Current Goal
 
@@ -67,6 +67,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Fixed custom typed Codex question answers so they route back to the active question id.
 - Allowed pending custom Codex answers through the message handler even when normal message prompts are disabled.
 - Extended `/dashboard` with pending operator action visibility for approvals, questions, custom answers, and queue confirmations.
+- Added best-effort central attention notifications for approval and Codex question waits when `DISCORD_NOTIFICATION_CHANNEL_ID` points to a separate sendable channel.
 
 ## Open Work
 

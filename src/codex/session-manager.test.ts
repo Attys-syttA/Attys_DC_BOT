@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     respond: vi.fn(),
     interruptTurn: vi.fn(),
   },
+  sendOperatorAttentionNotification: vi.fn(),
 }));
 
 vi.mock("../db/database.js", () => ({
@@ -38,6 +39,10 @@ vi.mock("./app-server-client.js", () => ({
   codexAppServer: mocks.codexAppServer,
 }));
 
+vi.mock("../bot/notifications.js", () => ({
+  sendOperatorAttentionNotification: mocks.sendOperatorAttentionNotification,
+}));
+
 import { SessionManager } from "./session-manager.js";
 import { createStopButton, splitMessage } from "./output-formatter.js";
 
@@ -58,6 +63,7 @@ describe("SessionManager streaming output", () => {
       DISCORD_ENABLE_AUTO_APPROVE: false,
       DISCORD_QUEUE_MAX_ITEMS: 10,
     });
+    mocks.sendOperatorAttentionNotification.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -182,6 +188,7 @@ describe("SessionManager approval safety", () => {
       DISCORD_ENABLE_AUTO_APPROVE: false,
       DISCORD_QUEUE_MAX_ITEMS: 10,
     });
+    mocks.sendOperatorAttentionNotification.mockResolvedValue(undefined);
   });
 
   it("treats approve-all as a single approval when auto-approve is disabled", async () => {
@@ -199,6 +206,16 @@ describe("SessionManager approval safety", () => {
     );
     await vi.waitFor(() => {
       expect(channel.send).toHaveBeenCalled();
+    });
+    expect(mocks.sendOperatorAttentionNotification).toHaveBeenCalledWith(
+      channel,
+      expect.any(Object),
+      "approval",
+    );
+    await vi.waitFor(() => {
+      expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+        pendingApproval: true,
+      });
     });
     const resolved = manager.resolveApproval("44", "approve-all");
 
@@ -227,6 +244,11 @@ describe("SessionManager approval safety", () => {
     );
     await vi.waitFor(() => {
       expect(channel.send).toHaveBeenCalled();
+    });
+    await vi.waitFor(() => {
+      expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+        pendingApproval: true,
+      });
     });
     const resolved = manager.resolveApproval("45", "approve-all");
 
@@ -263,6 +285,11 @@ describe("SessionManager approval safety", () => {
       expect(channel.send).toHaveBeenCalled();
     });
     expect(mocks.codexAppServer.respond).not.toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+        pendingApproval: true,
+      });
+    });
 
     manager.resolveApproval("46", "approve");
     await response;
@@ -279,6 +306,7 @@ describe("SessionManager user input routing", () => {
       DISCORD_ENABLE_AUTO_APPROVE: false,
       DISCORD_QUEUE_MAX_ITEMS: 10,
     });
+    mocks.sendOperatorAttentionNotification.mockResolvedValue(undefined);
   });
 
   it("routes custom typed answers back to the active Codex question id", async () => {
@@ -303,6 +331,17 @@ describe("SessionManager user input routing", () => {
 
     await vi.waitFor(() => {
       expect(channel.send).toHaveBeenCalled();
+    });
+    expect(mocks.sendOperatorAttentionNotification).toHaveBeenCalledWith(
+      channel,
+      expect.any(Object),
+      "question",
+    );
+
+    await vi.waitFor(() => {
+      expect(manager.getOperatorRuntimeSnapshot("channel-1")).toMatchObject({
+        pendingQuestion: true,
+      });
     });
 
     manager.enableCustomInput("77", "channel-1");
