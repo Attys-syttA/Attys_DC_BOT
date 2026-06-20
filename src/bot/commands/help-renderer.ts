@@ -9,6 +9,13 @@ const CATEGORY_LABELS = {
 } as const;
 
 const CATEGORY_ORDER = ["codex", "sessions", "repo", "ops", "safety"] as const;
+const HELP_LIST_DESCRIPTION_MAX = 58;
+
+function compactDescription(value: string): string {
+  return value.length > HELP_LIST_DESCRIPTION_MAX
+    ? `${value.slice(0, HELP_LIST_DESCRIPTION_MAX - 3)}...`
+    : value;
+}
 
 export function commandChoices() {
   return HELP_ENTRIES
@@ -23,17 +30,16 @@ export function renderHelpList(commandName: string): string {
     const group = entries.filter((entry) => entry.category === category);
     if (group.length === 0) continue;
     lines.push(`**${CATEGORY_LABELS[category]}**`);
-    lines.push(...group.map((entry) => `- \`/${entry.name}\` - ${entry.short}`));
+    lines.push(...group.map((entry) => `- \`/${entry.name}\` - ${compactDescription(entry.short)}`));
     lines.push("");
   }
 
   return [
-    "**Codex Discord Bot sugo**",
-    "",
-    "Kezdeshez: `/dashboard`, `/health`, `/sessions`, `/events`, `/logs`.",
+    "**Attys DC BOT sugo**",
+    "Kezdes: `/dashboard`, `/health`, `/events`, `/logs`.",
     "",
     ...lines,
-    `Reszletes sugo: \`/${commandName} parancs: ask\``,
+    `Reszletes: \`/${commandName} parancs: ask\``,
   ].join("\n");
 }
 

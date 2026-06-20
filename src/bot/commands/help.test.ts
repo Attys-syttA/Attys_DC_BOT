@@ -29,13 +29,14 @@ describe("/help and /sugo", () => {
     await executeHelp(interaction as never);
 
     const content = interaction.editReply.mock.calls[0][0].content;
-    expect(content).toContain("Codex Discord Bot sugo");
-    expect(content).toContain("Kezdeshez: `/dashboard`, `/health`, `/sessions`, `/events`, `/logs`.");
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content).toContain("Attys DC BOT sugo");
+    expect(content).toContain("Kezdes: `/dashboard`, `/health`, `/events`, `/logs`.");
     expect(content).toContain("**Codex work**");
     expect(content).toContain("**Operator diagnostics**");
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
     expect(content).toContain("`/doctor` - Ellenorzi");
-    expect(content).toContain("Reszletes sugo: `/help parancs: ask`");
+    expect(content).toContain("Reszletes: `/help parancs: ask`");
   });
 
   it("shows detailed help for a selected command", async () => {
@@ -56,6 +57,7 @@ describe("/help and /sugo", () => {
     await executeSugo(interaction as never);
 
     const content = interaction.editReply.mock.calls[0][0].content;
-    expect(content).toContain("Reszletes sugo: `/sugo parancs: ask`");
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content).toContain("Reszletes: `/sugo parancs: ask`");
   });
 });
