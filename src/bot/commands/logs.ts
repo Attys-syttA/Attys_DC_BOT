@@ -33,7 +33,11 @@ export const data = new SlashCommandBuilder()
     .setName("lines")
     .setDescription("Number of lines to show")
     .setMinValue(1)
-    .setMaxValue(30));
+    .setMaxValue(30))
+  .addStringOption((option) => option
+    .setName("contains")
+    .setDescription("Optional public-safe text filter")
+    .setRequired(false));
 
 function clampLineCount(value: number): number {
   return Math.max(1, Math.min(30, value));
@@ -56,15 +60,18 @@ export function readPublicLogLines(
   repoRoot: string,
   source: LogSource,
   lineCount = 12,
+  contains?: string | null,
 ): string[] {
   const filename = LOG_SOURCES[source];
   if (!filename) return [];
+  const filter = contains?.trim().toLowerCase() ?? "";
 
   try {
     return fs.readFileSync(path.join(repoRoot, filename), "utf8")
       .split(/\r?\n/)
       .map(sanitizeLogLine)
       .filter(Boolean)
+      .filter((line) => !filter || line.toLowerCase().includes(filter))
       .slice(-clampLineCount(lineCount));
   } catch {
     return [];
@@ -77,9 +84,10 @@ function compactCodeBlock(lines: string[]): string {
   return `...${joined.slice(joined.length - 1750)}`;
 }
 
-export function buildLogsReply(source: LogSource, lines: string[]): string {
+export function buildLogsReply(source: LogSource, lines: string[], contains?: string | null): string {
+  const filter = sanitizeLogLine(contains ?? "");
   return [
-    `**Attys DC BOT Logs** (${source})`,
+    `**Attys DC BOT Logs** (${source}${filter ? `, contains: ${filter}` : ""})`,
     lines.length > 0
       ? `\`\`\`text\n${compactCodeBlock(lines)}\n\`\`\``
       : "No public-safe lines found for this log source.",
@@ -91,7 +99,8 @@ export async function execute(
 ): Promise<void> {
   const source = (interaction.options.getString("source", true) ?? "bot") as LogSource;
   const lines = interaction.options.getInteger("lines") ?? 12;
+  const contains = interaction.options.getString("contains", false);
   await interaction.editReply({
-    content: buildLogsReply(source, readPublicLogLines(process.cwd(), source, lines)),
+    content: buildLogsReply(source, readPublicLogLines(process.cwd(), source, lines, contains), contains),
   });
 }

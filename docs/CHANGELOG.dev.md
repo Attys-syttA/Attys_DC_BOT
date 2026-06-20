@@ -73,3 +73,4 @@
 - Health version visibility: a `/health` public-safe riport megmutatja a futtatott bot package verziot is.
 - Session inspect fallback: a `/sessions` select reszletnezet is a kozos `/last` fallback logikat hasznalja, igy live app-server olvasas hiba eseten is megprobal helyi rollout JSONL-bol utolso valaszt mutatni.
 - Health command surface: a `/health` riport mutatja az ismert slash command surface darabszamat is.
+- Log filtering: a `/logs` `contains` opciot kapott, amely a mar scrubbolt public-safe log sorokon szur tavoli diagnosztikahoz.

@@ -77,6 +77,7 @@ Confirm the panel shows:
 - `/health` shows the package version without reading or printing private config values
 - `/sessions` selected-session inspection reuses `/last` rollout fallback and does not print raw app-server errors
 - `/health` shows known slash command surface count for remote command registration sanity checks
+- `/logs contains:` filters only already-scrubbed public-safe log lines
 
 `Safe Update` must stay guarded:
 

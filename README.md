@@ -130,7 +130,7 @@ When the sibling `codex-ai-tools-mcp-link` repository is present next to this re
 - `/help`: show categorized Hungarian help for known bot commands
 - `/sugo`: Hungarian alias for `/help`
 - `/health`: show public-safe bot runtime health
-- `/logs`: show a public-safe tail from local bot logs
+- `/logs`: show a public-safe tail from local bot logs, with optional scrubbed text filtering
 - `/run-tests`: run `npm test` in the registered local project when `DISCORD_ENABLE_RUN_TESTS=true`
 - `/tools`: run or inspect the VS Code-free local operator tools preflight
 - `/usage`: show local Codex account usage when the app-server exposes rate limits

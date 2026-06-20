@@ -52,15 +52,29 @@ describe("/logs helpers", () => {
     ]);
   });
 
+  it("filters public log lines by scrubbed text", () => {
+    const dir = makeTempDir();
+    fs.writeFileSync(path.join(dir, "bot.log"), [
+      "startup online",
+      "operator tools ready",
+      "task completed",
+    ].join("\n"), "utf8");
+
+    expect(readPublicLogLines(dir, "bot", 10, "tools")).toEqual([
+      "operator tools ready",
+    ]);
+  });
+
   it("returns empty lines for missing logs", () => {
     expect(readPublicLogLines(makeTempDir(), "error", 5)).toEqual([]);
   });
 
   it("builds a compact Discord reply", () => {
-    const reply = buildLogsReply("events", ["startup online"]);
+    const reply = buildLogsReply("events", ["startup online"], "startup");
 
     expect(reply).toContain("Attys DC BOT Logs");
-    expect(reply).toContain("(events)");
+    expect(reply).toContain("events");
+    expect(reply).toContain("contains: startup");
     expect(reply).toContain("startup online");
   });
 
@@ -70,7 +84,7 @@ describe("/logs helpers", () => {
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
     const interaction = {
       options: {
-        getString: vi.fn().mockReturnValue("events"),
+        getString: vi.fn((name: string) => name === "source" ? "events" : "startup"),
         getInteger: vi.fn().mockReturnValue(1),
       },
       editReply: vi.fn(),

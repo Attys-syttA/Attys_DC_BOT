@@ -120,11 +120,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "logs",
     category: "ops",
-    usage: "/logs source: bot|error|operator-tools|events|update lines: <1-30>",
-    short: "Public-safe tailt mutat a helyi bot logokbol.",
+    usage: "/logs source: bot|error|operator-tools|events|update lines: <1-30> contains: <opcionalis>",
+    short: "Public-safe tailt es opcionális szurest mutat a helyi bot logokbol.",
     details: [
       "Tavoli operatori diagnosztikahoz valo, amikor nincs VS Code vagy desktop panel elotted.",
       "Csak elore engedelyezett repo-lokalis logforrasokat olvas.",
+      "A `contains` opcio a mar scrubbolt sorokon szur.",
       "A valasz scrubolja a pathokat, raw ID-kat, IP-ket es secret-szeru ertekeket.",
     ],
   },
