@@ -118,7 +118,7 @@ When the sibling `codex-ai-tools-mcp-link` repository is present next to this re
 - `/session stop`: stop the active Codex turn in this channel
 - `/sessions`: show known local Codex sessions for the registered project
 - `/clear-sessions`: delete local Codex session files for the registered project when `DISCORD_ENABLE_SESSION_DELETE=true`
-- `/last`: show the last known assistant response
+- `/last`: show the last known assistant response, with local rollout-log fallback when live thread read is unavailable
 - `/mappings`: list project-channel mappings, flag duplicate project paths, and offer cleanup buttons
 - `/stop`: interrupt the current Codex turn
 - `/queue list`: show queued prompts

@@ -6,10 +6,35 @@ import { getProject, getSession } from "../../db/database.js";
 import { codexAppServer } from "../../codex/app-server-client.js";
 import { splitMessage } from "../../codex/output-formatter.js";
 import { L } from "../../utils/i18n.js";
+import { getStoredThread } from "../../codex/storage.js";
+import { getLastAssistantMessageFull } from "./sessions.js";
 
 export const data = new SlashCommandBuilder()
   .setName("last")
   .setDescription("Show the last Codex response from the current session");
+
+export function lastResponseFromThread(thread: { turns?: Array<{ items?: Array<{ type?: string; text?: unknown }> }> }): string {
+  let lastMessage = "";
+  for (const turn of thread.turns ?? []) {
+    for (const item of turn.items ?? []) {
+      if (item.type === "agentMessage" && typeof item.text === "string" && item.text.trim()) {
+        lastMessage = item.text.trim();
+      }
+    }
+  }
+  return lastMessage;
+}
+
+async function lastResponseFromStoredThread(sessionId: string): Promise<string> {
+  const stored = getStoredThread(sessionId);
+  if (!stored?.rollout_path) return "";
+  try {
+    const message = await getLastAssistantMessageFull(stored.rollout_path);
+    return message === "(no message)" ? "" : message.trim();
+  } catch {
+    return "";
+  }
+}
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
@@ -32,15 +57,16 @@ export async function execute(
     return;
   }
 
-  const thread = await codexAppServer.readThread(session.session_id, true);
   let lastMessage = "";
+  try {
+    const thread = await codexAppServer.readThread(session.session_id, true);
+    lastMessage = lastResponseFromThread(thread);
+  } catch {
+    // Fallback to the local rollout log below.
+  }
 
-  for (const turn of thread.turns ?? []) {
-    for (const item of turn.items ?? []) {
-      if (item.type === "agentMessage" && typeof item.text === "string" && item.text.trim()) {
-        lastMessage = item.text.trim();
-      }
-    }
+  if (!lastMessage) {
+    lastMessage = await lastResponseFromStoredThread(session.session_id);
   }
 
   if (!lastMessage) {

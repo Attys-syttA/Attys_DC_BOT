@@ -5,8 +5,8 @@
 - Date: 2026-06-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: slash multi-attachment parity in progress
-- Git state: local `main` tracks `origin/main`; slash multi-attachment support prepared for validation
+- Phase: last response fallback in progress
+- Git state: local `main` tracks `origin/main`; `/last` rollout fallback prepared for validation
 
 ## Current Goal
 
@@ -78,6 +78,7 @@ Build a clean Windows local-first Discord bot that controls local Codex CLI sess
 - Extended `/ask` with one optional `file` attachment using the shared attachment sanitize/download helper.
 - Aligned `/ask` with message prompt queue-confirm behavior when a Codex turn is already active.
 - Extended `/ask` to accept `file`, `file2`, and `file3` attachment slots.
+- Added `/last` fallback to local Codex rollout JSONL logs when live app-server thread reading is unavailable.
 
 ## Open Work
 

@@ -163,6 +163,7 @@ npm run dev
 Optional local commands:
 
 - `/ask` gives a slash-command prompt path in addition to normal messages and can include `file`, `file2`, and `file3` attachments.
+- `/last` can fall back to the local Codex rollout log if live app-server thread reading is unavailable.
 - `/git-status` reports the registered local project's git state.
 - `/bot status` checks the Windows launcher status from Discord.
 - `/bot restart` restarts the local bot only when `DISCORD_ENABLE_BOT_LIFECYCLE=true`.

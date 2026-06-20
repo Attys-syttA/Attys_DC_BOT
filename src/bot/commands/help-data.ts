@@ -135,6 +135,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     short: "Megmutatja az aktualis session utolso ismert Codex valaszat.",
     details: [
       "A kivalasztott vagy aktualis Codex threadbol probalja kiolvasni az utolso assistant valaszt.",
+      "Ha a live Codex app-server olvasas nem elerheto, helyi rollout JSONL logbol probal fallbacket adni.",
       "Hasznos, ha a channelben vissza kell hozni az elozo valaszt.",
     ],
   },

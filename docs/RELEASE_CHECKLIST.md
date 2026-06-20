@@ -72,6 +72,7 @@ Confirm the panel shows:
 - `/help` and `/sugo` list commands by category so the full operator surface stays discoverable
 - `/ask file/file2/file3:` saves slash attachments for Codex without echoing local saved paths to Discord
 - `/ask` uses queue confirmation instead of starting a parallel turn when the channel already has active Codex work
+- `/last` falls back to local rollout JSONL only when live thread reading is unavailable or empty
 
 `Safe Update` must stay guarded:
 
