@@ -103,3 +103,4 @@
 - Operator UI localization: a Windows tray/control panel, Linux Tk control panel, Linux tray, macOS menubar es Discord operator outputok masodik nyelve magyar lett; a nyelvvalaszto `EN/HU`, a regi `.tray-lang=kr` ertek kompatibilitasbol magyar modkent tolto be.
 - macOS Swift compile gate: bekerult a `macOS Swift Compile` GitHub Actions workflow, amely `macos-latest` runneren `swiftc`-vel forditja a `menubar/CodexBotMenu.swift` fajlt compile-only bizonyitekkent.
 - Windows/slash-only default: a `DISCORD_ENABLE_MESSAGE_PROMPTS` kodbeli es example alapertelmezese `false` lett, igy az uj telepitesek slash command/context-command alapon indulnak Message Content intent nelkul.
+- Windows acceptance docs: bekerult a `docs/WINDOWS_ACCEPTANCE.md`, amely a Windows launcher, tray, Discord smoke, safety expectation es 2026-06-21 bizonyitek snapshot megismetelheto ellenorzolistaja.

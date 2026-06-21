@@ -11,7 +11,7 @@
 
 ## Current Goal
 
-Finish the cross-platform source-parity closeout without weakening the local-first safety model. The implementation work is complete locally; the next step is human/platform acceptance for Linux desktop tray, macOS menu bar, and iPad/mobile Discord file handoff.
+Keep the Windows-first baseline stable while Linux and macOS runtime acceptance are paused. The current practical next step is Windows documentation and acceptance polish, not new Linux/macOS work.
 
 ## Current Cross-Platform Parity Status
 
@@ -116,3 +116,4 @@ Finish the cross-platform source-parity closeout without weakening the local-fir
 9. Add scrubbed or synthetic screenshots only when they reveal more than the current SVG.
 10. Keep using `/mappings` and `/doctor` for future legacy mapping drift checks.
 11. New installs now default to slash-only control: `DISCORD_ENABLE_MESSAGE_PROMPTS=false`; normal message prompts remain available as an explicit opt-in.
+12. Windows acceptance is documented in `docs/WINDOWS_ACCEPTANCE.md`; Linux tray and macOS runtime smoke are paused and are not blockers for the Windows baseline.

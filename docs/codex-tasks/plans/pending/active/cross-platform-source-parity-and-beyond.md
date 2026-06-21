@@ -46,25 +46,18 @@ Status: active
 - Operator UI localization: a Windows tray/control panel, Linux Tk control panel, Linux tray, macOS menubar es Discord operator outputok masodik nyelve magyar lett; a nyelvvalaszto `EN/HU`, a regi `.tray-lang=kr` ertek kompatibilitasbol magyar modkent tolto be.
 - macOS Swift compile gate: bekerult a `macOS Swift Compile` GitHub Actions workflow, amely `macos-latest` runneren `swiftc`-vel forditja a `menubar/CodexBotMenu.swift` fajlt compile-only bizonyitekkent.
 - Windows/slash-only default: a `DISCORD_ENABLE_MESSAGE_PROMPTS` kodbeli es example alapertelmezese `false` lett, igy az uj telepitesek slash command/context-command alapon indulnak Message Content intent nelkul.
+- Windows acceptance docs: bekerult a `docs/WINDOWS_ACCEPTANCE.md`, amely a Windows launcher, tray, Discord smoke, safety expectation es 2026-06-21 bizonyitek snapshot megismetelheto ellenorzolistaja.
 
 ## Nyitott reszek
 
-- Fazon 8 local validation/source parity matrix commit es push.
-- Linux control panel GUI runtime smoke WSLg alatt bizonyitott; Linux tray ikon smoke tovabbra is WSLg tray supportot vagy teljes Linux desktopot igenyel.
-- macOS menubar Swift compile-only smoke GitHub Actionsben elokeszitve; runtime smoke tovabbra is tenyleges macOS hostot igenyel.
-- iPad/mobile Discord file handoff es live Discord command smoke emberi acceptance-et igenyel.
-- Linux acceptance Windowsrol realisan WSL2/WSLg vagy Linux VM alatt kozelitheto:
-  - headless/script smoke: Debian WSL2 bizonyitott;
-  - GUI control panel smoke: Debian WSLg bizonyitott;
-  - Linux tray ikon smoke: WSLg tray support vagy teljes Linux VM;
-  - Docker csak headless build/testre eleg, tray desktop smoke-ra nem.
-- macOS acceptance Windows sandboxban nem realis/jogtiszta cel:
-  - Swift compile bizonyitekhez macOS GitHub Actions runner vagy remote Mac hasznalhato;
-  - menu bar runtime smokehoz valodi macOS desktop kell.
-- Kovetkezo konkret lepes:
-  1. Linux GUI smoke dontes: WSLg vagy teljes Linux VM legyen-e a helyi tray/control-panel acceptance kornyezet.
-  2. macOS smoke: CI compile-only gate futtatasa utan valodi Mac runtime smoke dontes.
-  3. iPad/mobile smoke: live Discordon `Send to Codex` file handoff modalos prompttal, majd `/last`, `/events`, `/logs`, `/usage`.
+- Windows baseline: mukodik es dokumentalt; kovetkezo Windows-oldali munka mar polish, nem source-parity blocker.
+- Linux: Debian WSL2 headless/runtime es WSLg control panel smoke bizonyitott; Linux tray ikon runtime smoke felreteve, nem Windows blocker.
+- macOS: Swift compile-only GitHub Actionsben bizonyitott; valodi menubar runtime smoke felreteve, nem Windows blocker.
+- iPad/mobile Discord file handoff live acceptance kesobb emberi kliensoldali tesztet igenyel; nem Windows launcher/tray blocker.
+- Kovetkezo konkret Windows lepesek:
+  1. Windows onboarding polish: setup screenshot/guide frissites public-safe modon.
+  2. Tray UX finomhangolas, ha a napi hasznalatban konkret zavaro pont jelentkezik.
+  3. Release elotti `docs/WINDOWS_ACCEPTANCE.md` teljes ujrafuttatasa.
 
 ## Cel
 
@@ -75,7 +68,7 @@ Referencia allapot:
 - Forras repo: `https://github.com/chadingTV/codex-discord`
 - Vizsgalt commit: `dc1afb8` (`Fix Linux Codex usage refresh`)
 - Helyi repo: `E:\codex_works\Attys_DC_BOT`
-- Jelenlegi helyi baseline: Windows launcher/tray/control panel eros; Linux/macOS launcher parity meg nincs; `Send to Codex` message context menu es modalos file handoff lokalisan kesz, de a terv keszitesekor meg commitolatlan.
+- Jelenlegi helyi baseline: Windows launcher/tray/control panel eros es acceptance dokumentalt; Linux/macOS launcher/source parity implementalva, de a real Linux tray ikon es macOS menubar runtime smoke felreteve; `Send to Codex` message context menu es modalos file handoff kesz.
 
 ## Szigoru vegrehajtasi szabaly
 
@@ -108,19 +101,13 @@ Referencia allapot:
 - `Send to Codex` message context menu explicit file handoff modalos prompttal, amely iPad/telefon oldalon is hasznalhatobb lehet, mint a Discord slash attachment mezok.
 - CI/lint/typecheck/secret-scan fegyelem erosebb.
 
-### Ami a forras repo-ban van, nalunk meg nincs vagy csak reszben van
+### Ami a forras repo-hoz kepest meg elteres vagy kesobbi polish
 
-- `install.sh` macOS/Linux telepitovonal.
-- `mac-start.sh` launchd alapu macOS hatterinditas.
-- `linux-start.sh` systemd --user alapu Linux inditas.
-- `menubar/CodexBotMenu.swift` macOS menubar/control app.
-- `tray/codex_tray.py` Linux tray app.
-- `tray/codex_control_panel.py` Linux desktop control panel.
-- Cross-platform README/SETUP struktura macOS, Linux es Windows fejezetekkel.
-- Forras-repo szeru normal Discord message attachment handling, ahol a sima fajlos uzenet is prompt lehet, ha Message Content intent engedelyezett.
-- Cross-platform installer a Codex CLI hiany kezelesere.
-- Public release setup olyan felhasznaloknak, akik nem csak Windows gepen futtatnak.
-- Platform specifikus troubleshooting launchd/systemd/tray/menubar es Codex command resolver eseteire.
+- Normal Discord message prompt flow nalunk defaultbol tiltott; ez szandekos Windows safety dontes, explicit opt-in marad.
+- Normal text+attachment message flow feature flaggel elerheto, de az ajanlott ut tovabbra is `/ask` vagy `Send to Codex`.
+- Legacy secondary-language docs parity nincs atveve; nalunk English public docs + magyar `/sugo` az aktualis cel.
+- Source-style onboarding screenshotok kozul nem mind van atveve; nalunk csak public-safe sajat abra/screenshot marad.
+- Linux tray ikon es macOS menubar valos runtime smoke kesobbi platformos acceptance; Windows baseline-t nem blokkolja.
 
 ## Celallapot
 

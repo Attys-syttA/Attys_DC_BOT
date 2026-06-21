@@ -37,6 +37,8 @@ Confirm:
 
 ## Windows Smoke
 
+For the full Windows-first acceptance route, use `docs/WINDOWS_ACCEPTANCE.md`.
+
 ```powershell
 cmd /c win-start.bat --stop
 cmd /c win-start.bat --status
