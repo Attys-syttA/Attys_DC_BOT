@@ -2,6 +2,37 @@
 
 This setup is for one local host machine: Discord bot, Codex CLI, Git, and repositories all live on the same Windows, Linux, or macOS host.
 
+## Windows-First Route
+
+For the current supported desktop baseline, use the Windows path first:
+
+```powershell
+git clone https://github.com/Attys-syttA/Attys_DC_BOT.git
+cd Attys_DC_BOT
+cmd /c install.bat
+```
+
+Then complete the local `.env`, start the bot, and verify Discord:
+
+```powershell
+notepad .env
+codex.cmd login status
+cmd /c win-start.bat
+cmd /c win-start.bat --status
+```
+
+In Discord, use:
+
+```text
+/doctor
+/register
+/dashboard
+/ask prompt: Irj egy rovid tesztvalaszt.
+```
+
+The full repeatable Windows acceptance checklist lives in
+`docs/WINDOWS_ACCEPTANCE.md`.
+
 ## 1. Install Prerequisites
 
 - Node.js 20+
@@ -153,6 +184,22 @@ It can:
 - run a guarded `Safe Update` when the checkout is clean and behind origin
 - run the local operator tools preflight from the `Tools` button
 - enable or disable Windows login startup
+
+Button quick reference:
+
+| Button | Purpose |
+|---|---|
+| `Start` / `Stop` | Starts or stops only this repository's bot process. |
+| `Restart` | Restarts the local bot through the same guarded launcher path. |
+| `Settings` | Opens the local ignored `.env` editor. |
+| `Open Log` | Opens `bot.log` for local diagnosis. |
+| `Open Folder` | Opens the repository folder. |
+| `Refresh Usage` | Refreshes the local Codex usage cache through the local Codex app-server. |
+| `Check Updates` | Runs a read-only update check. |
+| `Safe Update` | Runs only when the checkout is clean, behind origin, and not diverged. |
+| `Setup` | Opens this guide. |
+| `Tools` | Runs or reports the VS Code-free operator tools preflight. |
+| `Launch on login` | Creates or removes the current user's Windows Startup shortcut. |
 
 Public-safe preview:
 
@@ -307,6 +354,20 @@ Optional local commands:
 
 ## 9. Troubleshooting
 
+First-run Windows checks:
+
+```powershell
+codex.cmd login status
+cmd /c win-start.bat --status
+npm run doctor:local
+Get-Content bot.err.log -Tail 80
+```
+
+- If `codex.cmd login status` is not healthy, fix Codex login before debugging Discord.
+- If `win-start.bat --status` says `Stopped`, start with `cmd /c win-start.bat` and then re-check.
+- If `/doctor` fails command registration, set `DISCORD_REGISTER_COMMANDS=true` once and restart the bot.
+- If `/dashboard` says the channel is not registered, run `/register` in that Discord channel.
+- If the tray looks stale after an update, close and reopen the tray; the bot process can keep running.
 - If `--status` says `Stopped`, run `Get-Content bot.log -Tail 80` and `Get-Content bot.err.log -Tail 80`.
 - If you are away from the desktop, run `/bot status`; if lifecycle control is enabled, `/bot restart` can restart the local bot.
 - If `.bot.lock` is stale, run `cmd /c win-start.bat --stop`, then `cmd /c win-start.bat --status`.

@@ -9,6 +9,7 @@ Attys DC BOT is a local-first Discord control surface for Codex CLI. It runs on 
 This project follows the local-first direction of [chadingTV/codex-discord](https://github.com/chadingTV/codex-discord), with Attys-specific Windows tooling, explicit file handoff, operator preflight, and public-safety hardening added for this repository.
 
 > Setup guide: [SETUP.md](SETUP.md)<br>
+> Windows acceptance checklist: [docs/WINDOWS_ACCEPTANCE.md](docs/WINDOWS_ACCEPTANCE.md)<br>
 > Public support notes: [docs/PUBLIC_SUPPORT.md](docs/PUBLIC_SUPPORT.md)<br>
 > Source parity matrix: [docs/SOURCE_PARITY_MATRIX.md](docs/SOURCE_PARITY_MATRIX.md)<br>
 > Release checklist: [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
@@ -129,6 +130,14 @@ If `codex.cmd` is not available, test the Codex command that works on this machi
 
 ## Quick Start
 
+Windows is the primary supported desktop path. The shortest setup route is:
+
+```powershell
+git clone https://github.com/Attys-syttA/Attys_DC_BOT.git
+cd Attys_DC_BOT
+cmd /c install.bat
+```
+
 1. Log in to Codex on the same Windows account that will run the bot.
 
 ```powershell
@@ -154,6 +163,10 @@ BASE_PROJECT_DIR=C:\workspace
 DISCORD_REGISTER_COMMANDS=true
 DISCORD_ENABLE_MESSAGE_PROMPTS=false
 ```
+
+Keep normal message prompts disabled unless you explicitly need them. Slash
+commands and `Send to Codex` work without Discord's privileged Message Content
+intent.
 
 3. Start the bot.
 
@@ -184,6 +197,9 @@ macOS:
 /dashboard
 /ask prompt:<what you want Codex to do>
 ```
+
+For a full Windows validation pass after setup or update, use
+[docs/WINDOWS_ACCEPTANCE.md](docs/WINDOWS_ACCEPTANCE.md).
 
 ## Windows Control Panel
 
@@ -424,7 +440,7 @@ Launcher smoke test on macOS:
 In scope:
 
 - Windows/local-first Codex control
-- initial Linux/macOS launcher support
+- initial Linux/macOS launcher and desktop-panel source support
 - Discord operator UX
 - local SQLite mapping state
 - local Codex login/session usage
@@ -436,7 +452,7 @@ Out of scope:
 - custom HTTP execution agent
 - multi-machine state sharing
 - network-share or portable-drive workflow
-- macOS menu bar desktop parity until the cross-platform plan is completed
+- production support for Linux tray or macOS menu bar runtime without real platform acceptance
 
 ## License
 

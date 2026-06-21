@@ -11,7 +11,7 @@
 
 ## Current Goal
 
-Keep the Windows-first baseline stable while Linux and macOS runtime acceptance are paused. The current practical next step is Windows documentation and acceptance polish, not new Linux/macOS work.
+Keep the Windows-first baseline stable while Linux and macOS runtime acceptance are paused. The current practical next step is Windows operator polish and release-readiness cleanup, not new Linux/macOS work.
 
 ## Current Cross-Platform Parity Status
 
@@ -117,3 +117,4 @@ Keep the Windows-first baseline stable while Linux and macOS runtime acceptance 
 10. Keep using `/mappings` and `/doctor` for future legacy mapping drift checks.
 11. New installs now default to slash-only control: `DISCORD_ENABLE_MESSAGE_PROMPTS=false`; normal message prompts remain available as an explicit opt-in.
 12. Windows acceptance is documented in `docs/WINDOWS_ACCEPTANCE.md`; Linux tray and macOS runtime smoke are paused and are not blockers for the Windows baseline.
+13. Windows onboarding now has a shorter first-run path in README/SETUP, including the acceptance checklist, tray button reference, and first-run troubleshooting route.
