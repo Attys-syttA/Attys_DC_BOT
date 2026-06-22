@@ -10,6 +10,7 @@
     "rootDir": "src",
     "declaration": true,
     "resolveJsonModule": true,
+    "ignoreDeprecations": "6.0",
     "isolatedModules": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
