@@ -1,5 +1,22 @@
 # Development Changelog
 
+## 2026-06-22
+
+- Release-readiness plan cleanup: az aktiv `cross-platform-source-parity-and-beyond.md` tervbol kikerultek a mar elkeszult implementacios fazisok mint hatralevo munka; a terv most a tenyleges Windows release acceptance, Discord live smoke, final validation es external-platform future-work pontokat tartja nyitva.
+- Source gap audit policy: a `docs/SOURCE_GAP_AUDIT.md` eredmenye lett iranyado, vagyis nincs P1 bot-core hiany a `chadingTV/codex-discord` forrashoz kepest; a normal-message-first upstream UX tovabbra is explicit opt-in, nem default.
+- SETUP polish: bekerult az `Upstream-Like Normal Message Mode` szakasz, amely pontosan rogziti a `DISCORD_ENABLE_MESSAGE_PROMPTS=true`, Discord Message Content Intent es `DISCORD_ENABLE_ATTACHMENT_MESSAGES=true` felteteleket.
+- Platform acceptance boundary: README/SETUP most kulon jelzi, hogy a Linux tray ikon runtime valodi Linux desktopot, a macOS menu bar runtime pedig valodi vagy remote Macet igenyel; ezek nem blokkoljak a Windows baseline-t.
+- State refresh: a `docs/STATE.md` aktualis celja Windows release-readiness closeout lett, friss nyitott munkalistaval es a `2461513` synced baseline megjelolesevel.
+- Validacio: `npm run typecheck`, `npm test` (`38` fajl, `248` teszt), `npm run build`, `npm run check`, `git diff --check`, es `ggshield secret scan path --recursive --yes --use-gitignore .` zold.
+- Windows launcher acceptance: `win-start.bat --stop/status/start/status/stop/status` es `npm run doctor:local` zold; a launcher vegallapota `Stopped`, az operator tools preflight OK volt.
+- Safe update status: `npm run safe-update:status` a commitolatlan release-readiness doksival helyesen `status=dirty`, `canSafeUpdate=false` allapotot adott.
+- First prerelease prep: a package verzio `0.1.1-prerelease.1` lett, a javasolt GitHub prerelease tag/title `v0.1.00001-pre`, hogy az email-header-analyzer fele futosorszamos verzioerzet megmaradjon npm-kompatibilis csomagverzio mellett.
+- Windows tray UI: a control panel alap szelessege `820px`, minimum szelessege `780px` lett, hogy a lifecycle sorban a `Releases/Kiadások` gomb mellett is legyen eleg hely.
+- Tray rebuild: az elso launcher smoke `CS0016` lock hibara futott, mert a korabbi `CodexBotTray.exe` meg fogta a binarist; a tray process celzott leallitasa utan a launcher ujra lefutott `CS0016` nelkul, es a bot lifecycle `Stopped -> Running -> Stopped` zold maradt.
+- Windows tray gombsor polish: a `Frissítés keresése` / `Check Updates` gomb mar nem tolti ki a lifecycle sor maradek helyet, hanem a tobbi lifecycle gombhoz hasonloan szovegmeret + fix padding alapjan kap szelesseget.
+- Discord live smoke: a user vegigprobalta a tervben felsorolt live parancsokat/flow-kat (`/doctor`, `/health`, `/dashboard`, `/register`, `/ask`, `Send to Codex`, approval accept/deny, Codex question answer, `/events`, `/logs`, `/last`, `/sessions`, `/usage`, `/bot status`) es nem talalt hibat.
+- Windows UI acceptance: a user vegigprobalta a tray/control panel gombjait, az ablak bezaraskor a system tray-re csukodik, es onnan visszanyithato; ez bekerult a `docs/WINDOWS_ACCEPTANCE.md` 2026-06-22 evidence snapshotjaba.
+
 ## 2026-06-17
 
 - Cel: Az `Attys_DC_BOT` mappat local-first Discord-Codex bot iranyba elinditani.

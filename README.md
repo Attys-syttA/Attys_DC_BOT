@@ -258,6 +258,8 @@ python3 tray/codex_control_panel.py
 
 The Linux tray/control panel can show status, start/stop/restart through `linux-start.sh`, open logs/folder/settings, show Codex usage cache, and check for upstream updates read-only. It does not run destructive auto-update actions.
 
+Acceptance note: Debian WSL2/WSLg control panel smoke is proven, but Linux tray icon runtime still requires a real Linux desktop session with system tray support.
+
 <p>
   <img src="docs/linux-control-panel-public-safe.svg" alt="Attys DC BOT Linux control panel illustration" width="760">
 </p>
@@ -278,6 +280,8 @@ swiftc menubar/CodexBotMenu.swift -o menubar/CodexBotMenu
 ```
 
 The menu bar app uses the same `mac-start.sh`/launchd lifecycle contract, shows status and Codex usage, opens logs/folder/settings, and keeps update actions read-only.
+
+Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS menu bar runtime still requires a real or remote Mac.
 
 <p>
   <img src="docs/macos-menubar-public-safe.svg" alt="Attys DC BOT macOS menu bar illustration" width="760">

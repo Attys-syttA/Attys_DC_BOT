@@ -58,6 +58,21 @@ Required values for `.env`:
 
 Enable Message Content Intent only if normal Discord messages should be accepted as prompts. Slash commands remain the safer default control surface.
 
+### Upstream-Like Normal Message Mode
+
+The upstream `chadingTV/codex-discord` workflow treats normal Discord messages in registered channels as Codex prompts. Attys DC BOT keeps that behavior as an explicit opt-in, not the default.
+
+To enable it:
+
+1. Set `DISCORD_ENABLE_MESSAGE_PROMPTS=true` in the local ignored `.env`.
+2. Enable Discord's privileged Message Content Intent in the Discord Developer Portal for this bot.
+3. Restart the bot and run `/doctor` to confirm the prompt mode warning/status.
+4. Use the mode only in channels intentionally registered to local projects, because normal messages in those channels can become Codex prompts.
+
+For source-style normal text plus attachment prompts, set `DISCORD_ENABLE_ATTACHMENT_MESSAGES=true` as well. Attachment-only normal messages still do not start blind Codex work; use `Send to Codex` or `/ask` when the file needs a written instruction.
+
+Recommended default: leave both flags `false` and use `/ask` or `Send to Codex`. Slash commands and the message context command avoid the Message Content Intent requirement and reduce accidental prompt capture.
+
 ## 3. Create Local Config
 
 ```powershell
@@ -255,6 +270,8 @@ The Linux panel uses `linux-start.sh` for Start, Stop, Restart, and Status, so i
 
 Linux update checks are read-only. The panel may compare local `HEAD` with `origin/main`, but it does not run `git stash`, `git reset --hard`, automatic pull, automatic dependency install, or restart-for-update actions.
 
+Acceptance note: Debian WSL2/WSLg control panel smoke is proven for render/status/usage/Stop/Restart, but the tray icon still needs a real Linux desktop session with system tray support before it can be called production-ready.
+
 ![Linux control panel illustration](docs/linux-control-panel-public-safe.svg)
 
 ### macOS Menu Bar App
@@ -269,6 +286,8 @@ swiftc menubar/CodexBotMenu.swift -o menubar/CodexBotMenu
 The macOS menu bar app uses the same local `.env`, `bot.log`, `bot.err.log`, `~/.codex/rate-limits-cache.json`, and `mac-start.sh`/launchd lifecycle contract as the shell launcher. It can show status, Start, Stop, Restart, open logs/folder/settings, display Codex usage, and open GitHub/Setup links.
 
 macOS update checks are read-only. The menu bar app does not run automatic git, npm, or restart update actions.
+
+Acceptance note: the Swift source has compile-only CI evidence, but menu bar runtime smoke still needs a real or remote Mac before it can be called production-ready.
 
 ![macOS menu bar illustration](docs/macos-menubar-public-safe.svg)
 

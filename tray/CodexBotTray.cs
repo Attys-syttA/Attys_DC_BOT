@@ -280,8 +280,8 @@ internal sealed class CodexBotTray : Form
         controlPanel = new Form();
         controlPanel.Text = "Attys DC BOT Control Panel";
         controlPanel.StartPosition = FormStartPosition.CenterScreen;
-        controlPanel.Size = new Size(700, 760);
-        controlPanel.MinimumSize = new Size(660, 660);
+        controlPanel.Size = new Size(820, 760);
+        controlPanel.MinimumSize = new Size(780, 660);
         controlPanel.BackColor = Color.FromArgb(24, 28, 36);
         controlPanel.ForeColor = Color.White;
         controlPanel.FormClosed += delegate { controlPanel = null; };
@@ -462,15 +462,18 @@ internal sealed class CodexBotTray : Form
         int rowTop = 114;
         int rowLeft = 14;
         int rowGap = 8;
-        int usableWidth = Math.Max(500, lifecyclePanel.Width - 28 - (rowGap * 5));
-        int checkWidth = Math.Max(132, usableWidth - 370);
-        int githubWidth = 76;
-        int releasesWidth = 86;
-        int safeUpdateWidth = 106;
-        int setupWidth = 58;
-        int toolsWidth = 60;
+        string checkText = L("Check Updates", "Frissítés keresése");
+        string releasesText = L("Releases", "Kiadások");
+        string safeUpdateText = L("Safe Update", "Safe update");
+        string setupText = L("Setup", "Setup");
+        int checkWidth = LifecycleButtonWidth(checkText, 132);
+        int githubWidth = LifecycleButtonWidth("GitHub", 76);
+        int releasesWidth = LifecycleButtonWidth(releasesText, 86);
+        int safeUpdateWidth = LifecycleButtonWidth(safeUpdateText, 106);
+        int setupWidth = LifecycleButtonWidth(setupText, 58);
+        int toolsWidth = LifecycleButtonWidth("Tools", 60);
 
-        Button check = MakeButton(L("Check Updates", "Frissítés keresése"), rowLeft, rowTop, checkWidth, 30);
+        Button check = MakeButton(checkText, rowLeft, rowTop, checkWidth, 30);
         check.Font = new Font("Segoe UI", 8, FontStyle.Bold);
         FitButtonText(check, 8, FontStyle.Bold);
         check.Click += delegate { RenderLifecyclePanel(true); };
@@ -484,14 +487,14 @@ internal sealed class CodexBotTray : Form
         lifecyclePanel.Controls.Add(github);
         rowLeft += githubWidth + rowGap;
 
-        Button releases = MakeButton(L("Releases", "Kiadások"), rowLeft, rowTop, releasesWidth, 30);
+        Button releases = MakeButton(releasesText, rowLeft, rowTop, releasesWidth, 30);
         releases.Font = new Font("Segoe UI", 8, FontStyle.Bold);
         FitButtonText(releases, 8, FontStyle.Bold);
         releases.Click += delegate { OpenUrl("https://github.com/Attys-syttA/Attys_DC_BOT/releases"); };
         lifecyclePanel.Controls.Add(releases);
         rowLeft += releasesWidth + rowGap;
 
-        Button safeUpdate = MakeButton(L("Safe Update", "Safe update"), rowLeft, rowTop, safeUpdateWidth, 30);
+        Button safeUpdate = MakeButton(safeUpdateText, rowLeft, rowTop, safeUpdateWidth, 30);
         safeUpdate.Font = new Font("Segoe UI", 8, FontStyle.Bold);
         FitButtonText(safeUpdate, 8, FontStyle.Bold);
         safeUpdate.Enabled = snapshot.CanSafeUpdate;
@@ -504,7 +507,7 @@ internal sealed class CodexBotTray : Form
         lifecyclePanel.Controls.Add(safeUpdate);
         rowLeft += safeUpdateWidth + rowGap;
 
-        Button setup = MakeButton(L("Setup", "Setup"), rowLeft, rowTop, setupWidth, 30);
+        Button setup = MakeButton(setupText, rowLeft, rowTop, setupWidth, 30);
         setup.Font = new Font("Segoe UI", 8, FontStyle.Bold);
         FitButtonText(setup, 8, FontStyle.Bold);
         setup.Click += delegate { OpenLocalFile(Path.Combine(botDir, "SETUP.md")); };
@@ -615,6 +618,15 @@ internal sealed class CodexBotTray : Form
             size -= 0.5f;
         }
         button.Font = new Font("Segoe UI", 7f, style);
+    }
+
+    private static int LifecycleButtonWidth(string text, int minWidth)
+    {
+        using (Font font = new Font("Segoe UI", 8, FontStyle.Bold))
+        {
+            Size measured = TextRenderer.MeasureText(text, font);
+            return Math.Max(minWidth, measured.Width + 30);
+        }
     }
 
     private void UpdateStatus()

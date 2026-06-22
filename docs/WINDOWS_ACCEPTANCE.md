@@ -121,3 +121,20 @@ Observed on the Windows host:
 - `/ask` returned a successful Codex response through the Windows bot
 - targeted app-server smoke returned `app-server smoke ok`
 - `bot.err.log` was empty after the Windows `.cmd` process wrapper fix
+
+## 2026-06-22 Evidence Snapshot
+
+Observed on the Windows host:
+
+- launcher lifecycle smoke completed: stop/status/start/status/stop/status ended
+  with `Stopped.`
+- `npm run doctor:local` passed
+- operator tools preflight completed OK through the Windows launcher
+- tray/control panel opened and reported status
+- tray/control panel buttons were tried with no errors reported
+- closing the control panel minimized it to the system tray
+- the control panel reopened from the system tray
+- Discord live smoke completed with no errors reported for `/doctor`, `/health`,
+  `/dashboard`, `/register`, `/ask`, `Send to Codex`, approval accept/deny,
+  Codex question answer, `/events`, `/logs`, `/last`, `/sessions`, `/usage`,
+  and `/bot status`
