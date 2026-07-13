@@ -2,6 +2,9 @@
 
 ## 2026-07-13
 
+- Dependabot-karbantartás: a zöld #7 PR `globals` 17.6.0 → 17.7.0, a zöld #8 PR `@types/node` 26.0.0 → 26.0.1 fejlesztői dependency-frissítést hozott; mindkettő squash merge-dzsel került a `main` ágra.
+- Dependency-validáció: a két PR a friss `main` tetején együtt, konfliktus nélkül alkalmazható volt; izolált worktree-ben az `npm ci` és a teljes `npm run check` sikeres lett (38 tesztfájl, 248 teszt), majd a merge utáni CI, SQLite Check, Secret Scan és macOS Swift Compile workflow is zöldre futott.
+- Audit- és verziódöntés: az `npm audit` mindkét állapotban változatlanul 3 közepes és 1 magas találatot jelzett, ezért a frissítések nem vezettek be új auditriasztást, de a meglévőket sem oldották meg; kizárólag fejlesztői dependency-változás miatt nincs alkalmazásverzió-emelés.
 - Átfogó ForgeLab-értékelés: elkészült a `docs/FORGELAB_FREE_MODE_ATFOGO_ELEMZO_ERTEKELES_2026-07-13.md`, amely a legelső auditriport kizárásával a három megosztható kontrollriportot, a Conductor-kísérleteket, a ZIP-validációt, a UI-megfigyeléseket és a javítási elfogadási feltételeket egységes, önálló jelentésben foglalja össze.
 - Összesített következtetés: a gyors, egyfájlos Conductor-kontroll igazolta, hogy van működő orchestráció, de a többfájlos Brain-futások success gate-je nem volt megbízható. A kapcsolódó projekt-ZIP-ek, GUI-képek, Terminal-/konzolképek és rövid UI-videó szükség esetén külön átadható bizonyíték.
 - Kontrollált ForgeLab Free-mode audit: új `docs/FORGELAB_FREE_MODE_AUDIT_2026-07-13.md` rögzíti a saját API-kulcs nélküli Free konfigurációt, az öt agentszerep és a fő modell `Free Openrouter Ai` beállítását, a teljes Audit Board promptot, a futás menetét és a független exportellenőrzést.

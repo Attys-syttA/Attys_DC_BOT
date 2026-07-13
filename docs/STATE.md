@@ -6,7 +6,11 @@
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
 - Phase: Windows prerelease baseline complete; external-platform acceptance remains active, and a separate bounded audit-orchestration design track is now documented without implementation.
-- Git state before this docs task: local `main` tracked `origin/main`, worktree clean at `21cc327`.
+- Git state: local `main` tracks `origin/main`; the worktree is clean and synchronized after the ForgeLab documentation publication and Dependabot maintenance.
+- Dependency maintenance: Dependabot PR #7 (`globals` 17.6.0 → 17.7.0) and PR #8 (`@types/node` 26.0.0 → 26.0.1) were reviewed and squash-merged on 2026-07-13.
+- Dependency validation: the two updates applied together without conflict; `npm ci` and `npm run check` passed in an isolated worktree (38 test files, 248 tests), and the post-merge CI, SQLite Check, Secret Scan, and macOS Swift Compile workflows all passed.
+- Audit note: `npm audit` remained unchanged at 3 moderate and 1 high finding; these PRs introduced no additional finding and did not claim to remediate the existing ones.
+- Version decision for this maintenance: development-dependency-only updates with no runtime behavior or release-package change, so no application version bump.
 - Active plans:
   - `docs/codex-tasks/plans/pending/active/external-platform-acceptance.md`
   - `docs/codex-tasks/plans/pending/active/bounded-audit-orchestration-and-nas-handoff.md`
