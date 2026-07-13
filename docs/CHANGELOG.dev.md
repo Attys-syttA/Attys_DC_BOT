@@ -1,5 +1,30 @@
 # Development Changelog
 
+## 2026-07-13
+
+- Átfogó ForgeLab-értékelés: elkészült a `docs/FORGELAB_FREE_MODE_ATFOGO_ELEMZO_ERTEKELES_2026-07-13.md`, amely a legelső auditriport kizárásával a három megosztható kontrollriportot, a Conductor-kísérleteket, a ZIP-validációt, a UI-megfigyeléseket és a javítási elfogadási feltételeket egységes, önálló jelentésben foglalja össze.
+- Összesített következtetés: a gyors, egyfájlos Conductor-kontroll igazolta, hogy van működő orchestráció, de a többfájlos Brain-futások success gate-je nem volt megbízható. A kapcsolódó projekt-ZIP-ek, GUI-képek, Terminal-/konzolképek és rövid UI-videó szükség esetén külön átadható bizonyíték.
+- Kontrollált ForgeLab Free-mode audit: új `docs/FORGELAB_FREE_MODE_AUDIT_2026-07-13.md` rögzíti a saját API-kulcs nélküli Free konfigurációt, az öt agentszerep és a fő modell `Free Openrouter Ai` beállítását, a teljes Audit Board promptot, a futás menetét és a független exportellenőrzést.
+- ForgeLab teszteredmény: a Brain + Audit workflow két audititerációt és 30 javított hibát állított, majd `Complete` / `Project delivered` / `no critical issues` eredményt adott, miközben ugyanazon a felületen `⚠ 4 failed`, `64/68` task, `17/19` frontend és `4/6` test állapot maradt.
+- Független ellenőrzés: az exportált projektből hiányzott a `src/main.jsx` és több szükséges import/contract; a `package.json` nem tartalmazott `typecheck`, `test` vagy `build` scriptet, ezért mindhárom kötelező parancs exit code 1 eredménnyel állt le.
+- Támogatott-stack kontroll: az üres workspace-ben, plain JavaScript/JSX követelményekkel megismételt futás szintén hibásan lett `Complete`. A UI és az export csak `package.json`, `README.md` és `vite.config.js` fájlt tartalmazott, miközben az összegzés 19 elkészült fájlt állított; `npm ci`, `npm test` és `npm run build` egyaránt exit code 1 eredményt adott.
+- Önálló JavaScript/JSX hibajelentés: a `docs/FORGELAB_JAVASCRIPT_JSX_KONTROLL_HIBAJELENTES_2026-07-13.md` megőrzi a teljes kontrollpromptot, az időrendi futásfolyamatot, a ZIP hashét és fájllistáját, a független parancseredményeket, a befejezés utáni UI-hibákat és a javítás elfogadási feltételeit, saját projektadatok nélkül.
+- Második success-gate ellentmondás: a rendszer `Self-evaluation: 2/10`, hiányzó Vite/React és Vitest/Testing Library jelzés, tiltott placeholder/duplikált fájlok és futásképtelen preview mellett is `Project delivered` és `no critical issues` eredményt közölt.
+- Minimális HTML-kontroll: az egyetlen önálló `index.html` fájlt kérő futás hatszor jelölte sikeresnek a fájl létrehozását, köztük három `URGENT: Create missing file: index.html` feladatot, miközben a tényleges workspace csak `README.md` fájlt tartalmazott.
+- Önálló hibajelentés: a `docs/FORGELAB_COUNTER_CHECK_HIBAJELENTES_2026-07-13.md` reprodukcióval, bizonyítékokkal, súlyossági indoklással, javítási javaslatokkal és elfogadási feltételekkel dokumentálja a minimális kontrollfutást, saját projektadatok nélkül.
+- Rejtett terminálhiba: a Preview indokolatlanul `npm install --legacy-peer-deps && npm run dev` parancsot indított, amely kétszer `ENOENT` hibát adott a nem létező `package.json` miatt; a hibák nem kerültek be a futási összesítésbe, és nem akadályozták meg a `Complete` állapotot.
+- ForgeLab UI-megfigyelések: a fő Free modell választása új beszélgetésnél nem maradt meg, miközben a Brain-konfiguráció igen; az egyfájlos terv `medium` és `~47K FLT` becslést kapott; több auditfelirat 100%-os Chrome-nagyítás mellett csak 10–11 CSS-pixeles volt.
+- Következtetés: a Free-mode orchestráció többfázisú munkát végzett, de a success gate megbízhatatlan volt. Ez megerősíti az Attys-terv named-check, exit-code-alapú validator és fail-closed `completed` szabályát.
+- Cel: részletes, source-backed fejlesztési terv készítése a local-first `Attys_DC_BOT` korlátozott audit-orchestrációjához és a későbbi, külön jóváhagyandó NAS handoffhoz.
+- Források: a ForgeLab nyilvános `README.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `LICENSE`, `https://forgelab.one/home` marketingoldal és a bejelentkezett béta workspace read-only UI-feltérképezése 2026-07-13-án; proprietary kód nem volt elérhető és nem lett implementációs bizonyítékként kezelve.
+- Belső UI-evidence: külön Single Chat/Brain mód, Brain/Audit kapcsoló, workspace-context és read/edit/create-delete capabilityk, agentenkénti modellek, existing-project PATCH workflow, valamint külön Files/Editor/Preview/Terminal és export/GitHub/deploy felületek. Ezek UI-contract megfigyelések, nem backend-audit eredmények.
+- Tervpontosítás: az első contract külön `read-context`, `edit-existing` és `create-delete` capabilityt rögzít; a validator/reviewer write nélkül marad, a Conductor megfelelője nem ír kódot, és a role/model routing későbbi, külön bizonyítékhoz kötött irány.
+- Terv: új `docs/codex-tasks/plans/pending/active/bounded-audit-orchestration-and-nas-handoff.md` fájl rögzíti a check-first state machine-t, named-check allowlistet, Discord UX-et, tartós job/step állapotot, explicit repair approvalt, izolált worktree-t, bounded retry/stagnation policyt, tesztkapukat és NAS handoff feltételeket.
+- Biztonsági döntés: az első checkpoint csak domain contract és read-only `/audit start|status|stop`; nincs arbitrary shell, repair, automatikus install/deploy, párhuzamos worktree-írás vagy NAS módosítás.
+- Scope: az `external-platform-acceptance.md` külön aktív terv maradt; az `Attys_DC_BOT_NAS` repo nem módosult, és a benne már meglévő local `AGENTS.md` változás érintetlen maradt.
+- Verziós döntés: docs-only tervfrissítés, ezért nincs version bump.
+- Validáció: `npm run plans:check`, `git diff --check` és `ggshield secret scan path --recursive --yes --use-gitignore .` sikeres.
+
 ## 2026-06-22
 
 - Release-readiness plan cleanup: az aktiv `cross-platform-source-parity-and-beyond.md` tervbol kikerultek a mar elkeszult implementacios fazisok mint hatralevo munka; a terv most a tenyleges Windows release acceptance, Discord live smoke, final validation es external-platform future-work pontokat tartja nyitva.

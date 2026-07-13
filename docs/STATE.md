@@ -2,16 +2,43 @@
 
 ## Current Status
 
-- Date: 2026-06-22
+- Date: 2026-07-13
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: Windows prerelease baseline complete; external-platform acceptance is the active remaining work
-- Git state: local `main` tracks `origin/main`; last verified synced at `dbec36c`
-- Active plan: `docs/codex-tasks/plans/pending/active/external-platform-acceptance.md`
+- Phase: Windows prerelease baseline complete; external-platform acceptance remains active, and a separate bounded audit-orchestration design track is now documented without implementation.
+- Git state before this docs task: local `main` tracked `origin/main`, worktree clean at `21cc327`.
+- Active plans:
+  - `docs/codex-tasks/plans/pending/active/external-platform-acceptance.md`
+  - `docs/codex-tasks/plans/pending/active/bounded-audit-orchestration-and-nas-handoff.md`
 
 ## Current Goal
 
-Keep the Windows-first baseline stable while Linux tray icon runtime, macOS menu bar runtime, and iPad/mobile file handoff remain external-platform acceptance work until real target-platform evidence exists.
+Keep the Windows-first baseline stable while:
+
+- Linux tray icon runtime, macOS menu bar runtime, and iPad/mobile file handoff remain external-platform acceptance work until real target-platform evidence exists;
+- the next local-first development direction is prepared as a bounded, check-first audit orchestrator with explicit repair approval, isolated worktrees, strict retry/stagnation stops, and a later separately approved NAS handoff.
+
+## Current Audit-Orchestration Plan Status
+
+- Az önálló, nagy összefoglaló értékelés elkészült: `docs/FORGELAB_FREE_MODE_ATFOGO_ELEMZO_ERTEKELES_2026-07-13.md`. A dokumentum a három megosztható kontrollriportot és a Conductor-futások bizonyítékait egyesíti; a legelső auditriportot a felhasználói kérésnek megfelelően nem kezeli forrásként.
+- Az összesített eredmény kiegyensúlyozott: az egyszerű, egyfájlos Conductor-kontroll sikeres volt, de a többfájlos Brain-futásoknál a tényleges fájlok, az exit code-ok és a Preview hibái nem akadályozták meg a hamis `Complete` állapotot. A jelentés végén külön szerepel, hogy a projekt-ZIP-ek és a GUI-/konzolképek szükség esetén átadhatók.
+- A 2026-07-13-i kontrollált ForgeLab Free-mode futás és független ZIP-ellenőrzés részletes jelentése: `docs/FORGELAB_FREE_MODE_AUDIT_2026-07-13.md`.
+- A Brain + Audit futás többfázisú orchestrációt és két audititerációt mutatott, de hibás projektet minősített `Complete` állapotúnak. Az exportban nem volt futó belépési pont, és mindhárom kötelező `typecheck`/`test`/`build` script hiányzott.
+- A kontrollteszt ezért sikertelen. Az eredmény közvetlenül alátámasztja, hogy az Attys `completed` állapota csak fix named-checkek igazolt exit code-jából származhat, nem modell-önértékelésből.
+- A tesztet üres workspace-ben, a ForgeLab által támogatott plain JavaScript/JSX stackkel is megismételtük. A második futás `Complete` állapotot adott, de a UI és az export mindössze három konfigurációs/dokumentációs fájlt tartalmazott; hiányzott az alkalmazáskód, az `index.html`, a lockfile és minden teszt.
+- A második export validálása: `npm ci`, `npm test` és `npm run build` egyaránt exit code 1 eredménnyel állt le. Ez kizárja, hogy az első kudarc pusztán a TypeScript-korlátozás vagy a korábbi workspace-előzmény következménye volt.
+- A támogatott JavaScript/JSX kontroll teljes, külön megosztható hibajelentése: `docs/FORGELAB_JAVASCRIPT_JSX_KONTROLL_HIBAJELENTES_2026-07-13.md`; tartalmazza a teljes promptot, a futási folyamatot, a ZIP- és parancsbizonyítékokat, valamint az auditnyom elvesztésének megfigyelését, saját repositoryra vagy helyi gépre utaló adat nélkül.
+- Egy harmadik, minimális kontroll pontosan egy önálló `index.html` fájlt kért csomagok és buildeszköz nélkül. A ForgeLab `Complete` állapotot és hat sikeres fájllétrehozási feladatot jelzett, de a workspace-ben csak `README.md` volt; a Preview két `ENOENT` terminálhiba ellenére sem érvénytelenítette a sikert.
+- A harmadik kontroll külön, megosztható hibajelentése: `docs/FORGELAB_COUNTER_CHECK_HIBAJELENTES_2026-07-13.md`; a dokumentum nem tartalmaz saját repositoryra vagy helyi gépre utaló adatot.
+- 2026-07-13 source review covered the official ForgeLab marketing page, public GitHub documentation, and a read-only inspection of the authenticated beta workspace UI; no proprietary code was available or treated as implementation evidence.
+- The authenticated UI confirmed separate Single Chat/Brain modes, Brain/Audit controls, workspace-context and read/edit/create-delete capability boundaries, role-specific model configuration, existing-project PATCH workflow, and distinct workspace/operator panes. These remain UI-contract observations, not backend enforcement evidence.
+- Reusable patterns were limited to phased orchestration, pre-execution plan review, explicit capability separation, bounded audit/retry, stagnation detection, checkpoint/rollback principles, and operator progress/stop UX.
+- The plan explicitly rejects OpenRouter/BYOK integration, arbitrary commands, automatic dependency installation/deployment, default-on repair, parallel writes to one worktree, and copying proprietary patch logic.
+- First proposed checkpoint: domain and read/edit/create-delete capability contract plus read-only named-check `/audit start|status|stop`, with no repair, worktree automation, retry loop, multi-agent execution, or NAS write.
+- `Attys_DC_BOT_NAS` remains a separate repository and was not modified. Its existing local `AGENTS.md` change remains untouched.
+- Version decision for this docs-only planning checkpoint: no version bump.
+- Version decision for the comprehensive report: docs-only change, no version bump.
+- Validation: `npm run plans:check`, `git diff --check` and `ggshield secret scan path --recursive --yes --use-gitignore .` passed on 2026-07-13.
 
 ## Current Cross-Platform Parity Status
 
