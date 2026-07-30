@@ -77,6 +77,40 @@ function unixCandidates(): string[] {
   ]);
 }
 
+function windowsVsCodeCodexCandidates(home: string): string[] {
+  const extensionsRoot = path.join(home, ".vscode", "extensions");
+  try {
+    return fs.readdirSync(extensionsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.toLowerCase().startsWith("openai.chatgpt-"))
+      .flatMap((entry) => [
+        path.join(extensionsRoot, entry.name, "bin", "windows-x86_64", "codex.exe"),
+        path.join(extensionsRoot, entry.name, "bin", "windows-arm64", "codex.exe"),
+      ]);
+  } catch {
+    return [];
+  }
+}
+
+function windowsCandidates(): string[] {
+  const home = os.homedir();
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
+
+  return uniqueCandidates([
+    process.env.CODEX_BIN,
+    ...pathEntries.flatMap((entry) => [
+      path.join(entry, "codex.cmd"),
+      path.join(entry, "codex.exe"),
+      path.join(entry, "codex"),
+    ]),
+    ...windowsVsCodeCodexCandidates(home),
+    "codex.cmd",
+    "codex.exe",
+    "codex",
+  ]);
+}
+
 export function resolveCodexCommand(): string {
   const cache = loadCache();
   if (cache.codexCommand && (process.platform === "win32" || !isBareCommand(cache.codexCommand)) && commandWorks(cache.codexCommand)) {
@@ -84,7 +118,7 @@ export function resolveCodexCommand(): string {
   }
 
   const candidates = process.platform === "win32"
-    ? ["codex.cmd", "codex.exe", "codex"]
+    ? windowsCandidates()
     : unixCandidates();
 
   for (const candidate of candidates) {

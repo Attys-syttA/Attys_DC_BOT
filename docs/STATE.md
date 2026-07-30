@@ -2,11 +2,13 @@
 
 ## Current Status
 
-- Date: 2026-07-13
+- Date: 2026-07-22
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
 - Phase: Windows prerelease baseline complete; external-platform acceptance remains active, and a separate bounded audit-orchestration design track is now documented without implementation.
-- Git state: local `main` tracks `origin/main`; the worktree is clean and synchronized after the ForgeLab documentation publication and Dependabot maintenance.
+- Git state: local `main` tracks `origin/main`; the worktree has a local Codex command resolver fix for launcher-started Windows environments.
+- 2026-07-22 launcher/bot recovery: the GUI-launched doctor failed on `codex.cmd --version` and `codex.cmd login status` because the launcher environment did not see the VS Code bundled Codex CLI on PATH. The bot command resolver now honors `CODEX_BIN`, scans PATH entries explicitly, and falls back to the VS Code OpenAI extension `codex.exe` path on Windows.
+- 2026-07-22 validation: focused `command-resolver.test.ts` 1 file / 2 PASS; full `npm run check` passed (`plans:check`, `lint`, `typecheck`, 39 test files / 250 PASS, `build`); `doctor:local` passed both normally and with the VS Code Codex PATH entry removed; `git diff --check` passed. The bot was restarted through `win-start.bat`; final status `Running`, new `CodexBot.exe` process, and `bot.err.log` empty. Version unchanged (`0.1.1-prerelease.1`) because no release package was cut.
 - Dependency maintenance: Dependabot PR #7 (`globals` 17.6.0 → 17.7.0) and PR #8 (`@types/node` 26.0.0 → 26.0.1) were reviewed and squash-merged on 2026-07-13.
 - Dependency validation: the two updates applied together without conflict; `npm ci` and `npm run check` passed in an isolated worktree (38 test files, 248 tests), and the post-merge CI, SQLite Check, Secret Scan, and macOS Swift Compile workflows all passed.
 - Audit note: `npm audit` remained unchanged at 3 moderate and 1 high finding; these PRs introduced no additional finding and did not claim to remediate the existing ones.

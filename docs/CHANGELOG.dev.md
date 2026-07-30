@@ -1,5 +1,12 @@
 # Development Changelog
 
+## 2026-07-22
+
+- Windows Codex CLI feloldás javítása: a bot `resolveCodexCommand()` logikája már Windows alatt is figyelembe veszi a `CODEX_BIN` értéket, a PATH bejegyzések konkrét `codex.cmd`/`codex.exe` útvonalait, és fallbackként a VS Code OpenAI extension alatti `codex.exe`-t.
+- Ok: a launcher GUI-ból indított `Bot Doctor` külön PowerShell környezetben futott, ahol a `codex.cmd` nem volt elérhető, miközben a VS Code extensionben lévő `codex.exe` működött. Emiatt a doctor `FAIL codex.cmd --version` és `FAIL codex.cmd login status` hibát mutatott.
+- Regressziós teszt készült arra, hogy Windows-szimulációban PATH nélküli bare parancsok mellett is megtalálja a VS Code extension `codex.exe` binárist, illetve a `CODEX_BIN` elsőbbséget élvezzen.
+- Validáció: célzott `command-resolver.test.ts` 1 fájl / 2 PASS; teljes `npm run check` sikeres (`plans:check`, `lint`, `typecheck`, 39 tesztfájl / 250 PASS, `build`); `doctor:local` sikeres normál és VS Code Codex PATH nélküli környezetben is; `git diff --check` sikeres. A bot `win-start.bat` útvonalon újraindult, végállapot `Running`, `bot.err.log` üres. Verzióemelés nem történt.
+
 ## 2026-07-13
 
 - Dependabot-karbantartás: a zöld #7 PR `globals` 17.6.0 → 17.7.0, a zöld #8 PR `@types/node` 26.0.0 → 26.0.1 fejlesztői dependency-frissítést hozott; mindkettő squash merge-dzsel került a `main` ágra.
