@@ -78,13 +78,13 @@ function unixCandidates(): string[] {
 }
 
 function windowsVsCodeCodexCandidates(home: string): string[] {
-  const extensionsRoot = path.join(home, ".vscode", "extensions");
+  const extensionsRoot = path.win32.join(home, ".vscode", "extensions");
   try {
     return fs.readdirSync(extensionsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name.toLowerCase().startsWith("openai.chatgpt-"))
       .flatMap((entry) => [
-        path.join(extensionsRoot, entry.name, "bin", "windows-x86_64", "codex.exe"),
-        path.join(extensionsRoot, entry.name, "bin", "windows-arm64", "codex.exe"),
+        path.win32.join(extensionsRoot, entry.name, "bin", "windows-x86_64", "codex.exe"),
+        path.win32.join(extensionsRoot, entry.name, "bin", "windows-arm64", "codex.exe"),
       ]);
   } catch {
     return [];
@@ -94,15 +94,15 @@ function windowsVsCodeCodexCandidates(home: string): string[] {
 function windowsCandidates(): string[] {
   const home = os.homedir();
   const pathEntries = (process.env.PATH ?? "")
-    .split(path.delimiter)
+    .split(path.win32.delimiter)
     .filter(Boolean);
 
   return uniqueCandidates([
     process.env.CODEX_BIN,
     ...pathEntries.flatMap((entry) => [
-      path.join(entry, "codex.cmd"),
-      path.join(entry, "codex.exe"),
-      path.join(entry, "codex"),
+      path.win32.join(entry, "codex.cmd"),
+      path.win32.join(entry, "codex.exe"),
+      path.win32.join(entry, "codex"),
     ]),
     ...windowsVsCodeCodexCandidates(home),
     "codex.cmd",
