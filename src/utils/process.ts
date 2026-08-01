@@ -8,10 +8,6 @@ export function windowsCmdInvocation(
 
   return {
     command: "cmd.exe",
-    args: ["/d", "/s", "/c", [quoteCmdArg(command), ...args.map(quoteCmdArg)].join(" ")],
+    args: ["/d", "/c", command, ...args],
   };
-}
-
-function quoteCmdArg(value: string): string {
-  return `"${value.replace(/"/g, "\"\"")}"`;
 }

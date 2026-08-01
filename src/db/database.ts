@@ -1,7 +1,17 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import type { Project, Session, SessionStatus } from "./types.js";
+import { randomUUID } from "node:crypto";
+import { sanitizePublicFileLabel, sanitizePublicText } from "../utils/public-safety.js";
+import type { AuditCheckRunResult } from "../audit/check-runner.js";
+import type {
+  AuditJobCreateInput,
+  AuditJobRecord,
+  AuditStepRecord,
+  Project,
+  Session,
+  SessionStatus,
+} from "./types.js";
 
 let db: Database.Database;
 
@@ -30,6 +40,36 @@ export function initDatabase(): void {
       session_id TEXT,
       status TEXT DEFAULT 'offline',
       last_activity TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_jobs (
+      id TEXT PRIMARY KEY,
+      channel_id TEXT REFERENCES projects(channel_id) ON DELETE CASCADE,
+      project_label TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      status TEXT NOT NULL,
+      current_step TEXT,
+      iteration INTEGER NOT NULL,
+      max_iterations INTEGER NOT NULL,
+      stop_requested INTEGER NOT NULL DEFAULT 0,
+      capabilities_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_steps (
+      id TEXT PRIMARY KEY,
+      job_id TEXT REFERENCES audit_jobs(id) ON DELETE CASCADE,
+      step_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      exit_code INTEGER,
+      timed_out INTEGER NOT NULL,
+      stopped INTEGER NOT NULL,
+      public_output TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
@@ -124,4 +164,110 @@ export function getAllSessions(guildId: string): (Session & { project_path: stri
       WHERE p.guild_id = ?
     `)
     .all(guildId) as (Session & { project_path: string })[];
+}
+
+export function createAuditJob(input: AuditJobCreateInput): void {
+  db.prepare(`
+    INSERT INTO audit_jobs (
+      id,
+      channel_id,
+      project_label,
+      mode,
+      status,
+      current_step,
+      iteration,
+      max_iterations,
+      stop_requested,
+      capabilities_json,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.id,
+    input.channelId,
+    sanitizePublicFileLabel(input.projectLabel),
+    input.mode,
+    input.status,
+    input.currentStep,
+    input.iteration,
+    input.maxIterations,
+    input.stopRequested ? 1 : 0,
+    JSON.stringify(input.capabilities),
+    input.createdAt,
+    input.updatedAt,
+  );
+}
+
+export function getAuditJob(jobId: string): AuditJobRecord | undefined {
+  return db
+    .prepare("SELECT * FROM audit_jobs WHERE id = ?")
+    .get(jobId) as AuditJobRecord | undefined;
+}
+
+export function getLatestAuditJob(channelId: string): AuditJobRecord | undefined {
+  return db
+    .prepare("SELECT * FROM audit_jobs WHERE channel_id = ? ORDER BY updated_at DESC LIMIT 1")
+    .get(channelId) as AuditJobRecord | undefined;
+}
+
+export function updateAuditJobProgress(
+  jobId: string,
+  status: AuditJobRecord["status"],
+  currentStep: string | null,
+  iteration: number,
+  updatedAt: string,
+): void {
+  db.prepare(`
+    UPDATE audit_jobs
+    SET status = ?, current_step = ?, iteration = ?, updated_at = ?
+    WHERE id = ?
+  `).run(status, currentStep, iteration, updatedAt, jobId);
+}
+
+export function requestAuditJobStop(jobId: string, updatedAt: string): void {
+  db.prepare(`
+    UPDATE audit_jobs
+    SET stop_requested = 1, updated_at = ?
+    WHERE id = ?
+  `).run(updatedAt, jobId);
+}
+
+export function insertAuditStepResult(jobId: string, result: AuditCheckRunResult): string {
+  const id = randomUUID();
+  db.prepare(`
+    INSERT INTO audit_steps (
+      id,
+      job_id,
+      step_name,
+      status,
+      exit_code,
+      timed_out,
+      stopped,
+      public_output,
+      started_at,
+      finished_at,
+      duration_ms
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    jobId,
+    result.name,
+    result.status,
+    result.exitCode,
+    result.timedOut ? 1 : 0,
+    result.stopped ? 1 : 0,
+    sanitizePublicText(result.publicOutput, 1_800) || "(no output)",
+    result.startedAt,
+    result.finishedAt,
+    result.durationMs,
+  );
+  return id;
+}
+
+export function listAuditSteps(jobId: string): AuditStepRecord[] {
+  return db
+    .prepare("SELECT * FROM audit_steps WHERE job_id = ? ORDER BY started_at ASC, created_at ASC")
+    .all(jobId) as AuditStepRecord[];
 }

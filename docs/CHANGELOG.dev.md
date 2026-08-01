@@ -2,6 +2,11 @@
 
 ## 2026-08-01
 
+- Audit contract start after NAS-0: új `src/audit/types.ts`, `src/audit/check-catalog.ts` és fókuszált tesztek rögzítik a `check-only` / `approved-repair` mode-okat, az explicit audit státuszállapotgépet, a `read-context` / `edit-existing` / `create-delete` capability contractot és a fix named-check catalogot.
+- Audit read-only runner alap: új `src/audit/check-runner.ts` és `src/cli/audit-check.ts` készült. Az `npm run audit:check -- <check>` kizárólag a source-controlled catalogból futtat, hiányzó scriptnél `unsupported` állapotot ad, public-safe kimenetet ad vissza, és nem végez repairt, installt, Git write-ot, commitot, pusht vagy Codex promptot.
+- Audit SQLite store alap: az `initDatabase()` additive `audit_jobs` és `audit_steps` táblákat hoz létre, új CRUD helper készült job létrehozásra, progress update-re, stop requestre és public-safe step result tárolásra. A meglévő project/session táblák és flow-k változatlanok.
+- Windows `.cmd` process fix: a közös `windowsCmdInvocation()` most `cmd.exe /d /c <command> <args...>` formát használ a `.cmd`/`.bat` fájlokhoz, mert az előző idézőjelezés a valós `npm.cmd` smoke alatt hibásan adta át az argumentumokat.
+- Audit validáció: `npx vitest run src/db/database.test.ts src/audit src/utils/process.test.ts` sikeres (5 tesztfájl / 32 teszt), `npm run audit:check -- plans` sikeres public-safe JSON eredménnyel, és `npm run typecheck` sikeres.
 - NAS worker heartbeat writer: új `src/cli/nas-worker-heartbeat.ts` és `npm run nas:worker:heartbeat` parancs készült. Ez a Windows worker public-safe azonosítóját, címkéjét, workspace labeljét, capability listáját és heartbeat idejét írja a lokális/NAS `data/workers.json` store-ba.
 - Worker store hardening: a store upsert megtartja az eredeti `registeredAt` értéket, frissíti a `lastSeenAt` mezőt, és invalid JSON store esetén fail-closed hibával megáll, nem írja felül vakon a sérült állapotot.
 - NAS dry-run status folytatás: új `src/nas/worker-store.ts`, `src/nas/worker-store.test.ts` és `src/cli/nas-status.ts` készült. A `npm run nas:status` public-safe JSON státuszt ad a NAS control-plane configról és a helyi worker store-ról, raw store path kiírása nélkül.

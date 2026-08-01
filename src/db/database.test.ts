@@ -23,7 +23,15 @@ import {
   getSession,
   updateSessionStatus,
   getAllSessions,
+  createAuditJob,
+  getAuditJob,
+  getLatestAuditJob,
+  updateAuditJobProgress,
+  requestAuditJobStop,
+  insertAuditStepResult,
+  listAuditSteps,
 } from "./database.js";
+import { defaultAuditCapabilities } from "../audit/types.js";
 
 describe("database", () => {
   beforeEach(() => {
@@ -139,6 +147,126 @@ describe("database", () => {
     it("getAllSessions returns empty for guild with no sessions", () => {
       registerProject("ch2", "/p2", "guild2");
       expect(getAllSessions("guild2")).toHaveLength(0);
+    });
+  });
+
+  describe("audit job store", () => {
+    beforeEach(() => {
+      registerProject("ch1", "/p1", "guild1");
+    });
+
+    it("creates audit jobs with public-safe project labels", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "E:\\codex_works\\private-project",
+        mode: "check-only",
+        status: "queued",
+        currentStep: null,
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      const job = getAuditJob("audit-1");
+      expect(job).toMatchObject({
+        id: "audit-1",
+        channel_id: "ch1",
+        project_label: "<local-path>/private-project",
+        mode: "check-only",
+        status: "queued",
+        current_step: null,
+        iteration: 0,
+        max_iterations: 2,
+        stop_requested: 0,
+      });
+      expect(job!.capabilities_json).toContain("read-context");
+      expect(getLatestAuditJob("ch1")!.id).toBe("audit-1");
+    });
+
+    it("updates audit progress and stop requests without touching sessions", () => {
+      upsertSession("s1", "ch1", null, "idle");
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "queued",
+        currentStep: null,
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      updateAuditJobProgress(
+        "audit-1",
+        "running_checks",
+        "tests",
+        1,
+        "2026-08-01T12:00:10.000Z",
+      );
+      requestAuditJobStop("audit-1", "2026-08-01T12:00:20.000Z");
+
+      const job = getAuditJob("audit-1");
+      expect(job).toMatchObject({
+        status: "running_checks",
+        current_step: "tests",
+        iteration: 1,
+        stop_requested: 1,
+        updated_at: "2026-08-01T12:00:20.000Z",
+      });
+      expect(getSession("ch1")!.status).toBe("idle");
+    });
+
+    it("stores only public-safe audit step output", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "running_checks",
+        currentStep: "tests",
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      const stepId = insertAuditStepResult("audit-1", {
+        name: "tests",
+        status: "failed",
+        exitCode: 1,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "DISCORD_BOT_TOKEN=abcdefghijklmnopqrstuvwxyz C:\\Users\\someone\\repo",
+        startedAt: "2026-08-01T12:00:00.000Z",
+        finishedAt: "2026-08-01T12:00:01.000Z",
+        durationMs: 1_000,
+      });
+
+      const steps = listAuditSteps("audit-1");
+      expect(steps).toHaveLength(1);
+      expect(steps[0]).toMatchObject({
+        id: stepId,
+        job_id: "audit-1",
+        step_name: "tests",
+        status: "failed",
+        exit_code: 1,
+        timed_out: 0,
+        stopped: 0,
+        duration_ms: 1_000,
+      });
+      expect(steps[0].public_output).toContain("DISCORD_BOT_TOKEN=<redacted>");
+      expect(steps[0].public_output).toContain("<local-path>");
+      expect(steps[0].public_output).not.toContain("someone");
     });
   });
 });

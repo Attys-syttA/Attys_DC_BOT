@@ -1,3 +1,6 @@
+import type { AuditCapabilityGrant, AuditJobStatus, AuditMode } from "../audit/types.js";
+import type { AuditCheckRunResult } from "../audit/check-runner.js";
+
 export type SessionStatus = "online" | "offline" | "waiting" | "idle";
 
 export interface Project {
@@ -14,5 +17,50 @@ export interface Session {
   session_id: string | null; // Codex thread ID
   status: SessionStatus;
   last_activity: string | null;
+  created_at: string;
+}
+
+export interface AuditJobRecord {
+  id: string;
+  channel_id: string;
+  project_label: string;
+  mode: AuditMode;
+  status: AuditJobStatus;
+  current_step: string | null;
+  iteration: number;
+  max_iterations: number;
+  stop_requested: number;
+  capabilities_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditJobCreateInput {
+  id: string;
+  channelId: string;
+  projectLabel: string;
+  mode: AuditMode;
+  status: AuditJobStatus;
+  currentStep: string | null;
+  iteration: number;
+  maxIterations: number;
+  stopRequested: boolean;
+  capabilities: AuditCapabilityGrant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditStepRecord {
+  id: string;
+  job_id: string;
+  step_name: AuditCheckRunResult["name"];
+  status: AuditCheckRunResult["status"];
+  exit_code: number | null;
+  timed_out: number;
+  stopped: number;
+  public_output: string;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
   created_at: string;
 }

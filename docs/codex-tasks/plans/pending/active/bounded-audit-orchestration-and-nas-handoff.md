@@ -1,6 +1,6 @@
 # Korlátozott audit-orchestráció és későbbi NAS handoff
 
-Status: active design / implementation not started
+Status: active implementation / NAS-0 complete, audit contract-runner foundation in progress
 
 Kapcsolódó jelenlegi helyzet:
 
@@ -34,12 +34,15 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Aktív/done tervfájl-rend és CI-ben futó `npm run plans:check`.
 - Windows prerelease baseline és külön external-platform acceptance terv.
 - 2026-08-01 döntés: a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa lesz az új NAS deploy célhely; a régi ARM bundle ZIP csak érzékeny történeti referencia.
+- Szelet NAS-0 első biztonságos alapja: worker registry, NAS config parser, public-safe worker store/status, heartbeat writer, tracked NAS sablon és ignored copy-ready staging kimenet.
+- Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
+- Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
+- Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.
 
 ## Nyitott reszek
 
-- NAS control-plane és Windows worker első, health/heartbeat-only kapcsolatának megtervezése és tesztelése.
-- Worker registry, heartbeat timeout és public-safe worker status első implementációs contractja.
-- Audit job és audit step domain contract megtervezése és tesztelése a NAS kapcsolat után.
+- NAS control-plane és Windows worker transport/auth kapcsolatának külön megtervezése és tesztelése, a mostani file-backed dry-run store után.
+- Audit job és audit step tartós store Discord-integrációja és interrupted recovery normalizálása.
 - Fix, server-side named-check catalog bevezetése tetszőleges shell parancs nélkül.
 - Read-only `/audit start|status|stop` első vertikális szelet.
 - Tartós, újraindítás után is olvasható audit-job állapot.
@@ -493,6 +496,24 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - `npm run nas:prepare` újragenerálja a staging mappát;
 - `-IncludeSource` mód dirty checkoutból alapból megtagadja a forrásmásolást, hogy user változás vagy titok ne kerüljön véletlenül a NAS stagingbe.
 
+2026-08-01 audit contract/runner checkpoint:
+
+- létrejött a `src/audit/types.ts` contract modul;
+- létrejött a `src/audit/types.test.ts` fókuszált teszt;
+- létrejött a `src/audit/check-catalog.ts` fix named-check catalog;
+- létrejött a `src/audit/check-catalog.test.ts` fókuszált teszt;
+- létrejött a `src/audit/check-runner.ts` read-only check runner;
+- létrejött a `src/audit/check-runner.test.ts` fókuszált teszt;
+- létrejött a `src/cli/audit-check.ts` helyi CLI és az `npm run audit:check` script;
+- a `full` check külön látható `plans`, `lint`, `typecheck`, `tests`, `build` lépésekre bomlik;
+- a hiányzó package script `unsupported`, nem automatikus install vagy találgatott parancs;
+- a runner public-safe outputot ad vissza, raw path/token/ID szivárgás ellen scrubbolva;
+- a runner még nincs bekötve Discord `/audit` parancsra, és nincs tartós job store.
+- létrejött az additive SQLite `audit_jobs` és `audit_steps` store alap;
+- a store public-safe project labelt és public-safe step outputot tárol;
+- a store támogatja a progress update-et és stop requestet;
+- a meglévő project/session táblák változatlanul működnek.
+
 Érintett területek:
 
 - új vagy meglévő terv/contract dokumentáció az `Attys_DC_BOT` repóban;
@@ -541,12 +562,14 @@ Elfogadási feltételek:
 
 Elfogadási feltételek:
 
-- státuszok és átmenetek explicit típussal leírva;
-- fix check catalog;
-- explicit `read-context`, `edit-existing` és `create-delete` capability contract;
-- ismeretlen check fail-closed;
+- státuszok és átmenetek explicit típussal leírva; **kész**
+- fix check catalog; **kész**
+- explicit `read-context`, `edit-existing` és `create-delete` capability contract; **kész**
+- ismeretlen check fail-closed; **kész a catalog parser szintjén**
 - nincs process execution ebben a szeletben;
 - parser/typecheck/test zöld.
+
+Megjegyzés: a process execution már külön, read-only runner előkészítőként elindult, de Discord command és tartós job store nélkül. Ez nem repair és nem arbitrary shell.
 
 ### Szelet 1 — Read-only check runner
 
@@ -561,9 +584,9 @@ Elfogadási feltételek:
 Elfogadási feltételek:
 
 - `/audit start` csak engedélyezett principalnak és regisztrált projectben működik;
-- kizárólag catalog check fut;
-- timeout és stop működik;
-- output public-safe és korlátozott;
+- kizárólag catalog check fut; **helyi CLI-runner szinten kész**
+- timeout és stop működik; **runner contract szinten kész**
+- output public-safe és korlátozott; **runner contract szinten kész**
 - nincs repair, install vagy Git write;
 - `/run-tests` továbbra is kompatibilis.
 
@@ -581,8 +604,10 @@ Elfogadási feltételek:
 
 - restart után a befejezett/megakadt job diagnosztizálható;
 - aktív processz nélküli korábbi `running` job `interrupted`-szerű kezelt állapotra normalizálódik;
-- raw log és privát path nem kerül DB summaryba vagy Discordra;
+- raw log és privát path nem kerül DB summaryba vagy Discordra; **store helper szinten kész**
 - egy projectre nincs két aktív audit job.
+
+Megjegyzés: az additive SQLite táblák és helper függvények elkészültek, de a Discord observability, interrupted normalization és per-project active-job enforcement még hátralévő vertikális integráció.
 
 ### Szelet 3 — Repair approval gate és izolált worktree előkészítés
 
