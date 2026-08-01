@@ -54,6 +54,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("**Operator diagnostics**");
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
     expect(content).toContain("`/audit` - Fix, read-only audit checkeket futtat");
+    expect(content).toContain("`/nas` - Public-safe NAS bridge");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Elso lepesek: `/help parancs: kezdetek`");
     expect(content).toContain("Fajlfeltoltes: `/help parancs: fajlfeltoltes`");
@@ -71,6 +72,20 @@ describe("/help and /sugo", () => {
     expect(content).toContain("Hasznalat: `/ask prompt: <szoveg> file/file2/file3: <opcionalis>`");
     expect(content).toContain("A megadott promptot");
     expect(content).toContain("Send to Codex");
+  });
+
+  it("shows detailed help for the NAS bridge command", async () => {
+    const interaction = makeInteraction("help", "nas");
+
+    await executeHelp(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("**/nas**");
+    expect(content).toContain("/nas status");
+    expect(content).toContain("/nas request");
+    expect(content).toContain("/nas results");
+    expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
+    expect(content).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
   });
 
   it("explains the /register autocomplete limit", async () => {
