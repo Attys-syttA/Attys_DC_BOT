@@ -29,6 +29,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
+      "Ugyanarra a regisztralt project pathra egyszerre csak egy aktiv audit job indulhat, akkor is, ha masik Discord csatornabol probalod.",
       "A `full` kulon lathato `plans`, `lint`, `typecheck`, `tests`, `build` lepesekre bomlik.",
       "Nem futtat tetszoleges shell parancsot, nem telepit dependencyt, nem javit kodot, es nem ir Gitbe.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
@@ -180,6 +181,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas request` a helyi audit store-ban is nyit egy `waiting_nas_result` jobot, igy `/audit status` alatt is kovetheto.",
+      "`/nas request` nem indul el, ha ugyanarra a project pathra mar van aktiv audit job barmelyik csatornaban.",
       "`/nas requests` a helyileg tracked NAS requesteket listazza statusz szerint, csak public-safe mezokkel.",
       "`/nas request-status` egy konkret helyileg tracked NAS request public-safe reszleteit es handoff mailbox allapotat mutatja rovid ID vagy prefix alapjan.",
       "`/nas mailbox` a NAS handoff inbox/outbox/archive olvashato uzeneteit listazza public-safe rovid sorokban.",

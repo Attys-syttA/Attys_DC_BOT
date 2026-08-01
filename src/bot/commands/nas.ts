@@ -15,7 +15,7 @@ import {
   createNasHandoffRequest,
   expireStaleNasHandoffRequests,
   findNasHandoffRequestsByIdPrefix,
-  getActiveAuditJob,
+  getActiveAuditJobByProjectPath,
   getNasHandoffRequest,
   getProject,
   insertAuditStepResult,
@@ -938,10 +938,10 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
     return;
   }
 
-  const activeJob = getActiveAuditJob(interaction.channelId);
+  const activeJob = getActiveAuditJobByProjectPath(project.guild_id, project.project_path);
   if (activeJob) {
     await interaction.editReply({
-      content: `An audit job is already active: \`${activeJob.id.slice(0, 8)}...\` status=${activeJob.status}.`,
+      content: `An audit job is already active for this project: \`${activeJob.id.slice(0, 8)}...\` status=${activeJob.status}.`,
     });
     return;
   }

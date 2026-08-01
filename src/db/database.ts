@@ -244,6 +244,20 @@ export function getActiveAuditJob(channelId: string): AuditJobRecord | undefined
   return jobs.find((job) => !isTerminalAuditStatus(job.status as AuditJobStatus));
 }
 
+export function getActiveAuditJobByProjectPath(guildId: string, projectPath: string): AuditJobRecord | undefined {
+  const jobs = db
+    .prepare(`
+      SELECT aj.*
+      FROM audit_jobs aj
+      JOIN projects p ON p.channel_id = aj.channel_id
+      WHERE p.guild_id = ?
+        AND p.project_path = ?
+      ORDER BY aj.updated_at DESC
+    `)
+    .all(guildId, projectPath) as AuditJobRecord[];
+  return jobs.find((job) => !isTerminalAuditStatus(job.status as AuditJobStatus));
+}
+
 export function normalizeInterruptedAuditJobs(now = new Date()): number {
   const interruptedStatuses = [
     "queued",

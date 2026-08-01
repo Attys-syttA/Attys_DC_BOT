@@ -25,6 +25,7 @@ import {
   getAllSessions,
   createAuditJob,
   getActiveAuditJob,
+  getActiveAuditJobByProjectPath,
   getAuditJob,
   getLatestAuditJob,
   normalizeInterruptedAuditJobs,
@@ -253,6 +254,42 @@ describe("database", () => {
 
       expect(getLatestAuditJob("ch1")!.id).toBe("audit-1");
       expect(getActiveAuditJob("ch1")).toBeUndefined();
+    });
+
+    it("finds active audit jobs by exact project path within one guild", () => {
+      registerProject("ch2", "/p1", "guild1");
+      registerProject("ch3", "/p1", "guild2");
+      createAuditJob({
+        id: "audit-other-channel",
+        channelId: "ch2",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "waiting_nas_result",
+        currentStep: "plans",
+        iteration: 0,
+        maxIterations: 1,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+      createAuditJob({
+        id: "audit-other-guild",
+        channelId: "ch3",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "waiting_nas_result",
+        currentStep: "plans",
+        iteration: 0,
+        maxIterations: 1,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:01.000Z",
+        updatedAt: "2026-08-01T12:00:01.000Z",
+      });
+
+      expect(getActiveAuditJobByProjectPath("guild1", "/p1")!.id).toBe("audit-other-channel");
+      expect(getActiveAuditJobByProjectPath("guild1", "/missing")).toBeUndefined();
     });
 
     it("normalizes process-like interrupted jobs to failed on startup recovery", () => {

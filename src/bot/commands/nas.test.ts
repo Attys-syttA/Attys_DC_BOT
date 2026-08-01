@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   createAuditRequestHandoff: vi.fn(),
   createAuditJob: vi.fn(),
   findNasHandoffRequestsByIdPrefix: vi.fn(),
-  getActiveAuditJob: vi.fn(),
+  getActiveAuditJobByProjectPath: vi.fn(),
   getProject: vi.fn(),
   insertAuditStepResult: vi.fn(),
   createNasHandoffRequest: vi.fn(),
@@ -52,7 +52,7 @@ vi.mock("../../db/database.js", () => ({
   countNasHandoffRequestsByStatus: mocks.countNasHandoffRequestsByStatus,
   createAuditJob: mocks.createAuditJob,
   getProject: mocks.getProject,
-  getActiveAuditJob: mocks.getActiveAuditJob,
+  getActiveAuditJobByProjectPath: mocks.getActiveAuditJobByProjectPath,
   insertAuditStepResult: mocks.insertAuditStepResult,
   createNasHandoffRequest: mocks.createNasHandoffRequest,
   expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
@@ -110,7 +110,7 @@ describe("/nas", () => {
       DISCORD_NAS_REQUEST_STALE_AFTER_MS: 900_000,
     });
     mocks.expireStaleNasHandoffRequests.mockReturnValue([]);
-    mocks.getActiveAuditJob.mockReturnValue(undefined);
+    mocks.getActiveAuditJobByProjectPath.mockReturnValue(undefined);
     mocks.countNasHandoffRequestsByStatus.mockReturnValue({
       queued: 1,
       completed: 2,
@@ -124,7 +124,7 @@ describe("/nas", () => {
         project: input.projectLabel,
       },
     }));
-    mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "E:\\codex_works\\Attys_DC_BOT" });
+    mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "E:\\codex_works\\Attys_DC_BOT", guild_id: "guild-1" });
     mocks.getNasHandoffRequest.mockReturnValue({
       id: "request-one",
       channel_id: "channel-1",
@@ -321,7 +321,7 @@ describe("/nas", () => {
 
   it("does not queue a NAS handoff request while an audit job is active", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_HANDOFF: true });
-    mocks.getActiveAuditJob.mockReturnValue({
+    mocks.getActiveAuditJobByProjectPath.mockReturnValue({
       id: "audit-job-active",
       status: "running_checks",
     });
@@ -339,6 +339,7 @@ describe("/nas", () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("An audit job is already active"),
     });
+    expect(mocks.getActiveAuditJobByProjectPath).toHaveBeenCalledWith("guild-1", "E:\\codex_works\\Attys_DC_BOT");
     expect(mocks.writeHandoffEnvelope).not.toHaveBeenCalled();
     expect(mocks.createNasHandoffRequest).not.toHaveBeenCalled();
   });

@@ -13,6 +13,7 @@ import {
 import {
   createAuditJob,
   getActiveAuditJob,
+  getActiveAuditJobByProjectPath,
   getAuditJob,
   getLatestAuditJob,
   getProject,
@@ -97,10 +98,10 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
     return;
   }
 
-  const activeJob = getActiveAuditJob(interaction.channelId);
+  const activeJob = getActiveAuditJobByProjectPath(project.guild_id, project.project_path);
   if (activeJob) {
     await interaction.editReply({
-      content: `An audit job is already active.\n\`\`\`text\n${renderAuditJob(activeJob, listAuditSteps(activeJob.id))}\n\`\`\``,
+      content: `An audit job is already active for this project.\n\`\`\`text\n${renderAuditJob(activeJob, listAuditSteps(activeJob.id))}\n\`\`\``,
     });
     return;
   }

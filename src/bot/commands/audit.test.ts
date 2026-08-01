@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getConfig: vi.fn(),
   getProject: vi.fn(),
   getActiveAuditJob: vi.fn(),
+  getActiveAuditJobByProjectPath: vi.fn(),
   getAuditJob: vi.fn(),
   getLatestAuditJob: vi.fn(),
   createAuditJob: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock("../../utils/config.js", () => ({
 vi.mock("../../db/database.js", () => ({
   getProject: mocks.getProject,
   getActiveAuditJob: mocks.getActiveAuditJob,
+  getActiveAuditJobByProjectPath: mocks.getActiveAuditJobByProjectPath,
   getAuditJob: mocks.getAuditJob,
   getLatestAuditJob: mocks.getLatestAuditJob,
   createAuditJob: mocks.createAuditJob,
@@ -97,8 +99,9 @@ describe("/audit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_AUDIT: true });
-    mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "/projects/app" });
+    mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "/projects/app", guild_id: "guild-1" });
     mocks.getActiveAuditJob.mockReturnValue(undefined);
+    mocks.getActiveAuditJobByProjectPath.mockReturnValue(undefined);
     mocks.getAuditJob.mockReturnValue(makeJob());
     mocks.getLatestAuditJob.mockReturnValue(makeJob());
     mocks.listAuditSteps.mockReturnValue([makeStep()]);
@@ -169,6 +172,25 @@ describe("/audit", () => {
     expect(interaction.followUp).toHaveBeenCalledWith({
       content: expect.stringContaining("**Audit completed**"),
     });
+  });
+
+  it("blocks a new audit when the same project already has an active job in another channel", async () => {
+    mocks.getActiveAuditJobByProjectPath.mockReturnValue(makeJob({
+      id: "audit-other-channel",
+      channel_id: "channel-2",
+      status: "waiting_nas_result",
+      current_step: "plans",
+    }));
+    const interaction = makeInteraction("start", "tests");
+
+    await execute(interaction as never);
+
+    expect(mocks.getActiveAuditJobByProjectPath).toHaveBeenCalledWith("guild-1", "/projects/app");
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: expect.stringContaining("already active for this project"),
+    });
+    expect(mocks.createAuditJob).not.toHaveBeenCalled();
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
   });
 
   it("reports failed checks as waiting for manual review", async () => {

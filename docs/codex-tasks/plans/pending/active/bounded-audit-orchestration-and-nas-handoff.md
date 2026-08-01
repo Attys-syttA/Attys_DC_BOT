@@ -658,7 +658,7 @@ Elfogadási feltételek:
 - restart után a befejezett/megakadt job diagnosztizálható; **kész a `/audit status`, `/dashboard`, `/status` alapnézetben**
 - aktív processz nélküli korábbi `running` job `interrupted`-szerű kezelt állapotra normalizálódik; **kész `failed` állapotba**
 - raw log és privát path nem kerül DB summaryba vagy Discordra; **store helper szinten kész**
-- egy projectre nincs két aktív audit job; **csatorna-szinten kész, project-path szintű globális lock még hátralévő**
+- egy projectre nincs két aktív audit job; **kész exact project path + guild alapú lockkal a `/audit start` és `/nas request` útvonalon**
 
 Megjegyzés: az additive SQLite táblák és helper függvények elkészültek, de a Discord observability, interrupted normalization és per-project active-job enforcement még hátralévő vertikális integráció.
 
