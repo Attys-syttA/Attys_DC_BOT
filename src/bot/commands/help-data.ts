@@ -178,6 +178,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
+      "`DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS=true` mellett a bot automatikusan visszairja a sajat queued requestek eredmenyet.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",

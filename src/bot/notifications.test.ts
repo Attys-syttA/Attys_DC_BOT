@@ -54,6 +54,7 @@ describe("startup notifications", () => {
     const message = buildStartupNotification(
       makeConfig({
         DISCORD_ENABLE_MESSAGE_PROMPTS: true,
+        DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: true,
         DISCORD_REGISTER_COMMANDS: true,
       }),
       {
@@ -69,6 +70,7 @@ describe("startup notifications", () => {
     expect(message).toContain("bot user: Codex_Dscrd_BOT#2018");
     expect(message).toContain("operator tools: ready");
     expect(message).toContain("message prompt mode: enabled");
+    expect(message).toContain("nas result notifier: enabled");
     expect(message).toContain("application command registration: enabled");
     expect(message).toContain("application commands loaded: 20");
     expect(message).not.toContain("token");
@@ -83,6 +85,7 @@ describe("startup notifications", () => {
 
     expect(message).toContain("launch reason: manual or external start");
     expect(message).toContain("operator tools: unknown");
+    expect(message).toContain("nas result notifier: disabled");
     expect(message).not.toContain("private");
   });
 

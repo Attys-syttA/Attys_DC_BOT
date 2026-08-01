@@ -52,6 +52,9 @@ export function buildStartupNotification(
   const commandRegistration = config.DISCORD_REGISTER_COMMANDS
     ? "application command registration: enabled"
     : "application command registration: skipped";
+  const nasResultNotifier = config.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS
+    ? "nas result notifier: enabled"
+    : "nas result notifier: disabled";
   const commandCount = typeof options.commandCount === "number"
     ? `application commands loaded: ${options.commandCount}`
     : "application commands loaded: unknown";
@@ -66,6 +69,7 @@ export function buildStartupNotification(
     operatorTools,
     messagePromptMode,
     attachmentMessageMode,
+    nasResultNotifier,
     commandRegistration,
     commandCount,
   ].join("\n");
