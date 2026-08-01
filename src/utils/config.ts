@@ -50,6 +50,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: z
     .enum(["true", "false"])
     .default("false")

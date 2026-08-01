@@ -86,6 +86,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("/nas results");
     expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
     expect(content).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
+    expect(content).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
   });
 
   it("explains the /register autocomplete limit", async () => {

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   updateNasHandoffRequestResult: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
   runLocalCommand: vi.fn(),
+  recordOperatorEvent: vi.fn(),
 }));
 
 vi.mock("node:fs", () => ({
@@ -52,7 +53,17 @@ vi.mock("./local-command.js", () => ({
   runLocalCommand: mocks.runLocalCommand,
 }));
 
-import { buildNasResultsReport, buildNasStatusReport, execute, projectFolderLabel } from "./nas.js";
+vi.mock("../operator-events.js", () => ({
+  recordOperatorEvent: mocks.recordOperatorEvent,
+}));
+
+import {
+  buildNasBridgeLifecycleReport,
+  buildNasResultsReport,
+  buildNasStatusReport,
+  execute,
+  projectFolderLabel,
+} from "./nas.js";
 
 function makeInteraction() {
   return {
@@ -215,6 +226,65 @@ describe("/nas", () => {
     expect(mocks.writeHandoffEnvelope).not.toHaveBeenCalled();
   });
 
+  it("keeps NAS bridge lifecycle disabled by default", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE: false });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "bridge"),
+        getString: vi.fn(() => "restart"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas bridge` is disabled. Set `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` in `.env` to enable it.",
+    });
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+  });
+
+  it("runs a fixed NAS bridge lifecycle action when enabled", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE: true });
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: [
+        "local preface E:\\private",
+        "{\"bridgeReady\":true,\"http\":{\"running\":true,\"listening\":true,\"port\":8787,\"processCount\":1,\"processIds\":[10]},\"handoff\":{\"running\":true,\"handoffRootConfigured\":true,\"handoffRootReachable\":true,\"processCount\":1,\"processIds\":[11]}}",
+      ].join("\n"),
+    });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "bridge"),
+        getString: vi.fn(() => "restart"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith(
+      "npm.cmd",
+      ["run", "--silent", "nas:bridge:restart"],
+      expect.any(String),
+      45_000,
+    );
+    expect(interaction.editReply.mock.calls[0][0].content).toContain("NAS Bridge Lifecycle");
+    expect(interaction.editReply.mock.calls[0][0].content).toContain("action: restart requested");
+    expect(interaction.editReply.mock.calls[0][0].content).toContain("OK bridge ready");
+    expect(interaction.editReply.mock.calls[0][0].content).not.toContain("8787");
+    expect(interaction.editReply.mock.calls[0][0].content).not.toContain("processIds");
+    expect(interaction.editReply.mock.calls[0][0].content).not.toContain("private");
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "lifecycle",
+      status: "nas-bridge-restart",
+      channelId: "channel-1",
+    });
+  });
+
   it("requires a registered project before queuing a NAS request", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_HANDOFF: true });
     mocks.getProject.mockReturnValue(undefined);
@@ -247,6 +317,46 @@ describe("/nas", () => {
     expect(report).not.toContain("processIds");
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("hidden");
+    expect(report).not.toContain("private");
+  });
+
+  it("builds a public-safe NAS bridge lifecycle report from nested JSON", async () => {
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: [
+        "status before json with token=secret",
+        "{\"bridgeReady\":true,\"http\":{\"running\":true,\"listening\":true,\"port\":8787,\"processCount\":2},\"handoff\":{\"running\":true,\"handoffRootConfigured\":true,\"handoffRootReachable\":true,\"processCount\":3}}",
+      ].join("\n"),
+    });
+
+    const report = await buildNasBridgeLifecycleReport("E:\\private\\repo", "start");
+
+    expect(report).toContain("NAS Bridge Lifecycle");
+    expect(report).toContain("action: start requested");
+    expect(report).toContain("OK lifecycle command completed");
+    expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
+    expect(report).toContain("OK worker http: listening on configured port, processes 2");
+    expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
+    expect(report).not.toContain("8787");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+  });
+
+  it("reports NAS bridge lifecycle failure without raw output", async () => {
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 1,
+      timedOut: false,
+      output: "raw failure E:\\private token=secret",
+    });
+
+    const report = await buildNasBridgeLifecycleReport("E:\\private\\repo", "stop");
+
+    expect(report).toContain("FAIL lifecycle command failed");
+    expect(report).toContain("FAIL worker http: status unavailable");
+    expect(report).toContain("FAIL handoff worker: status unavailable");
+    expect(report).not.toContain("raw failure");
+    expect(report).not.toContain("secret");
     expect(report).not.toContain("private");
   });
 

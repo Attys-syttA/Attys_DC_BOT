@@ -23,6 +23,7 @@ import {
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { npmCommand, runLocalCommand } from "./local-command.js";
+import { recordOperatorEvent } from "../operator-events.js";
 
 interface WorkerHttpStatus {
   running?: unknown;
@@ -37,6 +38,8 @@ interface WorkerHandoffStatus {
   handoffRootConfigured?: unknown;
   handoffRootReachable?: unknown;
 }
+
+type NasBridgeAction = "status" | "start" | "stop" | "restart";
 
 export const data = new SlashCommandBuilder()
   .setName("nas")
@@ -66,7 +69,20 @@ export const data = new SlashCommandBuilder()
       .setName("limit")
       .setDescription("Maximum results to show")
       .setMinValue(1)
-      .setMaxValue(10)));
+      .setMaxValue(10)))
+  .addSubcommand((subcommand) => subcommand
+    .setName("bridge")
+    .setDescription("Control the local PC NAS bridge lifecycle")
+    .addStringOption((option) => option
+      .setName("action")
+      .setDescription("Lifecycle action")
+      .setRequired(true)
+      .addChoices(
+        { name: "status", value: "status" },
+        { name: "start", value: "start" },
+        { name: "stop", value: "stop" },
+        { name: "restart", value: "restart" },
+      )));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -81,13 +97,18 @@ function count(value: unknown): string {
 function parseJsonObject(output: string): unknown {
   const trimmed = output.trim();
   if (!trimmed) return null;
-  const start = trimmed.lastIndexOf("{");
-  if (start < 0) return null;
-  try {
-    return JSON.parse(trimmed.slice(start));
-  } catch {
-    return null;
+
+  for (const line of trimmed.split(/\r?\n/).reverse()) {
+    const candidate = line.trim();
+    if (!candidate.startsWith("{")) continue;
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      continue;
+    }
   }
+
+  return null;
 }
 
 export function readHandoffRootFromWorkerEnv(repoRoot: string): string {
@@ -127,6 +148,19 @@ function handoffWorkerLine(status: WorkerHandoffStatus | null): string {
     return "INFO handoff worker: stopped, NAS root reachable";
   }
   return "FAIL handoff worker: stopped or NAS root missing";
+}
+
+function nasBridgeActionLabel(action: NasBridgeAction): string {
+  switch (action) {
+    case "start":
+      return "start requested";
+    case "stop":
+      return "stop requested";
+    case "restart":
+      return "restart requested";
+    case "status":
+      return "status";
+  }
 }
 
 function bridgeReadyLine(http: WorkerHttpStatus | null, handoff: WorkerHandoffStatus | null): string {
@@ -186,6 +220,26 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
     workerHttpLine(workerHttpStatus),
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),
+    "```",
+  ].join("\n");
+}
+
+export async function buildNasBridgeLifecycleReport(repoRoot: string, action: NasBridgeAction): Promise<string> {
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", `nas:bridge:${action}`], repoRoot, 45_000);
+  const parsed = result.exitCode === 0
+    ? parseJsonObject(result.output) as { http?: WorkerHttpStatus; handoff?: WorkerHandoffStatus } | null
+    : null;
+  const workerHttpStatus = parsed?.http ?? null;
+  const handoffWorkerStatus = parsed?.handoff ?? null;
+
+  return [
+    "**NAS Bridge Lifecycle**",
+    "```text",
+    `action: ${nasBridgeActionLabel(action)}`,
+    result.exitCode === 0 ? "OK lifecycle command completed" : "FAIL lifecycle command failed",
+    bridgeReadyLine(workerHttpStatus, handoffWorkerStatus),
+    workerHttpLine(workerHttpStatus),
+    handoffWorkerLine(handoffWorkerStatus),
     "```",
   ].join("\n");
 }
@@ -294,6 +348,30 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
+  if (subcommand === "bridge") {
+    const config = getConfig();
+    if (!config.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE) {
+      await interaction.editReply({
+        content: L("`/nas bridge` is disabled. Set `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` in `.env` to enable it.", "A `/nas bridge` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    const action = interaction.options.getString("action", true);
+    if (!["status", "start", "stop", "restart"].includes(action)) {
+      await interaction.editReply({ content: "Unsupported NAS bridge lifecycle action." });
+      return;
+    }
+
+    await interaction.editReply({
+      content: await buildNasBridgeLifecycleReport(process.cwd(), action as NasBridgeAction),
+    });
+    if (action !== "status") {
+      recordOperatorEvent({ kind: "lifecycle", status: `nas-bridge-${action}`, channelId: interaction.channelId });
+    }
+    return;
+  }
+
   if (subcommand === "request") {
     await executeRequest(interaction, process.cwd());
     return;

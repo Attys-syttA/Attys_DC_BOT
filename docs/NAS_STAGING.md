@@ -150,6 +150,14 @@ npm run nas:bridge:stop
 
 This wraps the worker HTTP lifecycle and the persistent handoff worker lifecycle into one operator command. It still targets only the PC-side NAS bridge worker processes, not the live Discord bot. The status output is public-safe and summarizes readiness without printing worker secrets, NAS paths, or process IDs.
 
+Discord-side bridge lifecycle control:
+
+```text
+DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=false
+```
+
+When this is explicitly enabled on the Windows Discord bot, `/nas bridge action:<status|start|stop|restart>` calls the same `nas:bridge:*` helper scripts and returns only a public-safe lifecycle summary. It does not touch the NAS container, does not run arbitrary commands, does not run Codex prompts, and does not stop or restart the live Discord bot.
+
 Repeatable live bridge smoke:
 
 ```powershell
