@@ -197,3 +197,21 @@ npm run nas:check
 ```
 
 The check verifies the manifest hashes and fails if forbidden local/runtime files appear in the staging output.
+
+Direct NAS share sync from the Windows machine:
+
+```powershell
+npm run nas:prepare -- -IncludeSource
+npm run nas:sync-share -- -TargetRoot K:\
+npm run nas:sync-share -- -TargetRoot K:\ -Apply
+```
+
+The sync command is dry-run by default. It writes to the NAS only with `-Apply`.
+
+Safety rules:
+
+- it copies only files listed in the generated `NAS_STAGING_MANIFEST.json`, plus the manifest itself;
+- when replacing a target file it deletes that single file first, then copies the new file, unless `-NoRemoveBeforeCopy` is used;
+- it does not prune the target folder;
+- it refuses to manage protected target paths such as `.env.nas`, `data\*.json`, `data\handoff\*`, `logs\*`, and `#recycle\*`;
+- it does not print or read real `.env.nas` values.

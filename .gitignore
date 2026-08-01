@@ -36,6 +36,7 @@ tray-error.log
 
 runtime/
 tmp/
+_tmp/
 temp/
 .codex/
 .codex-uploads/

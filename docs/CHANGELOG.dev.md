@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS share sync helper: uj `scripts/sync-nas-share.ps1` es `npm run nas:sync-share` keszult a Windowsrol csatolt NAS share kozvetlen, dry-run-alapu frissitesere. Alapbol nem ir, `-Apply` kell hozza; csak a staging manifestben szereplo fajlokat kezeli, replace eseten fajlonkent delete-before-copy modot hasznal, es megorzi a `.env.nas`, `data`, `data\handoff`, `logs` es `#recycle` runtime/secret teruleteket.
 - NAS CI fix: a worker HTTP server most tenylegesen tovabbadja az injected `runCheck` fuggvenyt a request handlernek, a `/nas request` projektcimke Windows es POSIX pathbol is stabil mappanevet kepez, a worker HTTP integration teszt pedig platformfuggetlen ideiglenes Git repot hasznal. Ez javitja a Linux GitHub Actions Node 20/22 piros tesztjeit.
 - NAS bridge lifecycle: uj `scripts/nas-bridge-lifecycle.ps1` es `nas:bridge:status/start/restart/stop` parancsok keszultek. Ezek a PC worker HTTP es a persistent handoff worker lifecycle helperjeit fogjak ossze egy public-safe statuszba, a live Discord bot erintese nelkul.
 - NAS bridge smoke: uj `scripts/nas-bridge-smoke.ps1` es `npm run nas:bridge:smoke` parancs keszult. Ez egy synthetic fixed-check requestet ir a NAS inboxba, megvarja a persistent handoff worker outbox eredmenyet, es csak public-safe osszegzest ir ki.
