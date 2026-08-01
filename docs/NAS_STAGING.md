@@ -150,6 +150,14 @@ npm run nas:bridge:stop
 
 This wraps the worker HTTP lifecycle and the persistent handoff worker lifecycle into one operator command. It still targets only the PC-side NAS bridge worker processes, not the live Discord bot. The status output is public-safe and summarizes readiness without printing worker secrets, NAS paths, or process IDs.
 
+Repeatable live bridge smoke:
+
+```powershell
+npm run nas:bridge:smoke
+```
+
+This requires `.env.worker.local` with a reachable `ATTYS_NAS_HANDOFF_ROOT` and an already ready bridge. It writes one synthetic fixed-check request to the NAS handoff inbox, waits for the persistent handoff worker to create the matching outbox result, and prints only the public request id, check, result, and summary. It does not expose the NAS path or any worker secret.
+
 Read-only worker repo status:
 
 ```powershell

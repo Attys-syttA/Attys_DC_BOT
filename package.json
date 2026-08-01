@@ -23,6 +23,7 @@
     "nas:bridge:start": "pwsh -NoProfile -File scripts/nas-bridge-lifecycle.ps1 -Action start",
     "nas:bridge:stop": "pwsh -NoProfile -File scripts/nas-bridge-lifecycle.ps1 -Action stop",
     "nas:bridge:restart": "pwsh -NoProfile -File scripts/nas-bridge-lifecycle.ps1 -Action restart",
+    "nas:bridge:smoke": "pwsh -NoProfile -File scripts/nas-bridge-smoke.ps1",
     "worker:http": "tsx src/cli/worker-http.ts",
     "worker:http:start": "pwsh -NoProfile -File scripts/start-worker-http.ps1",
     "worker:http:status": "pwsh -NoProfile -File scripts/worker-http-lifecycle.ps1 -Action status",
