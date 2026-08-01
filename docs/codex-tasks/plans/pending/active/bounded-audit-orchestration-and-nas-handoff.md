@@ -10,6 +10,19 @@ Kapcsolódó jelenlegi helyzet:
 - A ForgeLab nyilvános dokumentációja és marketingoldala csak mintaforrás. A motor zárt forrású, ezért a leírt belső megvalósítás és biztonsági állítások nem tekinthetők auditált referenciakódnak.
 - Az `Attys_DC_BOT_NAS` külön repository és külön kockázati felület. Ebben a tervben csak handoff-feltételek szerepelnek; a NAS repo módosítása külön, explicit feladat lesz.
 
+## 2026-08-01 prioritásváltás
+
+A terv korábban audit/szigorítás-first sorrendet írt le: előbb local audit-orchestrator, utána későbbi NAS handoff. Ez a korábbi irány nem törlődik, és nincs késznek nyilvánítva.
+
+A végrehajtási sorrend a felhasználói döntés alapján módosul:
+
+1. először a NAS-kapcsolat legkisebb biztonságos alapja készül el;
+2. utána tér vissza a terv a local audit-orchestrator Szelet 0-1 részéhez;
+3. a repair, izolált worktree, bounded retry és multi-agent részek továbbra is későbbi, magasabb kockázatú szeletek;
+4. a VS Code single-runtime / shim terv külön not-started terv marad, és nem része ennek az első NAS-kapcsolati checkpointnak.
+
+Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb a worker registry, heartbeat, public-safe status és deploy boundary contractját kell tisztázni. Így a későbbi audit-orchestrator már nem egy kizárólag helyi botra lesz ráépítve, hanem NAS-handoffra előkészített határokkal indulhat.
+
 ## Elkeszult reszek
 
 - Local-first Discord -> helyi bot -> Codex app-server/CLI -> helyi project útvonal architektúra.
@@ -20,10 +33,13 @@ Kapcsolódó jelenlegi helyzet:
 - Public-safe output/path sanitizing, `BASE_PROJECT_DIR` határ és allowed user/role ellenőrzés.
 - Aktív/done tervfájl-rend és CI-ben futó `npm run plans:check`.
 - Windows prerelease baseline és külön external-platform acceptance terv.
+- 2026-08-01 döntés: a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa lesz az új NAS deploy célhely; a régi ARM bundle ZIP csak érzékeny történeti referencia.
 
 ## Nyitott reszek
 
-- Audit job és audit step domain contract megtervezése és tesztelése.
+- NAS control-plane és Windows worker első, health/heartbeat-only kapcsolatának megtervezése és tesztelése.
+- Worker registry, heartbeat timeout és public-safe worker status első implementációs contractja.
+- Audit job és audit step domain contract megtervezése és tesztelése a NAS kapcsolat után.
 - Fix, server-side named-check catalog bevezetése tetszőleges shell parancs nélkül.
 - Read-only `/audit start|status|stop` első vertikális szelet.
 - Tartós, újraindítás után is olvasható audit-job állapot.
@@ -79,9 +95,17 @@ Nem tekinthető bizonyítottnak és nem másolható át:
 
 ## 2. Döntés röviden
 
-Az első cél nem egy ötagentes, autonóm fejlesztőrendszer.
+Az első cél nem egy ötagentes, autonóm fejlesztőrendszer, és nem a VS Code single-runtime shim.
 
-Az első cél egy local-first, operátor által kontrollált audit-orchestrator, amely:
+Az első cél a NAS-kapcsolat legkisebb biztonságos alapja:
+
+1. a NAS oldali control-plane célmappa és deploy boundary rögzítése;
+2. Windows worker health/heartbeat/status contract;
+3. public-safe worker registry és timeout kezelés;
+4. nincs Codex prompt, nincs named check, nincs repair, nincs VS Code shim;
+5. nincs NAS oldali Codex auth, Git credential vagy Windows workspace secret.
+
+Csak ezután következhet a local-first, operátor által kontrollált audit-orchestrator, amely:
 
 1. egy regisztrált projecthez fix, allowlisted checkeket futtat;
 2. fázisonként jelenti az állapotot;
@@ -112,7 +136,8 @@ Az első cél egy local-first, operátor által kontrollált audit-orchestrator,
 - Dirty user worktree automatikus resetje, stash-e, commitja vagy felülírása.
 - Git history rewrite, force-push vagy automatikus PR/merge.
 - ForgeLab felület, branding, agentnevek vagy proprietary patch stratégia másolása.
-- NAS/multi-machine végrehajtás implementálása ebben a repository-szeletben.
+- NAS oldali Codex-végrehajtás vagy Windows workspace közvetlen NAS-fájlrendszeres használata.
+- VS Code `chatgpt.cliExecutable` / shim módosítás ebben a tervben; az külön, későbbi terv marad.
 
 ## 5. Megőrzendő biztonsági invariánsok
 
@@ -442,6 +467,65 @@ Több agent csak később mérlegelhető, ha:
 
 ## 14. Implementációs szeletek
 
+### Szelet NAS-0 — Control-plane/worker kapcsolat alap
+
+Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, hogy a későbbi NAS control plane és a Windows worker között van biztonságosan modellezett, public-safe állapotkapcsolat.
+
+2026-08-01 implementációs checkpoint:
+
+- létrejött a minimális `src/nas/worker-registry.ts` contract modul;
+- létrejött a fókuszált `src/nas/worker-registry.test.ts` teszt;
+- létrejött a `src/nas/control-plane-config.ts` NAS config parser és a hozzá tartozó fókuszált teszt;
+- a modul kizárólag message type, worker state, heartbeat timestamp, timeout és public-safe status modell;
+- a config parser csak public-safe control-plane nevet, opcionális HTTP(S) public URL-t és korlátozott heartbeat timeoutot fogad;
+- a NAS oldali Codex execution flag `true` értéke fail-closed hibával megáll;
+- nincs hálózati endpoint, NAS runtime, Codex prompt, named check, repair vagy VS Code shim.
+
+2026-08-01 staging checkpoint:
+
+- létrejött a tracked NAS sablon: `deploy/nas/Discord_Codex_BOT/`;
+- létrejött a másolható, Gitből kizárt staging kimenet: `nas-staging/Discord_Codex_BOT/`;
+- a staging kimenet belseje a NAS `Discord_Codex_BOT` megosztott mappájának belsejét tükrözi;
+- `npm run nas:prepare` újragenerálja a staging mappát;
+- `-IncludeSource` mód dirty checkoutból alapból megtagadja a forrásmásolást, hogy user változás vagy titok ne kerüljön véletlenül a NAS stagingbe.
+
+Érintett területek:
+
+- új vagy meglévő terv/contract dokumentáció az `Attys_DC_BOT` repóban;
+- worker registry típusok és timeout/public-safe status helper;
+- tracked NAS staging sablon és ignored copy-ready staging kimenet;
+- NAS control-plane config parser;
+- `.env.example` csak synthetic placeholderrel, ha új feature flag vagy endpoint név kell;
+- NAS deploy célhely dokumentáció: `Discord_Codex_BOT` megosztott mappa.
+
+Minimális üzenettípusok:
+
+- `worker.register`
+- `worker.heartbeat`
+- `worker.health`
+- `worker.status`
+
+Minimális worker mezők:
+
+- `workerId`
+- `label`
+- `hostKind`
+- `workspaceRootLabel`
+- `capabilities`
+- `lastSeenAt`
+- `status`
+
+Elfogadási feltételek:
+
+- a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa az új deploy célhelyként dokumentált;
+- a régi `Discord_Codex_BOT.zip` érzékeny történeti referencia, nem aktuális futtatási alap;
+- az első contract nem tartalmaz Codex promptot, named checket, approval routingot, repairt vagy VS Code shimet;
+- a worker státusz public-safe: nincs raw local path, token, Discord ID, `.env` érték, Codex auth vagy Git credential;
+- a Windows worker végrehajtói szerepe megmarad, a NAS nem futtat Codexet Windows workspace-hez;
+- a fókuszált registry/timeout teszt bizonyítja a fenti public-safe contractot;
+- a staging script nem másol `.env`, Codex auth state, Git credential, `node_modules`, `dist`, log vagy SQLite runtime state fájlokat;
+- a config parser tesztelt, de endpoint vagy runtime kapcsolat előtt külön transport/auth szelet kell.
+
 ### Szelet 0 — Contract és teszt-fixture alap
 
 Érintett területek:
@@ -703,14 +787,14 @@ A local audit-orchestráció akkor kész:
 
 ## 21. Első javasolt megvalósítási checkpoint
 
-Az első fejlesztési checkpoint kizárólag a Szelet 0 és Szelet 1 legyen:
+Az első fejlesztési checkpoint kizárólag a **Szelet NAS-0** legyen:
 
-- domain contract;
-- külön context/edit/create-delete capability contract;
-- fix named-check catalog;
-- read-only `/audit start|status|stop`;
-- progress és public-safe summary;
-- focused tesztek;
-- repair, worktree, retry és NAS nélkül.
+- NAS deploy célhely dokumentálása: a Synology `Discord_Codex_BOT` megosztott mappa;
+- régi ZIP/ARM image érzékeny történeti referenciaként kezelése;
+- worker registry és heartbeat/status contract: `src/nas/worker-registry.ts`;
+- public-safe worker státuszmezők: fókuszált unit teszttel lefedve;
+- copy-ready local staging folder: `nas-staging/Discord_Codex_BOT/`;
+- config parser implementálva és tesztelve; endpoint vagy runtime kapcsolat előtt külön transport/auth szelet jön;
+- Codex prompt, named check, repair, worktree, retry és VS Code shim nélkül.
 
-Ez ad valódi operátori értéket, miközben nem hozza be idő előtt a zárt forrású termék marketingjének legkockázatosabb autonóm elemeit.
+Ez adja meg a NAS-kapcsolat biztonságos alapját. Csak ezután indulhat a korábbi audit Szelet 0-1: domain contract, named-check catalog és read-only `/audit start|status|stop`.

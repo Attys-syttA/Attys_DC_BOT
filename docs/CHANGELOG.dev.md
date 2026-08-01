@@ -1,5 +1,18 @@
 # Development Changelog
 
+## 2026-08-01
+
+- NAS-first prioritásváltás: a `bounded-audit-orchestration-and-nas-handoff.md` aktív terv első checkpointja már nem a local audit Szelet 0-1, hanem az új `Szelet NAS-0` health/heartbeat-only NAS control-plane / Windows worker kapcsolat.
+- Döntés: a korábbi audit/szigorításos terv nem lett késznek nyilvánítva és nem lett eldobva; a végrehajtási sorrend módosult úgy, hogy a worker registry, heartbeat, public-safe status és deploy boundary contract előzze meg az audit-orchestrator implementációját.
+- NAS célhely: a felhasználó kiürítette a Synology `Discord_Codex_BOT` megosztott mappát, és ez lesz az új NAS deploy célhely. A korábbi `Discord_Codex_BOT.zip` érzékeny történeti referencia, nem aktuális deploy source; a benne lévő régi ARM64 image nem cél a DS925+/AMD NAS-on.
+- NAS-0 implementációs kezdés: új `src/nas/worker-registry.ts` és `src/nas/worker-registry.test.ts` rögzíti a minimális `worker.register`, `worker.heartbeat`, `worker.health` és `worker.status` contractot, a heartbeat timestamp frissítést, a timeout alapú offline státuszt és a public-safe worker státuszmezőket.
+- NAS config parser: új `src/nas/control-plane-config.ts` és `src/nas/control-plane-config.test.ts` normalizálja a control-plane nevet, csak üres vagy HTTP(S) public base URL-t fogad, határok közé szorítja a heartbeat timeoutot, és fail-closed hibával tiltja a NAS oldali Codex executiont.
+- NAS staging alap: új tracked `deploy/nas/Discord_Codex_BOT/` sablon, ignored `nas-staging/Discord_Codex_BOT/` másolható kimenet, `scripts/prepare-nas-staging.ps1`, `npm run nas:prepare`, valamint `docs/NAS_STAGING.md` útmutató készült. A staging belseje a NAS `Discord_Codex_BOT` megosztott mappájának belsejét tükrözi.
+- Source staging védelem: a `-IncludeSource` mód dirty checkoutból alapból megtagadja a forrásmásolást, így review nélkül nem kerülhet user változás, `.env`, Codex auth state, Git credential, `node_modules`, `dist`, log vagy SQLite runtime state a NAS stagingbe.
+- Scope: nem történt NAS-futtatás, hálózati endpoint, VS Code shim beállítás, Codex prompt-futtatás, named-check implementáció, repair/worktree/retry logika vagy `Attys_DC_BOT_NAS` repo módosítás ebben a szeletben.
+- Validáció: célzott `npx vitest run src/nas` sikeres (2 tesztfájl / 11 teszt), `npm run nas:prepare` létrehozta a copy-ready staginget, `npm run nas:check` ellenőrizte a manifestet és tiltott fájlokat, `scripts/prepare-nas-staging.ps1 -IncludeSource` dirty checkoutból biztonságosan megállt, teljes `npm run check` sikeres (41 tesztfájl / 262 teszt, builddel).
+- Verziós döntés: belső contract/test alap, runtime viselkedés és release package változás nélkül; nincs application version bump.
+
 ## 2026-07-22
 
 - Windows Codex CLI feloldás javítása: a bot `resolveCodexCommand()` logikája már Windows alatt is figyelembe veszi a `CODEX_BIN` értéket, a PATH bejegyzések konkrét `codex.cmd`/`codex.exe` útvonalait, és fallbackként a VS Code OpenAI extension alatti `codex.exe`-t.

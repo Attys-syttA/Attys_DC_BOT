@@ -9,6 +9,8 @@
     "build": "tsup src/index.ts --format esm --dts",
     "start": "node dist/index.js",
     "doctor:local": "tsx src/cli/preflight.ts",
+    "nas:prepare": "pwsh -NoProfile -File scripts/prepare-nas-staging.ps1",
+    "nas:check": "pwsh -NoProfile -File scripts/check-nas-staging.ps1",
     "plans:check": "tsx src/cli/plans-check.ts",
     "safe-update:status": "tsx src/cli/safe-update.ts --status",
     "safe-update:apply": "tsx src/cli/safe-update.ts --apply",

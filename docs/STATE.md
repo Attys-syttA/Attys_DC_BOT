@@ -2,10 +2,10 @@
 
 ## Current Status
 
-- Date: 2026-07-22
+- Date: 2026-08-01
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
-- Phase: Windows prerelease baseline complete; external-platform acceptance remains active, and a separate bounded audit-orchestration design track is now documented without implementation.
+- Phase: Windows prerelease baseline complete; external-platform acceptance remains active, and the bounded audit-orchestration / NAS handoff design track has been reprioritized to start with a NAS connection baseline.
 - Git state: local `main` tracks `origin/main`; the worktree has a local Codex command resolver fix for launcher-started Windows environments.
 - 2026-07-22 launcher/bot recovery: the GUI-launched doctor failed on `codex.cmd --version` and `codex.cmd login status` because the launcher environment did not see the VS Code bundled Codex CLI on PATH. The bot command resolver now honors `CODEX_BIN`, scans PATH entries explicitly, and falls back to the VS Code OpenAI extension `codex.exe` path on Windows.
 - 2026-07-22 validation: focused `command-resolver.test.ts` 1 file / 2 PASS; full `npm run check` passed (`plans:check`, `lint`, `typecheck`, 39 test files / 250 PASS, `build`); `doctor:local` passed both normally and with the VS Code Codex PATH entry removed; `git diff --check` passed. The bot was restarted through `win-start.bat`; final status `Running`, new `CodexBot.exe` process, and `bot.err.log` empty. Version unchanged (`0.1.1-prerelease.1`) because no release package was cut.
@@ -22,7 +22,7 @@
 Keep the Windows-first baseline stable while:
 
 - Linux tray icon runtime, macOS menu bar runtime, and iPad/mobile file handoff remain external-platform acceptance work until real target-platform evidence exists;
-- the next local-first development direction is prepared as a bounded, check-first audit orchestrator with explicit repair approval, isolated worktrees, strict retry/stagnation stops, and a later separately approved NAS handoff.
+- the next development direction starts with the NAS control-plane / Windows worker connection baseline, then returns to the bounded, check-first audit orchestrator with explicit repair approval, isolated worktrees, and strict retry/stagnation stops.
 
 ## Current Audit-Orchestration Plan Status
 
@@ -40,9 +40,13 @@ Keep the Windows-first baseline stable while:
 - The authenticated UI confirmed separate Single Chat/Brain modes, Brain/Audit controls, workspace-context and read/edit/create-delete capability boundaries, role-specific model configuration, existing-project PATCH workflow, and distinct workspace/operator panes. These remain UI-contract observations, not backend enforcement evidence.
 - Reusable patterns were limited to phased orchestration, pre-execution plan review, explicit capability separation, bounded audit/retry, stagnation detection, checkpoint/rollback principles, and operator progress/stop UX.
 - The plan explicitly rejects OpenRouter/BYOK integration, arbitrary commands, automatic dependency installation/deployment, default-on repair, parallel writes to one worktree, and copying proprietary patch logic.
-- First proposed checkpoint: domain and read/edit/create-delete capability contract plus read-only named-check `/audit start|status|stop`, with no repair, worktree automation, retry loop, multi-agent execution, or NAS write.
+- 2026-08-01 priority change: the first checkpoint is now `Szelet NAS-0`, a health/heartbeat-only NAS control-plane / Windows worker contract. The earlier audit Szelet 0-1 remains planned after this connection baseline and is not considered implemented.
+- 2026-08-01 NAS-0 implementation start: added `src/nas/worker-registry.ts` and `src/nas/worker-registry.test.ts` for the first public-safe worker message/status contract (`worker.register`, `worker.heartbeat`, `worker.health`, `worker.status`). This is an internal state/timeout model only; it does not add a network endpoint, NAS runtime, Codex prompt, named check, repair, worktree, retry, or VS Code shim.
+- 2026-08-01 NAS-0 config parser: added `src/nas/control-plane-config.ts` and `src/nas/control-plane-config.test.ts`. It normalizes the public-safe control-plane name, accepts only empty or HTTP(S) public base URLs, bounds heartbeat timeout, and fail-closed rejects NAS-side Codex execution.
+- 2026-08-01 NAS staging start: added tracked template folder `deploy/nas/Discord_Codex_BOT/`, ignored copy-ready output `nas-staging/Discord_Codex_BOT/`, `scripts/prepare-nas-staging.ps1`, `npm run nas:prepare`, and `docs/NAS_STAGING.md`. The staging output mirrors the inside of the NAS `Discord_Codex_BOT` share; source copying is opt-in and refuses dirty checkouts unless explicitly overridden after review.
+- NAS target decision: the Synology `Discord_Codex_BOT` shared folder was emptied by the operator and is the new NAS deploy target. The old `Discord_Codex_BOT.zip` is sensitive historical reference only, and its old ARM64 Docker image is not current deploy source.
 - `Attys_DC_BOT_NAS` remains a separate repository and was not modified. Its existing local `AGENTS.md` change remains untouched.
-- Version decision for this docs-only planning checkpoint: no version bump.
+- Version decision for this internal contract/test/staging checkpoint: no runtime behavior or release package changed, so no version bump.
 - Version decision for the comprehensive report: docs-only change, no version bump.
 - Validation: `npm run plans:check`, `git diff --check` and `ggshield secret scan path --recursive --yes --use-gitignore .` passed on 2026-07-13.
 

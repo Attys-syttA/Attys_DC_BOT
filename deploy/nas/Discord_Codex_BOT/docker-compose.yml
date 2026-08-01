@@ -1,0 +1,14 @@
+services:
+  attys-dc-bot-control-plane:
+    build:
+      context: ./app
+    image: attys-dc-bot-control-plane:local
+    container_name: attys-dc-bot-control-plane
+    env_file:
+      - ./.env.nas
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    profiles:
+      - manual

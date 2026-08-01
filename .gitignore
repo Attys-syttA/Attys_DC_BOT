@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 !.env.wsl.example
+!deploy/nas/Discord_Codex_BOT/.env.nas.example
 
 node_modules/
 dist/
@@ -24,6 +25,8 @@ tray/*.pdb
 *.db-wal
 
 logs/
+!deploy/nas/Discord_Codex_BOT/logs/
+!deploy/nas/Discord_Codex_BOT/logs/.gitkeep
 *.log
 *.err
 tray-error.log
@@ -38,6 +41,8 @@ temp/
 .codex-uploads/
 codex-discord-runtime.json
 rate-limits-cache.json
+
+nas-staging/
 
 .DS_Store
 Thumbs.db
