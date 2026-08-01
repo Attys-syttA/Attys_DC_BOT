@@ -46,6 +46,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_NAS_HANDOFF: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   DISCORD_ENABLE_AUTO_APPROVE: z
     .enum(["true", "false"])
     .default("false")

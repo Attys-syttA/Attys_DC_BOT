@@ -4,7 +4,11 @@ import {
 } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
+import { isAuditCheckName } from "../../audit/check-catalog.js";
+import { createAuditRequestHandoff } from "../../nas/audit-handoff.js";
 import { readPublicHandoffStore } from "../../nas/handoff-store.js";
+import { getProject } from "../../db/database.js";
+import { writeHandoffEnvelope } from "../../nas/handoff-store.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { npmCommand, runLocalCommand } from "./local-command.js";
@@ -28,7 +32,22 @@ export const data = new SlashCommandBuilder()
   .setDescription("Show public-safe NAS bridge status")
   .addSubcommand((subcommand) => subcommand
     .setName("status")
-    .setDescription("Show PC worker and NAS handoff status"));
+    .setDescription("Show PC worker and NAS handoff status"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("request")
+    .setDescription("Queue a fixed audit request through the NAS handoff inbox")
+    .addStringOption((option) => option
+      .setName("check")
+      .setDescription("Named check to request")
+      .setRequired(true)
+      .addChoices(
+        { name: "plans", value: "plans" },
+        { name: "lint", value: "lint" },
+        { name: "typecheck", value: "typecheck" },
+        { name: "tests", value: "tests" },
+        { name: "build", value: "build" },
+        { name: "full", value: "full" },
+      )));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -52,7 +71,7 @@ function parseJsonObject(output: string): unknown {
   }
 }
 
-function readHandoffRootFromWorkerEnv(repoRoot: string): string {
+export function readHandoffRootFromWorkerEnv(repoRoot: string): string {
   const envPath = path.join(repoRoot, ".env.worker.local");
   if (!fs.existsSync(envPath)) return "";
   const line = fs.readFileSync(envPath, "utf8")
@@ -127,9 +146,62 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
   ].join("\n");
 }
 
+async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot: string): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_NAS_HANDOFF) {
+    await interaction.editReply({
+      content: L("`/nas request` is disabled. Set `DISCORD_ENABLE_NAS_HANDOFF=true` in `.env` to enable it.", "A `/nas request` ki van kapcsolva."),
+    });
+    return;
+  }
+
+  const project = getProject(interaction.channelId);
+  if (!project) {
+    await interaction.editReply({
+      content: L("This channel is not registered to any project.", "Ez a csatorna nincs projekthez regisztrálva."),
+    });
+    return;
+  }
+
+  const requestedCheck = interaction.options.getString("check", true);
+  if (!isAuditCheckName(requestedCheck)) {
+    await interaction.editReply({ content: `Unsupported NAS handoff check: \`${requestedCheck}\`` });
+    return;
+  }
+
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) {
+    await interaction.editReply({
+      content: "NAS handoff root is not reachable from the bot process.",
+    });
+    return;
+  }
+
+  try {
+    const envelope = createAuditRequestHandoff({
+      projectLabel: path.basename(project.project_path),
+      checkName: requestedCheck,
+    });
+    writeHandoffEnvelope(handoffRoot, "inbox", envelope);
+    await interaction.editReply({
+      content: `Queued NAS audit request \`${envelope.id.slice(0, 8)}...\` for check \`${requestedCheck}\`.`,
+    });
+  } catch {
+    await interaction.editReply({
+      content: "Failed to queue NAS audit request.",
+    });
+  }
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  const subcommand = interaction.options.getSubcommand();
+  if (subcommand === "request") {
+    await executeRequest(interaction, process.cwd());
+    return;
+  }
+
   if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
     await interaction.editReply({
       content: L("`/nas` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas` ki van kapcsolva."),

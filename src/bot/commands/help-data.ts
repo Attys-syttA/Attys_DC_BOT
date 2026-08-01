@@ -172,12 +172,14 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status",
-    short: "Public-safe NAS bridge es PC worker allapotot mutat, ha az env engedi.",
+    usage: "/nas status | /nas request check:<plans|lint|typecheck|tests|build|full>",
+    short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
-      "Alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
+      "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
+      "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
+      "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",
       "Nem ir ki IP-t, meghajto betut, lokalis pathot, tokent vagy process ID-t Discordra.",
     ],
   },
