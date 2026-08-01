@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import type { Client } from "discord.js";
 import {
+  expireStaleNasHandoffRequests,
   getNasHandoffRequest,
   updateNasHandoffRequestResult,
 } from "../db/database.js";
@@ -23,6 +24,10 @@ export interface NasResultNotification {
   updatedAt: string;
 }
 
+function staleCutoff(now = new Date()): string {
+  return new Date(now.getTime() - getConfig().DISCORD_NAS_REQUEST_STALE_AFTER_MS).toISOString();
+}
+
 function envelopeStatus(value: string | undefined, fallback: HandoffEnvelope["status"]): "completed" | "failed" {
   if (value === "passed") return "completed";
   if (value === "failed") return "failed";
@@ -30,10 +35,22 @@ function envelopeStatus(value: string | undefined, fallback: HandoffEnvelope["st
 }
 
 export function reconcileNasHandoffResults(repoRoot: string): NasResultNotification[] {
-  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
-  if (!handoffRoot || !fs.existsSync(handoffRoot)) return [];
-
   const notifications: NasResultNotification[] = [];
+  const now = new Date();
+  for (const request of expireStaleNasHandoffRequests(staleCutoff(now), now.toISOString())) {
+    notifications.push({
+      channelId: request.channel_id,
+      requestId: request.id,
+      checkName: request.check_name,
+      status: "failed",
+      summary: request.result_summary ?? "no NAS result before stale timeout",
+      updatedAt: request.updated_at,
+    });
+  }
+
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) return notifications;
+
   const outboxResults = listHandoffEnvelopeFiles(handoffRoot, "outbox")
     .map((filePath) => {
       try {

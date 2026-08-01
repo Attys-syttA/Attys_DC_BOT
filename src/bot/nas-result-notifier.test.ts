@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   readFileSync: vi.fn(),
   listHandoffEnvelopeFiles: vi.fn(),
   readHandoffEnvelope: vi.fn(),
+  expireStaleNasHandoffRequests: vi.fn(),
   getNasHandoffRequest: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
   recordOperatorEvent: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("../nas/handoff-store.js", () => ({
 }));
 
 vi.mock("../db/database.js", () => ({
+  expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
   updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
 }));
@@ -64,7 +66,9 @@ describe("NAS result notifier", () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: false,
       DISCORD_NAS_RESULT_POLL_INTERVAL_MS: 60_000,
+      DISCORD_NAS_REQUEST_STALE_AFTER_MS: 900_000,
     });
+    mocks.expireStaleNasHandoffRequests.mockReturnValue([]);
   });
 
   it("reconciles queued NAS outbox results once", () => {
@@ -109,6 +113,61 @@ describe("NAS result notifier", () => {
 
     expect(reconcileNasHandoffResults("repo")).toEqual([]);
     expect(mocks.updateNasHandoffRequestResult).not.toHaveBeenCalled();
+  });
+
+  it("creates failed notifications for stale queued NAS requests", () => {
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
+    mocks.expireStaleNasHandoffRequests.mockReturnValue([{
+      id: "stale-request-1",
+      channel_id: "channel-1",
+      project_label: "Attys_DC_BOT",
+      check_name: "plans",
+      status: "failed",
+      result_summary: "no NAS result before stale timeout",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:15:00.000Z",
+    }]);
+
+    expect(reconcileNasHandoffResults("repo")).toEqual([{
+      channelId: "channel-1",
+      requestId: "stale-request-1",
+      checkName: "plans",
+      status: "failed",
+      summary: "no NAS result before stale timeout",
+      updatedAt: "2026-08-01T12:15:00.000Z",
+    }]);
+    expect(mocks.expireStaleNasHandoffRequests).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+    );
+  });
+
+  it("expires stale requests even when the NAS outbox is unavailable", () => {
+    mocks.existsSync.mockReturnValue(false);
+    mocks.expireStaleNasHandoffRequests.mockReturnValue([{
+      id: "stale-request-1",
+      channel_id: "channel-1",
+      project_label: "Attys_DC_BOT",
+      check_name: "plans",
+      status: "failed",
+      result_summary: "no NAS result before stale timeout",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:15:00.000Z",
+    }]);
+
+    expect(reconcileNasHandoffResults("repo")).toEqual([{
+      channelId: "channel-1",
+      requestId: "stale-request-1",
+      checkName: "plans",
+      status: "failed",
+      summary: "no NAS result before stale timeout",
+      updatedAt: "2026-08-01T12:15:00.000Z",
+    }]);
+    expect(mocks.expireStaleNasHandoffRequests).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+    );
+    expect(mocks.listHandoffEnvelopeFiles).not.toHaveBeenCalled();
   });
 
   it("sends public-safe result messages to the request channel", async () => {

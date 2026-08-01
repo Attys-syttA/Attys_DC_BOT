@@ -166,16 +166,27 @@ npm run nas:bridge:smoke
 
 This requires `.env.worker.local` with a reachable `ATTYS_NAS_HANDOFF_ROOT` and an already ready bridge. It writes one synthetic fixed-check request to the NAS handoff inbox, waits for the persistent handoff worker to create the matching outbox result, and prints only the public request id, check, result, and summary. It does not expose the NAS path or any worker secret.
 
+Discord-side bridge smoke:
+
+```text
+DISCORD_ENABLE_NAS_BRIDGE_SMOKE=false
+```
+
+When this is explicitly enabled on the Windows Discord bot, `/nas smoke` calls only the repo-local `nas:bridge:smoke` helper. It writes one synthetic fixed-check request through the configured handoff mailbox, waits for the matching outbox result, and returns only a public-safe request id, check, result, and summary. It does not run arbitrary commands, does not repair code, does not install dependencies, does not write Git state, and does not run a Codex prompt.
+
 Automatic Discord result notifications:
 
 ```text
 DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS=false
 DISCORD_NAS_RESULT_POLL_INTERVAL_MS=60000
+DISCORD_NAS_REQUEST_STALE_AFTER_MS=900000
 ```
 
 This is disabled by default. When enabled on the Windows Discord bot, the bot periodically checks the configured NAS handoff outbox, reconciles only locally tracked `queued` requests, and sends a short public-safe result message back to the original Discord channel. Already completed/failed requests are skipped, so the notifier does not repeatedly announce the same outbox result.
 
-The `/nas status` Discord response also shows whether this notifier is enabled and the current channel's tracked NAS request counts by status (`queued`, `completed`, `failed`). These are local SQLite counters only; they do not expose request payloads, channel IDs, NAS paths, or raw result logs.
+`DISCORD_NAS_REQUEST_STALE_AFTER_MS` controls when a locally tracked `queued` request is marked `failed` if no matching NAS outbox result appears. `/nas status`, `/nas results`, and the automatic result notifier all use the same timeout rule. The failure summary is public-safe and does not include raw logs or paths.
+
+The `/nas status` Discord response also shows whether this notifier is enabled, the configured stale timeout, and the current channel's tracked NAS request counts by status (`queued`, `completed`, `failed`). These are local SQLite counters only; they do not expose request payloads, channel IDs, NAS paths, or raw result logs.
 
 Read-only worker repo status:
 
@@ -226,11 +237,28 @@ npm run nas:sync-share -- -TargetRoot K:\ -Apply
 ```
 
 The sync command is dry-run by default. It writes to the NAS only with `-Apply`.
+If the staging source copy is `stale`, `-Apply` refuses to run unless `-AllowStaleSource` is also passed after an explicit review. The normal fix is to regenerate staging with reviewed source first.
+
+Discord-side dry-run sync status:
+
+```text
+DISCORD_ENABLE_NAS_SYNC_STATUS=false
+```
+
+When this is explicitly enabled on the Windows Discord bot, `/nas sync-status` calls only the repo-local dry-run form of `nas:sync-share`. It never passes `-Apply`, so it does not copy, replace, or delete files on the NAS. The Discord response only shows public-safe counts for pending managed files, unchanged managed files, protected skipped files, whether delete-before-copy would be used by a later manual/apply sync, and the staging source freshness.
+
+The `staging-source` field means:
+
+- `fresh`: the source-bearing staging copy is at least as new as the current managed source files;
+- `stale`: the current managed source files are newer than `nas-staging`, so rerun `npm run nas:prepare -- -IncludeSource` after reviewing whether the current dirty checkout is intentionally deployable;
+- `not-included`: the staging package was generated without app source;
+- `unknown`: the helper could not compare the source and staging timestamps safely.
 
 Safety rules:
 
 - it copies only files listed in the generated `NAS_STAGING_MANIFEST.json`, plus the manifest itself;
 - when replacing a target file it deletes that single file first, then copies the new file, unless `-NoRemoveBeforeCopy` is used;
 - it does not prune the target folder;
+- it refuses `-Apply` when `staging-source=stale`, unless `-AllowStaleSource` is explicitly used after review;
 - it refuses to manage protected target paths such as `.env.nas`, `data\*.json`, `data\handoff\*`, `logs\*`, and `#recycle\*`;
 - it does not print or read real `.env.nas` values.

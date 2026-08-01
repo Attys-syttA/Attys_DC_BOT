@@ -392,3 +392,55 @@ export function countNasHandoffRequestsByStatus(channelId: string): NasHandoffRe
 
   return counts;
 }
+
+export function expireStaleNasHandoffRequests(
+  olderThanIso: string,
+  updatedAtIso: string,
+  channelId?: string,
+  limit = 25,
+): NasHandoffRequestRecord[] {
+  const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+  const rows = channelId
+    ? db
+      .prepare(`
+        SELECT * FROM nas_handoff_requests
+        WHERE channel_id = ?
+          AND status = 'queued'
+          AND created_at < ?
+        ORDER BY created_at ASC
+        LIMIT ?
+      `)
+      .all(channelId, olderThanIso, safeLimit) as NasHandoffRequestRecord[]
+    : db
+      .prepare(`
+        SELECT * FROM nas_handoff_requests
+        WHERE status = 'queued'
+          AND created_at < ?
+        ORDER BY created_at ASC
+        LIMIT ?
+      `)
+      .all(olderThanIso, safeLimit) as NasHandoffRequestRecord[];
+
+  const update = db.prepare(`
+    UPDATE nas_handoff_requests
+    SET status = 'failed',
+        result_summary = ?,
+        updated_at = ?
+    WHERE id = ?
+      AND status = 'queued'
+  `);
+  const summary = "no NAS result before stale timeout";
+  const updateMany = db.transaction((requests: NasHandoffRequestRecord[]) => {
+    for (const request of requests) {
+      update.run(summary, updatedAtIso, request.id);
+    }
+  });
+  updateMany(rows);
+
+  return rows.map((request) => ({
+    ...request,
+    status: "failed",
+    result_summary: summary,
+    updated_at: updatedAtIso,
+  }));
+}

@@ -27,8 +27,11 @@ describe("config", () => {
     delete process.env.DISCORD_ENABLE_NAS_STATUS;
     delete process.env.DISCORD_ENABLE_NAS_HANDOFF;
     delete process.env.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE;
+    delete process.env.DISCORD_ENABLE_NAS_BRIDGE_SMOKE;
+    delete process.env.DISCORD_ENABLE_NAS_SYNC_STATUS;
     delete process.env.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS;
     delete process.env.DISCORD_NAS_RESULT_POLL_INTERVAL_MS;
+    delete process.env.DISCORD_NAS_REQUEST_STALE_AFTER_MS;
     delete process.env.DISCORD_ENABLE_AUTO_APPROVE;
     delete process.env.DISCORD_ENABLE_SESSION_DELETE;
     delete process.env.DISCORD_ENABLE_BOT_LIFECYCLE;
@@ -67,8 +70,11 @@ describe("config", () => {
     expect(config.DISCORD_ENABLE_NAS_STATUS).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_HANDOFF).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE).toBe(false);
+    expect(config.DISCORD_ENABLE_NAS_BRIDGE_SMOKE).toBe(false);
+    expect(config.DISCORD_ENABLE_NAS_SYNC_STATUS).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS).toBe(false);
     expect(config.DISCORD_NAS_RESULT_POLL_INTERVAL_MS).toBe(60_000);
+    expect(config.DISCORD_NAS_REQUEST_STALE_AFTER_MS).toBe(900_000);
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(false);
     expect(config.DISCORD_ENABLE_SESSION_DELETE).toBe(false);
     expect(config.DISCORD_ENABLE_BOT_LIFECYCLE).toBe(false);
@@ -173,13 +179,29 @@ describe("config", () => {
     expect(config.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE).toBe(true);
   });
 
+  it("parses DISCORD_ENABLE_NAS_BRIDGE_SMOKE as boolean", async () => {
+    process.env.DISCORD_ENABLE_NAS_BRIDGE_SMOKE = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_NAS_BRIDGE_SMOKE).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_NAS_SYNC_STATUS as boolean", async () => {
+    process.env.DISCORD_ENABLE_NAS_SYNC_STATUS = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_NAS_SYNC_STATUS).toBe(true);
+  });
+
   it("parses NAS result notification settings", async () => {
     process.env.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS = "true";
     process.env.DISCORD_NAS_RESULT_POLL_INTERVAL_MS = "30000";
+    process.env.DISCORD_NAS_REQUEST_STALE_AFTER_MS = "120000";
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS).toBe(true);
     expect(config.DISCORD_NAS_RESULT_POLL_INTERVAL_MS).toBe(30_000);
+    expect(config.DISCORD_NAS_REQUEST_STALE_AFTER_MS).toBe(120_000);
   });
 
   it("accepts legacy NAS archive env names without overriding current names", async () => {

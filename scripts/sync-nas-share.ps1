@@ -5,6 +5,7 @@ param(
   [switch]$Prepare,
   [switch]$IncludeSource,
   [switch]$AllowDirtySource,
+  [switch]$AllowStaleSource,
   [switch]$Apply,
   [switch]$NoRemoveBeforeCopy,
   [switch]$Detailed
@@ -47,6 +48,44 @@ function Test-ProtectedTargetRelativePath([string]$RelativePath) {
     -or $normalized -like "data/*.json"
 }
 
+function Get-StagingFreshness([string]$RepoRoot, [string]$StagingRootPath, [object]$Manifest) {
+  if (-not [bool]$Manifest.includeSource) {
+    return [ordered]@{
+      includeSource = $false
+      status = "not-included"
+    }
+  }
+
+  $sourceItems = @(
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "src"
+  )
+  $sourceFiles = foreach ($item in $sourceItems) {
+    $sourcePath = Join-Path $RepoRoot $item
+    if (Test-Path -LiteralPath $sourcePath) {
+      Get-ChildItem -LiteralPath $sourcePath -Recurse -File
+    }
+  }
+  $stagedSourceFiles = Get-ChildItem -LiteralPath (Join-Path $StagingRootPath "app") -Recurse -File
+  $latestSource = @($sourceFiles | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1)
+  $latestStaged = @($stagedSourceFiles | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1)
+
+  if (-not $latestSource -or -not $latestStaged) {
+    return [ordered]@{
+      includeSource = $true
+      status = "unknown"
+    }
+  }
+
+  $stale = $latestSource[0].LastWriteTimeUtc -gt $latestStaged[0].LastWriteTimeUtc
+  return [ordered]@{
+    includeSource = $true
+    status = if ($stale) { "stale" } else { "fresh" }
+  }
+}
+
 if ($Prepare) {
   $prepareArgs = @("-NoProfile", "-File", $prepareScript, "-StagingRoot", $StagingRoot)
   if ($IncludeSource) { $prepareArgs += "-IncludeSource" }
@@ -76,6 +115,10 @@ if ($resolvedTargetRoot -eq $resolvedStagingRoot) {
 
 $manifestPath = Join-Path $resolvedStagingRoot "NAS_STAGING_MANIFEST.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$stagingSource = Get-StagingFreshness -RepoRoot $repoRoot -StagingRootPath $resolvedStagingRoot -Manifest $manifest
+if ($Apply -and $stagingSource.status -eq "stale" -and -not $AllowStaleSource) {
+  throw "Refusing to apply stale NAS staging source. Rerun nas:prepare with reviewed source or pass -AllowStaleSource after explicit review."
+}
 $manifestFiles = @($manifest.files | ForEach-Object { [string]$_.path })
 $copyRelativePaths = @($manifestFiles + "NAS_STAGING_MANIFEST.json" | Sort-Object -Unique)
 
@@ -129,6 +172,7 @@ foreach ($relativePath in $copyRelativePaths) {
 $summary = [ordered]@{
   mode = if ($Apply) { "applied" } else { "dry-run" }
   targetRoot = "<nas-share>"
+  stagingSource = $stagingSource
   copiedOrReplaced = @($planned | Where-Object { $_.action -notin @("skip", "skip-protected") }).Count
   skipped = @($planned | Where-Object { $_.action -eq "skip" }).Count
   protectedSkipped = @($planned | Where-Object { $_.action -eq "skip-protected" }).Count

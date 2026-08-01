@@ -54,11 +54,20 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_NAS_BRIDGE_SMOKE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  DISCORD_ENABLE_NAS_SYNC_STATUS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: z
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
   DISCORD_NAS_RESULT_POLL_INTERVAL_MS: z.coerce.number().int().min(10_000).max(3_600_000).default(60_000),
+  DISCORD_NAS_REQUEST_STALE_AFTER_MS: z.coerce.number().int().min(60_000).max(86_400_000).default(900_000),
   DISCORD_ENABLE_AUTO_APPROVE: z
     .enum(["true", "false"])
     .default("false")

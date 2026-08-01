@@ -10,6 +10,7 @@ import { readPublicHandoffStore } from "../../nas/handoff-store.js";
 import {
   countNasHandoffRequestsByStatus,
   createNasHandoffRequest,
+  expireStaleNasHandoffRequests,
   getNasHandoffRequest,
   getProject,
   listNasHandoffRequests,
@@ -23,6 +24,7 @@ import {
 } from "../../nas/handoff-store.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
+import { sanitizePublicText } from "../../utils/public-safety.js";
 import { npmCommand, runLocalCommand } from "./local-command.js";
 import { recordOperatorEvent } from "../operator-events.js";
 
@@ -38,6 +40,27 @@ interface WorkerHandoffStatus {
   processCount?: unknown;
   handoffRootConfigured?: unknown;
   handoffRootReachable?: unknown;
+}
+
+interface NasBridgeSmokeResult {
+  ok?: unknown;
+  requestId?: unknown;
+  check?: unknown;
+  result?: unknown;
+  summary?: unknown;
+}
+
+interface NasSyncDryRunResult {
+  mode?: unknown;
+  stagingSource?: {
+    includeSource?: unknown;
+    status?: unknown;
+  };
+  copiedOrReplaced?: unknown;
+  skipped?: unknown;
+  protectedSkipped?: unknown;
+  removeBeforeCopy?: unknown;
+  protectedPathsPreserved?: unknown;
 }
 
 type NasBridgeAction = "status" | "start" | "stop" | "restart";
@@ -83,7 +106,13 @@ export const data = new SlashCommandBuilder()
         { name: "start", value: "start" },
         { name: "stop", value: "stop" },
         { name: "restart", value: "restart" },
-      )));
+      )))
+  .addSubcommand((subcommand) => subcommand
+    .setName("smoke")
+    .setDescription("Run one fixed public-safe NAS bridge smoke"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("sync-status")
+    .setDescription("Dry-run check whether NAS staging differs from the NAS share"));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -206,10 +235,29 @@ function resultNotifierLine(): string {
   return "INFO result notifier: disabled";
 }
 
+function requestStaleTimeoutLine(): string {
+  const staleAfterMs = getConfig().DISCORD_NAS_REQUEST_STALE_AFTER_MS;
+  return `OK request stale timeout: ${Math.round(staleAfterMs / 60_000)}m`;
+}
+
 function requestTrackingLine(channelId: string | undefined): string {
   if (!channelId) return "INFO request tracking: channel unavailable";
+  expireStaleNasHandoffRequestsForChannel(channelId);
   const counts = countNasHandoffRequestsByStatus(channelId);
   return `OK request tracking: queued:${counts.queued} completed:${counts.completed} failed:${counts.failed}`;
+}
+
+export function nasRequestStaleCutoff(now = new Date()): string {
+  const staleAfterMs = getConfig().DISCORD_NAS_REQUEST_STALE_AFTER_MS;
+  return new Date(now.getTime() - staleAfterMs).toISOString();
+}
+
+export function expireStaleNasHandoffRequestsForChannel(channelId: string, now = new Date()): number {
+  return expireStaleNasHandoffRequests(
+    nasRequestStaleCutoff(now),
+    now.toISOString(),
+    channelId,
+  ).length;
 }
 
 function resultStatus(value: string | undefined, fallback: HandoffEnvelope["status"]): "completed" | "failed" {
@@ -239,6 +287,7 @@ export async function buildNasStatusReport(repoRoot: string, channelId?: string)
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),
     resultNotifierLine(),
+    requestStaleTimeoutLine(),
     requestTrackingLine(channelId),
     "```",
   ].join("\n");
@@ -264,7 +313,72 @@ export async function buildNasBridgeLifecycleReport(repoRoot: string, action: Na
   ].join("\n");
 }
 
+function smokeField(value: unknown, fallback: string, maxLength = 120): string {
+  return sanitizePublicText(typeof value === "string" ? value : fallback, maxLength) || fallback;
+}
+
+export async function buildNasBridgeSmokeReport(repoRoot: string): Promise<string> {
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:bridge:smoke"], repoRoot, 90_000);
+  const parsed = parseJsonObject(result.output) as NasBridgeSmokeResult | null;
+  const smokeOk = result.exitCode === 0 && parsed?.ok === true;
+  const requestId = smokeField(parsed?.requestId, "unknown", 80);
+  const check = smokeField(parsed?.check, "unknown", 40);
+  const smokeResult = smokeField(parsed?.result, smokeOk ? "passed" : "failed", 40);
+  const summary = smokeField(parsed?.summary, smokeOk ? "smoke completed" : "smoke failed", 180);
+
+  return [
+    "**NAS Bridge Smoke**",
+    "```text",
+    smokeOk ? "OK smoke completed" : "FAIL smoke failed",
+    `request=${requestId}`,
+    `check=${check} result=${smokeResult}`,
+    `summary=${summary}`,
+    "```",
+  ].join("\n");
+}
+
+function summaryCount(value: unknown): string {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? String(value)
+    : "unknown";
+}
+
+export async function buildNasSyncStatusReport(repoRoot: string): Promise<string> {
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share"], repoRoot, 60_000);
+  const parsed = result.exitCode === 0
+    ? parseJsonObject(result.output) as NasSyncDryRunResult | null
+    : null;
+
+  const changed = summaryCount(parsed?.copiedOrReplaced);
+  const skipped = summaryCount(parsed?.skipped);
+  const protectedSkipped = summaryCount(parsed?.protectedSkipped);
+  const mode = smokeField(parsed?.mode, "dry-run", 40);
+  const removeBeforeCopy = parsed?.removeBeforeCopy === true ? "enabled" : "disabled";
+  const stagingSourceStatus = smokeField(parsed?.stagingSource?.status, "unknown", 40);
+  let readyLine = "FAIL NAS sync dry-run failed";
+  if (result.exitCode === 0 && stagingSourceStatus === "stale") {
+    readyLine = "INFO NAS staging source is stale";
+  } else if (result.exitCode === 0 && changed === "0") {
+    readyLine = "OK NAS share in sync for managed files";
+  } else if (result.exitCode === 0) {
+    readyLine = "INFO NAS share has pending managed file changes";
+  }
+
+  return [
+    "**NAS Sync Status**",
+    "```text",
+    readyLine,
+    `mode=${mode}`,
+    `staging-source=${stagingSourceStatus}`,
+    `pending=${changed} unchanged=${skipped} protected=${protectedSkipped}`,
+    `delete-before-copy=${removeBeforeCopy}`,
+    "writes=disabled",
+    "```",
+  ].join("\n");
+}
+
 export function buildNasResultsReport(repoRoot: string, channelId: string, limit = 5): string {
+  expireStaleNasHandoffRequestsForChannel(channelId);
   const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
   if (!handoffRoot || !fs.existsSync(handoffRoot)) {
     return "**NAS Handoff Results**\n```text\nINFO handoff mailbox unavailable to bot process\n```";
@@ -293,7 +407,7 @@ export function buildNasResultsReport(repoRoot: string, channelId: string, limit
 
   const rows = listNasHandoffRequests(channelId, limit)
     .map((request) => {
-      const summary = request.result_summary ?? "waiting";
+      const summary = sanitizePublicText(request.result_summary ?? "waiting", 120) || "waiting";
       return `- request ${request.id.slice(0, 12)} check=${request.check_name} status=${request.status} summary=${summary}`;
     });
 
@@ -389,6 +503,40 @@ export async function execute(
     if (action !== "status") {
       recordOperatorEvent({ kind: "lifecycle", status: `nas-bridge-${action}`, channelId: interaction.channelId });
     }
+    return;
+  }
+
+  if (subcommand === "smoke") {
+    const config = getConfig();
+    if (!config.DISCORD_ENABLE_NAS_BRIDGE_SMOKE) {
+      await interaction.editReply({
+        content: L("`/nas smoke` is disabled. Set `DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true` in `.env` to enable it.", "A `/nas smoke` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    const content = await buildNasBridgeSmokeReport(process.cwd());
+    await interaction.editReply({ content });
+    recordOperatorEvent({
+      kind: "task",
+      status: content.includes("OK smoke completed") ? "nas-bridge-smoke-passed" : "nas-bridge-smoke-failed",
+      channelId: interaction.channelId,
+    });
+    return;
+  }
+
+  if (subcommand === "sync-status") {
+    const config = getConfig();
+    if (!config.DISCORD_ENABLE_NAS_SYNC_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas sync-status` is disabled. Set `DISCORD_ENABLE_NAS_SYNC_STATUS=true` in `.env` to enable it.", "A `/nas sync-status` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: await buildNasSyncStatusReport(process.cwd()),
+    });
     return;
   }
 

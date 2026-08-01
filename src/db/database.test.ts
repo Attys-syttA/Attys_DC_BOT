@@ -34,6 +34,7 @@ import {
   listAuditSteps,
   createNasHandoffRequest,
   countNasHandoffRequestsByStatus,
+  expireStaleNasHandoffRequests,
   getNasHandoffRequest,
   listNasHandoffRequests,
   updateNasHandoffRequestResult,
@@ -421,6 +422,52 @@ describe("database", () => {
         completed: 2,
         failed: 0,
       });
+    });
+
+    it("expires stale queued NAS handoff requests for one channel", () => {
+      const base = {
+        projectLabel: "proj",
+        checkName: "plans",
+        resultSummary: null,
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      };
+      createNasHandoffRequest({
+        ...base,
+        id: "old-queued",
+        channelId: "ch1",
+        status: "queued",
+        createdAt: "2026-08-01T12:00:00.000Z",
+      });
+      createNasHandoffRequest({
+        ...base,
+        id: "fresh-queued",
+        channelId: "ch1",
+        status: "queued",
+        createdAt: "2026-08-01T12:09:00.000Z",
+      });
+      registerProject("ch2", "/p2", "guild1");
+      createNasHandoffRequest({
+        ...base,
+        id: "old-other-channel",
+        channelId: "ch2",
+        status: "queued",
+        createdAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      const expired = expireStaleNasHandoffRequests(
+        "2026-08-01T12:05:00.000Z",
+        "2026-08-01T12:15:00.000Z",
+        "ch1",
+      );
+
+      expect(expired.map((entry) => entry.id)).toEqual(["old-queued"]);
+      expect(getNasHandoffRequest("old-queued")).toMatchObject({
+        status: "failed",
+        result_summary: "no NAS result before stale timeout",
+        updated_at: "2026-08-01T12:15:00.000Z",
+      });
+      expect(getNasHandoffRequest("fresh-queued")).toMatchObject({ status: "queued" });
+      expect(getNasHandoffRequest("old-other-channel")).toMatchObject({ status: "queued" });
     });
   });
 });

@@ -84,9 +84,14 @@ describe("/help and /sugo", () => {
     expect(content).toContain("/nas status");
     expect(content).toContain("/nas request");
     expect(content).toContain("/nas results");
+    expect(content).toContain("/nas smoke");
+    expect(content).toContain("/nas sync-status");
     expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
     expect(content).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
     expect(content).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
+    expect(content).toContain("DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true");
+    expect(content).toContain("DISCORD_ENABLE_NAS_SYNC_STATUS=true");
+    expect(content).toContain("DISCORD_NAS_REQUEST_STALE_AFTER_MS");
   });
 
   it("explains the /register autocomplete limit", async () => {
