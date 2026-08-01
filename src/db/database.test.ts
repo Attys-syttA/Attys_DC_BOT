@@ -33,6 +33,9 @@ import {
   requestAuditJobStop,
   insertAuditStepResult,
   listAuditSteps,
+  createAuditRepairWorktree,
+  getAuditRepairWorktree,
+  updateAuditRepairWorktreeStatus,
   createNasHandoffRequest,
   countNasHandoffRequestsByStatus,
   expireStaleNasHandoffRequests,
@@ -189,6 +192,7 @@ describe("database", () => {
         project_label: "<local-path>/private-project",
         mode: "check-only",
         status: "queued",
+        requested_check: null,
         current_step: null,
         iteration: 0,
         max_iterations: 2,
@@ -234,6 +238,31 @@ describe("database", () => {
         updated_at: "2026-08-01T12:00:20.000Z",
       });
       expect(getSession("ch1")!.status).toBe("idle");
+    });
+
+    it("stores the requested named check separately from the current step", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "running_checks",
+        requestedCheck: "full",
+        currentStep: "tests",
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      updateAuditJobProgress("audit-1", "waiting_manual_review", null, 0, "2026-08-01T12:01:00.000Z");
+
+      expect(getAuditJob("audit-1")).toMatchObject({
+        requested_check: "full",
+        current_step: null,
+      });
     });
 
     it("does not return terminal audit jobs as active", () => {
@@ -408,6 +437,48 @@ describe("database", () => {
       expect(steps[0].public_output).toContain("DISCORD_BOT_TOKEN=<redacted>");
       expect(steps[0].public_output).toContain("<local-path>");
       expect(steps[0].public_output).not.toContain("someone");
+    });
+
+    it("records isolated repair worktrees for later review and cleanup", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "waiting_manual_review",
+        currentStep: null,
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      createAuditRepairWorktree({
+        jobId: "audit-1",
+        worktreePath: "E:\\codex_works\\Attys_DC_BOT\\.discord-bot-state\\audit-worktrees\\audit-1",
+        branchName: "audit-repair/audit-1",
+        headCommit: "0123456789abcdef",
+        status: "prepared",
+        createdAt: "2026-08-01T12:01:00.000Z",
+        updatedAt: "2026-08-01T12:01:00.000Z",
+      });
+
+      expect(getAuditRepairWorktree("audit-1")).toMatchObject({
+        job_id: "audit-1",
+        branch_name: "audit-repair/audit-1",
+        head_commit: "0123456789abcdef",
+        status: "prepared",
+        created_at: "2026-08-01T12:01:00.000Z",
+        updated_at: "2026-08-01T12:01:00.000Z",
+      });
+
+      updateAuditRepairWorktreeStatus("audit-1", "retained", "2026-08-01T12:02:00.000Z");
+      expect(getAuditRepairWorktree("audit-1")).toMatchObject({
+        status: "retained",
+        updated_at: "2026-08-01T12:02:00.000Z",
+      });
     });
   });
 

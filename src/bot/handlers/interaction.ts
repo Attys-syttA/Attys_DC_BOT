@@ -8,7 +8,16 @@ import {
 import { isAllowedPrincipal } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { prepareRepairWorktree } from "../../audit/worktree-manager.js";
-import { upsertSession, getSession, getProject, getAllProjects, unregisterProject, getAuditJob, updateAuditJobProgress } from "../../db/database.js";
+import {
+  createAuditRepairWorktree,
+  upsertSession,
+  getSession,
+  getProject,
+  getAllProjects,
+  unregisterProject,
+  getAuditJob,
+  updateAuditJobProgress,
+} from "../../db/database.js";
 import { deleteStoredThread } from "../../codex/storage.js";
 import { renderMappingsPayload } from "../commands/mappings.js";
 import { readLastResponseWithFallback } from "../commands/last.js";
@@ -303,13 +312,23 @@ export async function handleButtonInteraction(
         sourceRoot: project.project_path,
         jobId: job.id,
       });
+      const now = new Date().toISOString();
+      createAuditRepairWorktree({
+        jobId: job.id,
+        worktreePath: prepared.worktreePath,
+        branchName: prepared.branchName,
+        headCommit: prepared.headCommit,
+        status: "prepared",
+        createdAt: now,
+        updatedAt: now,
+      });
       updateAuditJobProgress(job.id, "waiting_manual_review", null, job.iteration, new Date().toISOString());
       recordOperatorEvent({ kind: "task", status: "audit-repair-approved", channelId: interaction.channelId });
       await interaction.update({
         content: [
           `Isolated repair worktree prepared for audit job \`${job.id.slice(0, 8)}...\`.`,
           `Branch: \`${prepared.branchName}\``,
-          "Repair execution is not enabled in this slice; no Codex repair turn, merge, commit, or push was started.",
+          "Repair workspace was recorded for review; no Codex repair turn, merge, commit, or push was started.",
         ].join("\n"),
         components: [],
       });

@@ -18,6 +18,7 @@ import {
   getActiveAuditJob,
   getActiveAuditJobByProjectPath,
   getAuditJob,
+  getAuditRepairWorktree,
   getLatestAuditJob,
   getProject,
   insertAuditStepResult,
@@ -72,6 +73,7 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
     `project: \`${job.project_label}\``,
     `mode: ${job.mode}`,
     `status: ${job.status}`,
+    `requested check: ${job.requested_check ?? "unknown"}`,
     `current step: ${job.current_step ?? "none"}`,
     `iteration: ${job.iteration}/${job.max_iterations}`,
     `stop requested: ${job.stop_requested === 1 ? "yes" : "no"}`,
@@ -79,6 +81,17 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
 
   if (steps.length > 0) {
     lines.push("", "steps:", ...steps.map(renderStep));
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  if (repairWorktree) {
+    lines.push(
+      "",
+      "repair worktree:",
+      `- status: ${repairWorktree.status}`,
+      `- branch: ${repairWorktree.branch_name}`,
+      `- head: ${repairWorktree.head_commit.slice(0, 12)}`,
+    );
   }
 
   return lines.join("\n");
@@ -130,6 +143,7 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
     projectLabel: sanitizePublicFileLabel(project.project_path),
     mode: "check-only",
     status: "running_checks",
+    requestedCheck: requestedCheck,
     currentStep: requestedCheck,
     iteration: 0,
     maxIterations: 2,

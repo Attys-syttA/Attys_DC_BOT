@@ -57,6 +57,8 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Observability/recovery integráció: `/dashboard` és `/status` audit összefoglaló, startup interrupted-normalization, és pipeline-lépések közötti stop-request ellenőrzés.
 - Audit stop/events/dashboard finomítás: `/audit stop` már az aktuális bot processzben futó child-processnek is abort signalt küld, a `/dashboard` és `/status` közös public-safe audit-summaryt használ, és a lefutott named-check lépések `audit-check-*` operator eventként is megjelennek.
 - Audit repair approval/worktree preflight: külön `DISCORD_ENABLE_AUDIT_REPAIR` flag, `/audit repair` approval kérés, approve/deny button handler, és isolated worktree előkészítő Git preflight elkészült. Ez még nem indít Codex repair turnt, merge-et, commitot vagy pusht.
+- Audit repair workspace tracking: approval után az izolált worktree tartós helyi SQLite rekordot kap, és `/audit status` public-safe státuszt mutat róla lokális path nélkül.
+- Audit requested-check tracking: az `audit_jobs.requested_check` additive mező elkészült, hogy a későbbi repair/recheck ugyanazt a named checket futtassa újra a törlődő `current_step` helyett.
 
 ## Nyitott reszek
 
@@ -687,7 +689,9 @@ Elfogadási feltételek:
 - ugyanaz a check catalog fut újra;
 - eredmény review-ready summary;
 - automatikus merge/commit/push nincs;
-- failed repair megőrzi a diagnosztikai állapotot a retention policy szerint.
+- failed repair megőrzi a diagnosztikai állapotot a retention policy szerint;
+- **részben kész előfeltételként:** approval-created worktree rekord és public-safe `/audit status` láthatóság elkészült, tényleges Codex repair turn/recheck még nincs.
+- **részben kész előfeltételként:** az eredetileg kért named check tartós `requested_check` mezőben megmarad, így a recheck célja nem vész el a job lezárásakor.
 
 ### Szelet 5 — Bounded loop és stagnation
 
@@ -837,7 +841,7 @@ Repair/worktree szeletnél ezen felül:
 
 - Ez a tervfájl docs-only előkészítés; most nincs version bump.
 - Read-only `/audit` command megjelenése user-visible feature, ezért majd prerelease version bumpot és README/SETUP/help frissítést igényel.
-- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3`; a tényleges repair execution továbbra is külön későbbi version/doksi/security döntést igényel.
+- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt a következő package verzió `0.1.1-prerelease.4`.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

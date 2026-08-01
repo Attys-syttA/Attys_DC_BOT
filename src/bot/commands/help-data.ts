@@ -35,7 +35,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit stop` stop requestet rogzit, es ha a check ugyanebben a bot processzben fut, abort signalt is kuld a futtatott processznek.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
-      "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, es ebben a szeletben nem indit Codex repairt, merge-et, commitot vagy pusht.",
+      "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk, de ebben a szeletben nem indul Codex repair, merge, commit vagy push.",
     ],
   },
   {

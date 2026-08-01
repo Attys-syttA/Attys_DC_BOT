@@ -441,6 +441,7 @@ function createNasLinkedAuditJob(channelId: string, projectLabel: string, checkN
     projectLabel,
     mode: "check-only",
     status: "waiting_nas_result",
+    requestedCheck: checkName,
     currentStep: checkName,
     iteration: 0,
     maxIterations: 1,

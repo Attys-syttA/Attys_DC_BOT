@@ -26,6 +26,7 @@ export interface AuditJobRecord {
   project_label: string;
   mode: AuditMode;
   status: AuditJobStatus;
+  requested_check: string | null;
   current_step: string | null;
   iteration: number;
   max_iterations: number;
@@ -41,6 +42,7 @@ export interface AuditJobCreateInput {
   projectLabel: string;
   mode: AuditMode;
   status: AuditJobStatus;
+  requestedCheck?: string | null;
   currentStep: string | null;
   iteration: number;
   maxIterations: number;
@@ -63,6 +65,28 @@ export interface AuditStepRecord {
   finished_at: string;
   duration_ms: number;
   created_at: string;
+}
+
+export type AuditRepairWorktreeStatus = "prepared" | "retained" | "cleanup_failed" | "removed";
+
+export interface AuditRepairWorktreeRecord {
+  job_id: string;
+  worktree_path: string;
+  branch_name: string;
+  head_commit: string;
+  status: AuditRepairWorktreeStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditRepairWorktreeCreateInput {
+  jobId: string;
+  worktreePath: string;
+  branchName: string;
+  headCommit: string;
+  status: AuditRepairWorktreeStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type NasHandoffRequestStatus = "queued" | "completed" | "failed";

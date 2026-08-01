@@ -9,6 +9,7 @@ function makeJob(overrides: Partial<AuditJobRecord> = {}): AuditJobRecord {
     project_label: "<local-path>/app",
     mode: "check-only",
     status: "running_checks",
+    requested_check: "tests",
     current_step: "tests",
     iteration: 0,
     max_iterations: 0,

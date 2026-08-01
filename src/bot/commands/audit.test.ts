@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getActiveAuditJob: vi.fn(),
   getActiveAuditJobByProjectPath: vi.fn(),
   getAuditJob: vi.fn(),
+  getAuditRepairWorktree: vi.fn(),
   getLatestAuditJob: vi.fn(),
   createAuditJob: vi.fn(),
   updateAuditJobProgress: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("../../db/database.js", () => ({
   getActiveAuditJob: mocks.getActiveAuditJob,
   getActiveAuditJobByProjectPath: mocks.getActiveAuditJobByProjectPath,
   getAuditJob: mocks.getAuditJob,
+  getAuditRepairWorktree: mocks.getAuditRepairWorktree,
   getLatestAuditJob: mocks.getLatestAuditJob,
   createAuditJob: mocks.createAuditJob,
   updateAuditJobProgress: mocks.updateAuditJobProgress,
@@ -68,6 +70,7 @@ function makeJob(overrides = {}) {
     project_label: "<local-path>/app",
     mode: "check-only",
     status: "completed",
+    requested_check: "tests",
     current_step: null,
     iteration: 0,
     max_iterations: 2,
@@ -105,6 +108,7 @@ describe("/audit", () => {
     mocks.getActiveAuditJob.mockReturnValue(undefined);
     mocks.getActiveAuditJobByProjectPath.mockReturnValue(undefined);
     mocks.getAuditJob.mockReturnValue(makeJob());
+    mocks.getAuditRepairWorktree.mockReturnValue(undefined);
     mocks.getLatestAuditJob.mockReturnValue(makeJob());
     mocks.listAuditSteps.mockReturnValue([makeStep()]);
     mocks.runAuditCheckPipeline.mockResolvedValue([{
@@ -296,6 +300,29 @@ describe("/audit", () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("**Latest audit job**"),
     });
+  });
+
+  it("shows repair worktree status without leaking the local path", async () => {
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    const interaction = makeInteraction("status");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("repair worktree:");
+    expect(content).toContain("- status: prepared");
+    expect(content).toContain("- branch: audit-repair/audit-job-1");
+    expect(content).toContain("- head: 0123456789ab");
+    expect(content).not.toContain("/projects/app");
+    expect(content).not.toContain(".discord-bot-state");
   });
 
   it("requests stop for an active job", async () => {

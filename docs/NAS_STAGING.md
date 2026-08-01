@@ -71,7 +71,13 @@ After a NAS container rebuild, verify the deployed share and the running control
 npm run nas:deploy:verify -- --target-root K:\
 ```
 
-This checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, and `logs\nas-control-plane-status.json` together. It fails if the running container snapshot does not match the staged source commit/package version, the snapshot is stale, NAS-side Codex execution is not disabled, the handoff store is not ready, or the configured worker health is not OK. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
+This prints a short checklist by default. Add `--json` if the older machine-readable JSON output is needed:
+
+```powershell
+npm run nas:deploy:verify -- --target-root K:\ --json
+```
+
+The verifier checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, and `logs\nas-control-plane-status.json` together. It fails if the running container snapshot does not match the staged source commit/package version, the snapshot is stale, NAS-side Codex execution is not disabled, the handoff store is not ready, or the configured worker health is not OK. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
 
 NAS compose startup:
 

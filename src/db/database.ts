@@ -8,6 +8,9 @@ import { isTerminalAuditStatus, type AuditJobStatus } from "../audit/types.js";
 import type {
   AuditJobCreateInput,
   AuditJobRecord,
+  AuditRepairWorktreeCreateInput,
+  AuditRepairWorktreeRecord,
+  AuditRepairWorktreeStatus,
   AuditStepRecord,
   NasHandoffRequestCreateInput,
   NasHandoffRequestRecord,
@@ -55,6 +58,7 @@ export function initDatabase(): void {
       project_label TEXT NOT NULL,
       mode TEXT NOT NULL,
       status TEXT NOT NULL,
+      requested_check TEXT,
       current_step TEXT,
       iteration INTEGER NOT NULL,
       max_iterations INTEGER NOT NULL,
@@ -79,6 +83,16 @@ export function initDatabase(): void {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS audit_repair_worktrees (
+      job_id TEXT PRIMARY KEY REFERENCES audit_jobs(id) ON DELETE CASCADE,
+      worktree_path TEXT NOT NULL,
+      branch_name TEXT NOT NULL,
+      head_commit TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS nas_handoff_requests (
       id TEXT PRIMARY KEY,
       channel_id TEXT REFERENCES projects(channel_id) ON DELETE CASCADE,
@@ -91,6 +105,7 @@ export function initDatabase(): void {
       updated_at TEXT NOT NULL
     );
   `);
+  ensureColumn("audit_jobs", "requested_check", "TEXT");
   ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
   normalizeInterruptedAuditJobs();
 }
@@ -200,6 +215,7 @@ export function createAuditJob(input: AuditJobCreateInput): void {
       project_label,
       mode,
       status,
+      requested_check,
       current_step,
       iteration,
       max_iterations,
@@ -208,13 +224,14 @@ export function createAuditJob(input: AuditJobCreateInput): void {
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.id,
     input.channelId,
     sanitizePublicFileLabel(input.projectLabel),
     input.mode,
     input.status,
+    input.requestedCheck ? sanitizePublicText(input.requestedCheck, 40) : null,
     input.currentStep,
     input.iteration,
     input.maxIterations,
@@ -337,6 +354,47 @@ export function listAuditSteps(jobId: string): AuditStepRecord[] {
   return db
     .prepare("SELECT * FROM audit_steps WHERE job_id = ? ORDER BY started_at ASC, created_at ASC")
     .all(jobId) as AuditStepRecord[];
+}
+
+export function createAuditRepairWorktree(input: AuditRepairWorktreeCreateInput): void {
+  db.prepare(`
+    INSERT INTO audit_repair_worktrees (
+      job_id,
+      worktree_path,
+      branch_name,
+      head_commit,
+      status,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.jobId,
+    input.worktreePath,
+    input.branchName,
+    input.headCommit,
+    input.status,
+    input.createdAt,
+    input.updatedAt,
+  );
+}
+
+export function getAuditRepairWorktree(jobId: string): AuditRepairWorktreeRecord | undefined {
+  return db
+    .prepare("SELECT * FROM audit_repair_worktrees WHERE job_id = ?")
+    .get(jobId) as AuditRepairWorktreeRecord | undefined;
+}
+
+export function updateAuditRepairWorktreeStatus(
+  jobId: string,
+  status: AuditRepairWorktreeStatus,
+  updatedAt: string,
+): void {
+  db.prepare(`
+    UPDATE audit_repair_worktrees
+    SET status = ?, updated_at = ?
+    WHERE job_id = ?
+  `).run(status, updatedAt, jobId);
 }
 
 export function createNasHandoffRequest(input: NasHandoffRequestCreateInput): void {

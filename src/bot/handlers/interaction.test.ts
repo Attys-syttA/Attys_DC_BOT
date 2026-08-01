@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   unregisterProject: vi.fn(),
   getAuditJob: vi.fn(),
   updateAuditJobProgress: vi.fn(),
+  createAuditRepairWorktree: vi.fn(),
   readThread: vi.fn(),
   readLastResponseWithFallback: vi.fn(),
   deleteStoredThread: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("../../codex/session-manager.js", () => ({
 }));
 
 vi.mock("../../db/database.js", () => ({
+  createAuditRepairWorktree: mocks.createAuditRepairWorktree,
   upsertSession: mocks.upsertSession,
   getSession: vi.fn(),
   getProject: mocks.getProject,
@@ -352,10 +354,20 @@ describe("interaction handlers", () => {
       0,
       expect.any(String),
     );
+    expect(mocks.createAuditRepairWorktree).toHaveBeenCalledWith({
+      jobId: "audit-job-1",
+      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branchName: "audit-repair/audit-job-1",
+      headCommit: "0123456789abcdef",
+      status: "prepared",
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String),
+    });
     expect(interaction.update).toHaveBeenCalledWith({
-      content: expect.stringContaining("Repair execution is not enabled"),
+      content: expect.stringContaining("Repair workspace was recorded for review"),
       components: [],
     });
+    expect(interaction.update.mock.calls[0][0].content).not.toContain("/projects/app");
   });
 
   it("returns to manual review when repair worktree preflight fails", async () => {
