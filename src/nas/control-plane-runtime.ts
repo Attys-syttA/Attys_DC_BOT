@@ -1,6 +1,13 @@
 import { buildPublicNasWorkerTargets, type NasControlPlaneConfig } from "./control-plane-config.js";
 import { readPublicHandoffStore, type PublicHandoffStoreStatus } from "./handoff-store.js";
-import { probeNasWorkersHealth, type NasWorkerHealthResult } from "./worker-http-client.js";
+import {
+  probeNasWorkersHealth,
+  readNasWorkersRepoStatus,
+  runNasWorkersNamedCheck,
+  type NasWorkerHealthResult,
+  type NasWorkerNamedCheckResult,
+  type NasWorkerRepoStatusResult,
+} from "./worker-http-client.js";
 import { readPublicWorkerStore, type PublicWorkerStoreStatus } from "./worker-store.js";
 
 export interface NasControlPlaneRuntimePaths {
@@ -14,6 +21,8 @@ export interface NasControlPlaneSnapshot {
   codexExecutionEnabled: false;
   configuredWorkers: ReturnType<typeof buildPublicNasWorkerTargets>;
   workerHealth: NasWorkerHealthResult[];
+  workerRepoStatus: NasWorkerRepoStatusResult[];
+  workerNamedChecks: NasWorkerNamedCheckResult[];
   workerStore: PublicWorkerStoreStatus;
   handoffStore: PublicHandoffStoreStatus;
   checkedAt: string;
@@ -21,6 +30,8 @@ export interface NasControlPlaneSnapshot {
 
 export interface NasControlPlaneSnapshotOptions {
   probeWorkersHealth?: typeof probeNasWorkersHealth;
+  readWorkersRepoStatus?: typeof readNasWorkersRepoStatus;
+  runWorkersNamedCheck?: typeof runNasWorkersNamedCheck;
   now?: () => Date;
 }
 
@@ -31,6 +42,8 @@ export async function buildNasControlPlaneSnapshot(
 ): Promise<NasControlPlaneSnapshot> {
   const now = options.now ?? (() => new Date());
   const probeWorkersHealth = options.probeWorkersHealth ?? probeNasWorkersHealth;
+  const readWorkersRepoStatus = options.readWorkersRepoStatus ?? readNasWorkersRepoStatus;
+  const runWorkersNamedCheck = options.runWorkersNamedCheck ?? runNasWorkersNamedCheck;
 
   return {
     controlPlaneName: config.controlPlaneName,
@@ -38,6 +51,10 @@ export async function buildNasControlPlaneSnapshot(
     codexExecutionEnabled: config.codexExecutionEnabled,
     configuredWorkers: buildPublicNasWorkerTargets(config.workers),
     workerHealth: await probeWorkersHealth(config.workers),
+    workerRepoStatus: await readWorkersRepoStatus(config.workers, config.statusProject),
+    workerNamedChecks: config.statusCheck
+      ? await runWorkersNamedCheck(config.workers, config.statusProject, config.statusCheck)
+      : [],
     workerStore: readPublicWorkerStore(
       paths.workerStorePath,
       now(),

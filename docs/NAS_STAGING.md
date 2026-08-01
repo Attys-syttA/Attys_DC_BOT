@@ -111,6 +111,16 @@ This helper loads an ignored local env file when present, enables only the defau
 
 The existing `win-start.bat` and desktop shortcut remain the live Discord bot launcher. They do not start the PC worker automatically in this slice, because the worker opens a LAN-reachable HTTP port and should stay an explicit operator action.
 
+Worker lifecycle helpers:
+
+```powershell
+npm run worker:http:status
+npm run worker:http:restart
+npm run worker:http:stop
+```
+
+These helpers only target the repo-local worker HTTP process tree and do not stop or restart the live Discord bot.
+
 Read-only worker repo status:
 
 ```powershell

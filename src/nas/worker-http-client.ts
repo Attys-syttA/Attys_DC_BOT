@@ -167,6 +167,31 @@ export async function probeNasWorkersHealth(
   return results;
 }
 
+export async function readNasWorkersRepoStatus(
+  workers: NasWorkerTarget[],
+  project: string,
+  options: Omit<NasWorkerHttpClientOptions, "worker"> = {},
+): Promise<NasWorkerRepoStatusResult[]> {
+  const results: NasWorkerRepoStatusResult[] = [];
+  for (const worker of workers) {
+    results.push(await new NasWorkerHttpClient({ ...options, worker }).getRepoStatus(project));
+  }
+  return results;
+}
+
+export async function runNasWorkersNamedCheck(
+  workers: NasWorkerTarget[],
+  project: string,
+  checkName: AuditCheckName,
+  options: Omit<NasWorkerHttpClientOptions, "worker"> = {},
+): Promise<NasWorkerNamedCheckResult[]> {
+  const results: NasWorkerNamedCheckResult[] = [];
+  for (const worker of workers) {
+    results.push(await new NasWorkerHttpClient({ ...options, worker }).runNamedCheck(project, checkName));
+  }
+  return results;
+}
+
 function summarizeHealthBody(body: string): string {
   if (!body.trim()) return "worker health ok";
   try {

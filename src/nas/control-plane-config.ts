@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { isAuditCheckName, type AuditCheckName } from "../audit/check-catalog.js";
 
 export interface NasControlPlaneConfig {
   controlPlaneName: string;
   publicBaseUrl: string;
   workerHeartbeatTimeoutMs: number;
   workers: NasWorkerTarget[];
+  statusProject: string;
+  statusCheck: AuditCheckName | null;
   codexExecutionEnabled: false;
 }
 
@@ -28,6 +31,8 @@ const configSchema = z.object({
   ATTYS_NAS_CONTROL_PLANE_NAME: z.string().default("attys-dc-bot-nas"),
   ATTYS_NAS_PUBLIC_BASE_URL: z.string().default(""),
   ATTYS_NAS_WORKERS_JSON: z.string().default("[]"),
+  ATTYS_NAS_STATUS_PROJECT: z.string().default("Attys_DC_BOT"),
+  ATTYS_NAS_STATUS_CHECK: z.string().default(""),
   ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -97,6 +102,23 @@ function safeWorkerLabel(value: string): string {
     .replace(/\b\d{15,30}\b/g, "<id>")
     .slice(0, 120);
   return label || "Worker";
+}
+
+function safeProjectName(value: string): string {
+  const trimmed = value.trim();
+  if (!/^[A-Za-z0-9._ -]{1,120}$/.test(trimmed) || trimmed.includes("..")) {
+    throw new Error("ATTYS_NAS_STATUS_PROJECT must be a simple project folder name");
+  }
+  return trimmed;
+}
+
+function parseStatusCheck(value: string): AuditCheckName | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!isAuditCheckName(trimmed)) {
+    throw new Error("ATTYS_NAS_STATUS_CHECK must be empty or one fixed audit check name");
+  }
+  return trimmed;
 }
 
 function parseNasWorkers(raw: string): NasWorkerTarget[] {
@@ -175,6 +197,8 @@ export function parseNasControlPlaneConfig(env: NodeJS.ProcessEnv): NasControlPl
     publicBaseUrl: normalizePublicBaseUrl(result.data.ATTYS_NAS_PUBLIC_BASE_URL),
     workerHeartbeatTimeoutMs: result.data.ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS,
     workers: parseNasWorkers(result.data.ATTYS_NAS_WORKERS_JSON),
+    statusProject: safeProjectName(result.data.ATTYS_NAS_STATUS_PROJECT),
+    statusCheck: parseStatusCheck(result.data.ATTYS_NAS_STATUS_CHECK),
     codexExecutionEnabled: false,
   };
 }

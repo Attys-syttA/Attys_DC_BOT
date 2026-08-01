@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { NasWorkerHttpClient, probeNasWorkersHealth } from "./worker-http-client.js";
+import {
+  NasWorkerHttpClient,
+  probeNasWorkersHealth,
+  readNasWorkersRepoStatus,
+  runNasWorkersNamedCheck,
+} from "./worker-http-client.js";
 
 const worker = {
   id: "otthon",
@@ -122,5 +127,34 @@ describe("NAS worker HTTP client", () => {
       project: "Attys_DC_BOT",
       summary: "1/1 passed",
     });
+  });
+
+  it("reads repo status and named checks for all configured workers", async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const target = String(url);
+      if (target.includes("/repo-status")) {
+        return new Response(JSON.stringify({
+          ok: true,
+          project: "Attys_DC_BOT",
+          branch: "main",
+          clean: true,
+          summary: "clean",
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        ok: true,
+        check: "plans",
+        project: "Attys_DC_BOT",
+        results: [{ name: "plans", status: "passed" }],
+      }), { status: 200 });
+    });
+
+    await expect(readNasWorkersRepoStatus([worker, { ...worker, id: "munkahely" }], "Attys_DC_BOT", {
+      fetchImpl,
+    })).resolves.toHaveLength(2);
+
+    await expect(runNasWorkersNamedCheck([worker, { ...worker, id: "munkahely" }], "Attys_DC_BOT", "plans", {
+      fetchImpl,
+    })).resolves.toHaveLength(2);
   });
 });

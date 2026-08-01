@@ -11,6 +11,8 @@ describe("NAS control-plane config", () => {
       publicBaseUrl: "",
       workerHeartbeatTimeoutMs: 120_000,
       workers: [],
+      statusProject: "Attys_DC_BOT",
+      statusCheck: null,
       codexExecutionEnabled: false,
     });
   });
@@ -26,7 +28,19 @@ describe("NAS control-plane config", () => {
       publicBaseUrl: "https://nas.example.invalid/discord-codex",
       workerHeartbeatTimeoutMs: 60_000,
       workers: [],
+      statusProject: "Attys_DC_BOT",
+      statusCheck: null,
       codexExecutionEnabled: false,
+    });
+  });
+
+  it("parses optional worker status project and fixed check", () => {
+    expect(parseNasControlPlaneConfig({
+      ATTYS_NAS_STATUS_PROJECT: "email_header_analyzer",
+      ATTYS_NAS_STATUS_CHECK: "plans",
+    })).toMatchObject({
+      statusProject: "email_header_analyzer",
+      statusCheck: "plans",
     });
   });
 
@@ -91,5 +105,15 @@ describe("NAS control-plane config", () => {
     expect(() => parseNasControlPlaneConfig({
       ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS: "9999999",
     })).toThrow("ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS");
+  });
+
+  it("rejects unsafe project names and unsupported status checks", () => {
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_STATUS_PROJECT: "..\\secret",
+    })).toThrow("ATTYS_NAS_STATUS_PROJECT");
+
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_STATUS_CHECK: "npm install",
+    })).toThrow("ATTYS_NAS_STATUS_CHECK");
   });
 });
