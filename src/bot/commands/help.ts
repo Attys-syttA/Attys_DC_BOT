@@ -3,7 +3,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import { commandAutocompleteChoices, renderHelpDetail, renderHelpList } from "./help-renderer.js";
+import { commandAutocompleteChoices, renderHelpPages } from "./help-renderer.js";
 
 export const data = new SlashCommandBuilder()
   .setName("help")
@@ -24,7 +24,11 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const selected = interaction.options.getString("parancs", false);
+  const pages = renderHelpPages(interaction.commandName, selected);
   await interaction.editReply({
-    content: selected ? renderHelpDetail(selected) : renderHelpList(interaction.commandName),
+    content: pages[0] ?? "",
   });
+  for (const page of pages.slice(1)) {
+    await interaction.followUp({ content: page });
+  }
 }

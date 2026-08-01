@@ -9,6 +9,7 @@ function makeInteraction(commandName: "help" | "sugo", selected: string | null =
       getString: vi.fn(() => selected),
     },
     editReply: vi.fn(),
+    followUp: vi.fn(),
   };
 }
 
@@ -80,32 +81,51 @@ describe("/help and /sugo", () => {
     await executeHelp(interaction as never);
 
     const content = interaction.editReply.mock.calls[0][0].content;
+    const followUpContents = interaction.followUp.mock.calls.map((call) => call[0].content).join("\n");
+    const fullContent = [content, followUpContents].filter(Boolean).join("\n");
     expect(content).toContain("**/nas**");
-    expect(content).toContain("/nas status");
-    expect(content).toContain("/nas request");
-    expect(content).toContain("/nas requests");
-    expect(content).toContain("/nas request-status");
-    expect(content).toContain("/nas results");
-    expect(content).toContain("/nas smoke");
-    expect(content).toContain("/nas sync-status");
-    expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
-    expect(content).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
+    expect(fullContent).toContain("/nas status");
+    expect(fullContent).toContain("/nas request");
+    expect(fullContent).toContain("/nas requests");
+    expect(fullContent).toContain("/nas request-status");
+    expect(fullContent).toContain("/nas results");
+    expect(fullContent).toContain("/nas smoke");
+    expect(fullContent).toContain("/nas sync-status");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_STATUS=true");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_SYNC_STATUS=true");
+    expect(fullContent).toContain("DISCORD_NAS_REQUEST_STALE_AFTER_MS");
     expect(content.length).toBeLessThanOrEqual(2000);
-    expect(content).toContain("Tovabbi reszletekhez");
+    expect(interaction.followUp.mock.calls.length).toBeGreaterThan(0);
+    for (const call of interaction.followUp.mock.calls) {
+      expect(call[0].content.length).toBeLessThanOrEqual(2000);
+    }
   });
 
-  it("keeps detailed /sugo nas help under Discord's content limit", async () => {
+  it("sends detailed /sugo nas help as Discord-sized pages without truncating details", async () => {
     const interaction = makeInteraction("sugo", "nas");
 
     await executeSugo(interaction as never);
 
     const content = interaction.editReply.mock.calls[0][0].content;
+    const followUpContents = interaction.followUp.mock.calls.map((call) => call[0].content);
+    const fullContent = [content, ...followUpContents].join("\n");
+
     expect(content.length).toBeLessThanOrEqual(2000);
     expect(content).toContain("**/nas**");
-    expect(content).toContain("/nas status");
-    expect(content).toContain("/nas request");
-    expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
-    expect(content).toContain("Tovabbi reszletekhez");
+    expect(followUpContents.length).toBeGreaterThan(0);
+    for (const page of followUpContents) {
+      expect(page.length).toBeLessThanOrEqual(2000);
+    }
+    expect(fullContent).toContain("/nas status");
+    expect(fullContent).toContain("/nas request");
+    expect(fullContent).toContain("/nas deploy-status");
+    expect(fullContent).toContain("/nas doctor");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_STATUS=true");
+    expect(fullContent).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
+    expect(fullContent).toContain("DISCORD_NAS_REQUEST_STALE_AFTER_MS");
   });
 
   it("explains the /register autocomplete limit", async () => {

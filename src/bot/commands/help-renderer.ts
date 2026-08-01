@@ -11,8 +11,6 @@ const CATEGORY_LABELS = {
 const CATEGORY_ORDER = ["codex", "sessions", "repo", "ops", "safety"] as const;
 const HELP_LIST_DESCRIPTION_MAX = 48;
 const DISCORD_CONTENT_LIMIT = 2_000;
-const HELP_DETAIL_LIMIT = 1_900;
-const HELP_TRUNCATED_NOTE = "\n\n_Tovabbi reszletekhez hasznald a README/SETUP dokumentaciot vagy a celzott `/nas ...` status parancsokat._";
 const TOPIC_CHOICES = [
   { name: "kezdetek", value: "kezdetek" },
   { name: "fajlfeltoltes", value: "fajlfeltoltes" },
@@ -24,15 +22,35 @@ function compactDescription(value: string): string {
     : value;
 }
 
-function fitDiscordContent(content: string, limit = DISCORD_CONTENT_LIMIT): string {
-  if (content.length <= limit) return content;
+export function splitDiscordContent(content: string, limit = DISCORD_CONTENT_LIMIT): string[] {
+  if (content.length <= limit) return [content];
 
-  const note = HELP_TRUNCATED_NOTE;
-  const maxContentLength = Math.max(0, limit - note.length);
-  const candidate = content.slice(0, maxContentLength);
-  const lastLineBreak = candidate.lastIndexOf("\n");
-  const safePrefix = lastLineBreak > 0 ? candidate.slice(0, lastLineBreak) : candidate;
-  return `${safePrefix}${note}`;
+  const pages: string[] = [];
+  let current = "";
+
+  for (const line of content.split("\n")) {
+    if (line.length > limit) {
+      if (current) {
+        pages.push(current);
+        current = "";
+      }
+      for (let offset = 0; offset < line.length; offset += limit) {
+        pages.push(line.slice(offset, offset + limit));
+      }
+      continue;
+    }
+
+    const candidate = current ? `${current}\n${line}` : line;
+    if (candidate.length <= limit) {
+      current = candidate;
+    } else {
+      pages.push(current);
+      current = line;
+    }
+  }
+
+  if (current) pages.push(current);
+  return pages;
 }
 
 export function commandChoices() {
@@ -60,7 +78,7 @@ export function renderHelpList(commandName: string): string {
     lines.push("");
   }
 
-  return fitDiscordContent([
+  return splitDiscordContent([
     "**Attys DC BOT sugo**",
     "Kezdes: `/dashboard`, `/health`, `/events`, `/logs`.",
     "",
@@ -68,10 +86,10 @@ export function renderHelpList(commandName: string): string {
     `Elso lepesek: \`/${commandName} parancs: kezdetek\``,
     `Fajlfeltoltes: \`/${commandName} parancs: fajlfeltoltes\``,
     `Reszletes parancs: \`/${commandName} parancs: ask\``,
-  ].join("\n"));
+  ].join("\n"))[0];
 }
 
-export function renderHelpDetail(entryName: string): string {
+function renderHelpDetailContent(entryName: string): string {
   const normalizedEntryName = entryName.trim().toLowerCase();
   if (normalizedEntryName === "kezdetek") {
     return renderGettingStartedHelp();
@@ -89,7 +107,7 @@ export function renderHelpDetail(entryName: string): string {
     ].join("\n");
   }
 
-  return fitDiscordContent([
+  return [
     `**/${entry.name}**`,
     `Kategoria: ${CATEGORY_LABELS[entry.category]}`,
     "",
@@ -98,7 +116,19 @@ export function renderHelpDetail(entryName: string): string {
     entry.short,
     "",
     ...entry.details.map((line) => `- ${line}`),
-  ].join("\n"), HELP_DETAIL_LIMIT);
+  ].join("\n");
+}
+
+export function renderHelpDetail(entryName: string): string {
+  return renderHelpDetailPages(entryName)[0] ?? "";
+}
+
+export function renderHelpDetailPages(entryName: string): string[] {
+  return splitDiscordContent(renderHelpDetailContent(entryName));
+}
+
+export function renderHelpPages(commandName: string, selected: string | null): string[] {
+  return selected ? renderHelpDetailPages(selected) : [renderHelpList(commandName)];
 }
 
 export function renderGettingStartedHelp(): string {

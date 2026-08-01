@@ -846,7 +846,7 @@ Repair/worktree szeletnél ezen felül:
 
 - Ez a tervfájl docs-only előkészítés; most nincs version bump.
 - Read-only `/audit` command megjelenése user-visible feature, ezért majd prerelease version bumpot és README/SETUP/help frissítést igényel.
-- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt `0.1.1-prerelease.4`; az isolated `/audit recheck` miatt `0.1.1-prerelease.5`; a recheck stagnation stop miatt `0.1.1-prerelease.6`.
+- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt `0.1.1-prerelease.4`; az isolated `/audit recheck` miatt `0.1.1-prerelease.5`; a recheck stagnation stop miatt `0.1.1-prerelease.6`; a többüzenetes részletes `/help` és `/sugo` súgó miatt `0.1.1-prerelease.7`.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 
