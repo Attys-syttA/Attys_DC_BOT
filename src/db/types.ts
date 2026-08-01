@@ -71,6 +71,7 @@ export type NasHandoffRequestStatusFilter = NasHandoffRequestStatus | "all";
 export interface NasHandoffRequestRecord {
   id: string;
   channel_id: string;
+  audit_job_id: string | null;
   project_label: string;
   check_name: string;
   status: NasHandoffRequestStatus;
@@ -82,6 +83,7 @@ export interface NasHandoffRequestRecord {
 export interface NasHandoffRequestCreateInput {
   id: string;
   channelId: string;
+  auditJobId?: string | null;
   projectLabel: string;
   checkName: string;
   status: NasHandoffRequestStatus;

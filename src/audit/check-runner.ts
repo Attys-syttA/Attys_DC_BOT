@@ -21,7 +21,7 @@ export interface AuditProcessResult {
 }
 
 export interface AuditCheckRunResult {
-  name: AuditCheckDefinition["name"];
+  name: AuditCheckName;
   status: AuditCheckRunStatus;
   exitCode: number | null;
   timedOut: boolean;

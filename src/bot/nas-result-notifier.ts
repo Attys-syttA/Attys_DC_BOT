@@ -12,7 +12,7 @@ import {
 } from "../nas/handoff-store.js";
 import { getConfig } from "../utils/config.js";
 import { sanitizePublicText } from "../utils/public-safety.js";
-import { readHandoffRootFromWorkerEnv } from "./commands/nas.js";
+import { closeNasLinkedAuditJob, readHandoffRootFromWorkerEnv } from "./commands/nas.js";
 import { recordOperatorEvent } from "./operator-events.js";
 
 export interface NasResultNotification {
@@ -38,6 +38,12 @@ export function reconcileNasHandoffResults(repoRoot: string): NasResultNotificat
   const notifications: NasResultNotification[] = [];
   const now = new Date();
   for (const request of expireStaleNasHandoffRequests(staleCutoff(now), now.toISOString())) {
+    closeNasLinkedAuditJob(
+      request,
+      "failed",
+      request.result_summary ?? "no NAS result before stale timeout",
+      request.updated_at,
+    );
     notifications.push({
       channelId: request.channel_id,
       requestId: request.id,
@@ -70,6 +76,7 @@ export function reconcileNasHandoffResults(repoRoot: string): NasResultNotificat
     const status = envelopeStatus(envelope.publicFields.result, envelope.status);
     const summary = sanitizePublicText(envelope.publicFields.summary ?? envelope.publicSummary, 240) || "result received";
     updateNasHandoffRequestResult(request.id, status, summary, envelope.createdAt);
+    closeNasLinkedAuditJob(request, status, summary, envelope.createdAt);
     notifications.push({
       channelId: request.channel_id,
       requestId: request.id,

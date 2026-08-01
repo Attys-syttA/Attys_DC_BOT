@@ -303,6 +303,31 @@ describe("database", () => {
       });
     });
 
+    it("does not normalize NAS-waiting audit jobs", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "waiting_nas_result",
+        currentStep: "plans",
+        iteration: 0,
+        maxIterations: 1,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      expect(normalizeInterruptedAuditJobs(new Date("2026-08-01T12:05:00.000Z"))).toBe(0);
+      expect(getAuditJob("audit-1")).toMatchObject({
+        status: "waiting_nas_result",
+        current_step: "plans",
+        updated_at: "2026-08-01T12:00:00.000Z",
+      });
+      expect(getActiveAuditJob("ch1")!.id).toBe("audit-1");
+    });
+
     it("stores only public-safe audit step output", () => {
       createAuditJob({
         id: "audit-1",
@@ -358,6 +383,7 @@ describe("database", () => {
       createNasHandoffRequest({
         id: "request-1",
         channelId: "ch1",
+        auditJobId: "audit-1",
         projectLabel: "E:\\codex_works\\private-project",
         checkName: "plans",
         status: "queued",
@@ -370,6 +396,7 @@ describe("database", () => {
       expect(request).toMatchObject({
         id: "request-1",
         channel_id: "ch1",
+        audit_job_id: "audit-1",
         project_label: "<local-path>/private-project",
         check_name: "plans",
         status: "queued",

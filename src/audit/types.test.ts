@@ -19,6 +19,7 @@ describe("audit domain contract", () => {
     expect(isAuditMode("approved-repair")).toBe(true);
     expect(isAuditMode("auto-repair")).toBe(false);
     expect(AUDIT_JOB_STATUSES).toContain("waiting_repair_approval");
+    expect(AUDIT_JOB_STATUSES).toContain("waiting_nas_result");
     expect(AUDIT_JOB_STATUSES).not.toContain("interrupted");
     expect(AUDIT_CAPABILITIES).toEqual(["read-context", "edit-existing", "create-delete"]);
     expect(isAuditJobStatus("running_checks")).toBe(true);
@@ -28,6 +29,8 @@ describe("audit domain contract", () => {
   it("allows only the planned first state transitions", () => {
     expect(canTransitionAuditStatus("queued", "planning")).toBe(true);
     expect(canTransitionAuditStatus("running_checks", "completed")).toBe(true);
+    expect(canTransitionAuditStatus("waiting_nas_result", "completed")).toBe(true);
+    expect(canTransitionAuditStatus("waiting_nas_result", "running_checks")).toBe(false);
     expect(canTransitionAuditStatus("running_checks", "repairing")).toBe(false);
     expect(canTransitionAuditStatus("completed", "running_checks")).toBe(false);
     expect(canTransitionAuditStatus("stagnated", "repairing")).toBe(false);

@@ -200,6 +200,8 @@ This is disabled by default. When enabled on the Windows Discord bot, the bot pe
 
 `DISCORD_NAS_REQUEST_STALE_AFTER_MS` controls when a locally tracked `queued` request is marked `failed` if no matching NAS outbox result appears. `/nas status`, `/nas results`, and the automatic result notifier all use the same timeout rule. The failure summary is public-safe and does not include raw logs or paths.
 
+Each `/nas request` also creates a linked local audit job in `waiting_nas_result` status. This lets `/audit status` show the NAS-dispatched check while the NAS handoff is still pending. Manual `/nas results` reconciliation and the automatic result notifier both close the linked audit job as `completed` for passed results or `waiting_manual_review` for failed/stale results. The linked audit step stores only public-safe summary text; it does not store raw NAS payloads, paths, logs, tokens, worker URLs, or process IDs.
+
 The `/nas status` Discord response also shows whether this notifier is enabled, the configured stale timeout, and the current channel's tracked NAS request counts by status (`queued`, `completed`, `failed`). These are local SQLite counters only; they do not expose request payloads, channel IDs, NAS paths, or raw result logs.
 
 Read-only Discord request ledger:

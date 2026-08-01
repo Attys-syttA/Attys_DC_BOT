@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   readHandoffEnvelope: vi.fn(),
   expireStaleNasHandoffRequests: vi.fn(),
   getNasHandoffRequest: vi.fn(),
+  insertAuditStepResult: vi.fn(),
+  updateAuditJobProgress: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
   recordOperatorEvent: vi.fn(),
   getConfig: vi.fn(),
@@ -27,6 +29,8 @@ vi.mock("../nas/handoff-store.js", () => ({
 vi.mock("../db/database.js", () => ({
   expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
+  insertAuditStepResult: mocks.insertAuditStepResult,
+  updateAuditJobProgress: mocks.updateAuditJobProgress,
   updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
 }));
 
@@ -74,6 +78,7 @@ describe("NAS result notifier", () => {
   it("reconciles queued NAS outbox results once", () => {
     mocks.getNasHandoffRequest.mockReturnValue({
       id: "request-1",
+      audit_job_id: "audit-job-1",
       channel_id: "channel-1",
       project_label: "Attys_DC_BOT",
       check_name: "plans",
@@ -95,6 +100,22 @@ describe("NAS result notifier", () => {
       "request-1",
       "completed",
       "1/1 passed",
+      "2026-08-01T12:01:00.000Z",
+    );
+    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith(
+      "audit-job-1",
+      expect.objectContaining({
+        name: "plans",
+        status: "passed",
+        exitCode: 0,
+        publicOutput: "1/1 passed",
+      }),
+    );
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "completed",
+      null,
+      1,
       "2026-08-01T12:01:00.000Z",
     );
   });
@@ -119,6 +140,7 @@ describe("NAS result notifier", () => {
     mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
     mocks.expireStaleNasHandoffRequests.mockReturnValue([{
       id: "stale-request-1",
+      audit_job_id: "audit-stale-1",
       channel_id: "channel-1",
       project_label: "Attys_DC_BOT",
       check_name: "plans",
@@ -139,6 +161,13 @@ describe("NAS result notifier", () => {
     expect(mocks.expireStaleNasHandoffRequests).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
+    );
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-stale-1",
+      "waiting_manual_review",
+      null,
+      1,
+      "2026-08-01T12:15:00.000Z",
     );
   });
 

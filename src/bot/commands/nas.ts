@@ -2,23 +2,29 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { isAuditCheckName } from "../../audit/check-catalog.js";
+import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
+import { defaultAuditCapabilities } from "../../audit/types.js";
 import { createAuditRequestHandoff } from "../../nas/audit-handoff.js";
 import { readPublicHandoffStore } from "../../nas/handoff-store.js";
 import {
   countNasHandoffRequestsByStatus,
+  createAuditJob,
   createNasHandoffRequest,
   expireStaleNasHandoffRequests,
   findNasHandoffRequestsByIdPrefix,
+  getActiveAuditJob,
   getNasHandoffRequest,
   getProject,
+  insertAuditStepResult,
   listNasHandoffRequests,
   listNasHandoffRequestsByStatus,
+  updateAuditJobProgress,
   updateNasHandoffRequestResult,
 } from "../../db/database.js";
-import type { NasHandoffRequestStatusFilter } from "../../db/types.js";
+import type { NasHandoffRequestRecord, NasHandoffRequestStatusFilter } from "../../db/types.js";
 import {
   listHandoffEnvelopeFiles,
   readHandoffEnvelope,
@@ -415,6 +421,7 @@ export function expireStaleNasHandoffRequestsForChannel(channelId: string, now =
     channelId,
   );
   for (const request of expired) {
+    closeNasLinkedAuditJob(request, "failed", "no NAS result before stale timeout", now.toISOString());
     recordOperatorEvent({ kind: "task", status: "nas-request-timeout", channelId: request.channel_id }, repoRoot);
   }
   return expired.length;
@@ -424,6 +431,48 @@ function resultStatus(value: string | undefined, fallback: HandoffEnvelope["stat
   if (value === "passed") return "completed";
   if (value === "failed") return "failed";
   return fallback === "completed" ? "completed" : "failed";
+}
+
+function createNasLinkedAuditJob(channelId: string, projectLabel: string, checkName: AuditCheckName, now: string): string {
+  const auditJobId = randomUUID();
+  createAuditJob({
+    id: auditJobId,
+    channelId,
+    projectLabel,
+    mode: "check-only",
+    status: "waiting_nas_result",
+    currentStep: checkName,
+    iteration: 0,
+    maxIterations: 1,
+    stopRequested: false,
+    capabilities: defaultAuditCapabilities("check-only"),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return auditJobId;
+}
+
+export function closeNasLinkedAuditJob(
+  request: NasHandoffRequestRecord,
+  status: "completed" | "failed",
+  summary: string,
+  finishedAt: string,
+): void {
+  if (!request.audit_job_id) return;
+  const finalStatus = status === "completed" ? "completed" : "waiting_manual_review";
+  const publicOutput = sanitizePublicText(summary, 1_800) || (status === "completed" ? "NAS check passed" : "NAS check failed");
+  insertAuditStepResult(request.audit_job_id, {
+    name: request.check_name as AuditCheckName,
+    status: status === "completed" ? "passed" : "failed",
+    exitCode: status === "completed" ? 0 : 1,
+    timedOut: false,
+    stopped: false,
+    publicOutput,
+    startedAt: request.created_at,
+    finishedAt,
+    durationMs: Math.max(0, Date.parse(finishedAt) - Date.parse(request.created_at)) || 0,
+  });
+  updateAuditJobProgress(request.audit_job_id, finalStatus, null, 1, finishedAt);
 }
 
 export async function buildNasStatusReport(repoRoot: string, channelId?: string): Promise<string> {
@@ -627,12 +676,14 @@ export function buildNasResultsReport(repoRoot: string, channelId: string, limit
     const request = getNasHandoffRequest(requestId);
     if (!request || request.status !== "queued") continue;
     const status = resultStatus(envelope.publicFields.result, envelope.status);
+    const summary = envelope.publicFields.summary ?? envelope.publicSummary;
     updateNasHandoffRequestResult(
       requestId,
       status,
-      envelope.publicFields.summary ?? envelope.publicSummary,
+      summary,
       envelope.createdAt,
     );
+    closeNasLinkedAuditJob(request, status, summary, envelope.createdAt);
     recordOperatorEvent({ kind: "task", status: `nas-result-${status}`, channelId: request.channel_id }, repoRoot);
   }
 
@@ -887,6 +938,14 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
     return;
   }
 
+  const activeJob = getActiveAuditJob(interaction.channelId);
+  if (activeJob) {
+    await interaction.editReply({
+      content: `An audit job is already active: \`${activeJob.id.slice(0, 8)}...\` status=${activeJob.status}.`,
+    });
+    return;
+  }
+
   const requestedCheck = interaction.options.getString("check", true);
   if (!isAuditCheckName(requestedCheck)) {
     await interaction.editReply({ content: `Unsupported NAS handoff check: \`${requestedCheck}\`` });
@@ -909,9 +968,11 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
     });
     writeHandoffEnvelope(handoffRoot, "inbox", envelope);
     const now = envelope.createdAt;
+    const auditJobId = createNasLinkedAuditJob(interaction.channelId, projectLabel, requestedCheck, now);
     createNasHandoffRequest({
       id: envelope.id,
       channelId: interaction.channelId,
+      auditJobId,
       projectLabel,
       checkName: requestedCheck,
       status: "queued",
@@ -921,7 +982,7 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
     });
     recordOperatorEvent({ kind: "task", status: "nas-request-queued", channelId: interaction.channelId }, repoRoot);
     await interaction.editReply({
-      content: `Queued NAS audit request \`${envelope.id.slice(0, 8)}...\` for check \`${requestedCheck}\`.`,
+      content: `Queued NAS audit request \`${envelope.id.slice(0, 8)}...\` for check \`${requestedCheck}\` as audit job \`${auditJobId.slice(0, 8)}...\`.`,
     });
   } catch {
     await interaction.editReply({

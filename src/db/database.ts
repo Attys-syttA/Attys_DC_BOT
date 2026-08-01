@@ -82,6 +82,7 @@ export function initDatabase(): void {
     CREATE TABLE IF NOT EXISTS nas_handoff_requests (
       id TEXT PRIMARY KEY,
       channel_id TEXT REFERENCES projects(channel_id) ON DELETE CASCADE,
+      audit_job_id TEXT,
       project_label TEXT NOT NULL,
       check_name TEXT NOT NULL,
       status TEXT NOT NULL,
@@ -90,11 +91,18 @@ export function initDatabase(): void {
       updated_at TEXT NOT NULL
     );
   `);
+  ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
   normalizeInterruptedAuditJobs();
 }
 
 export function getDb(): Database.Database {
   return db;
+}
+
+function ensureColumn(tableName: string, columnName: string, columnDefinition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[];
+  if (columns.some((column) => column.name === columnName)) return;
+  db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`).run();
 }
 
 // Project queries
@@ -322,6 +330,7 @@ export function createNasHandoffRequest(input: NasHandoffRequestCreateInput): vo
     INSERT INTO nas_handoff_requests (
       id,
       channel_id,
+      audit_job_id,
       project_label,
       check_name,
       status,
@@ -329,10 +338,11 @@ export function createNasHandoffRequest(input: NasHandoffRequestCreateInput): vo
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     sanitizePublicText(input.id, 120),
     input.channelId,
+    input.auditJobId ? sanitizePublicText(input.auditJobId, 120) : null,
     sanitizePublicFileLabel(input.projectLabel),
     sanitizePublicText(input.checkName, 40),
     input.status,

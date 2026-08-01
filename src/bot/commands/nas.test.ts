@@ -8,14 +8,18 @@ const mocks = vi.hoisted(() => ({
   listHandoffEnvelopeFiles: vi.fn(),
   readHandoffEnvelope: vi.fn(),
   createAuditRequestHandoff: vi.fn(),
+  createAuditJob: vi.fn(),
   findNasHandoffRequestsByIdPrefix: vi.fn(),
+  getActiveAuditJob: vi.fn(),
   getProject: vi.fn(),
+  insertAuditStepResult: vi.fn(),
   createNasHandoffRequest: vi.fn(),
   expireStaleNasHandoffRequests: vi.fn(),
   countNasHandoffRequestsByStatus: vi.fn(),
   getNasHandoffRequest: vi.fn(),
   listNasHandoffRequests: vi.fn(),
   listNasHandoffRequestsByStatus: vi.fn(),
+  updateAuditJobProgress: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
   runLocalCommand: vi.fn(),
@@ -46,13 +50,17 @@ vi.mock("../../nas/audit-handoff.js", () => ({
 
 vi.mock("../../db/database.js", () => ({
   countNasHandoffRequestsByStatus: mocks.countNasHandoffRequestsByStatus,
+  createAuditJob: mocks.createAuditJob,
   getProject: mocks.getProject,
+  getActiveAuditJob: mocks.getActiveAuditJob,
+  insertAuditStepResult: mocks.insertAuditStepResult,
   createNasHandoffRequest: mocks.createNasHandoffRequest,
   expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
   findNasHandoffRequestsByIdPrefix: mocks.findNasHandoffRequestsByIdPrefix,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
   listNasHandoffRequests: mocks.listNasHandoffRequests,
   listNasHandoffRequestsByStatus: mocks.listNasHandoffRequestsByStatus,
+  updateAuditJobProgress: mocks.updateAuditJobProgress,
   updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
 }));
 
@@ -102,6 +110,7 @@ describe("/nas", () => {
       DISCORD_NAS_REQUEST_STALE_AFTER_MS: 900_000,
     });
     mocks.expireStaleNasHandoffRequests.mockReturnValue([]);
+    mocks.getActiveAuditJob.mockReturnValue(undefined);
     mocks.countNasHandoffRequestsByStatus.mockReturnValue({
       queued: 1,
       completed: 2,
@@ -288,18 +297,50 @@ describe("/nas", () => {
     expect(mocks.createNasHandoffRequest).toHaveBeenCalledWith(expect.objectContaining({
       id: "request-1",
       channelId: "channel-1",
+      auditJobId: expect.any(String),
       projectLabel: "Attys_DC_BOT",
       checkName: "plans",
       status: "queued",
     }));
+    expect(mocks.createAuditJob).toHaveBeenCalledWith(expect.objectContaining({
+      channelId: "channel-1",
+      projectLabel: "Attys_DC_BOT",
+      mode: "check-only",
+      status: "waiting_nas_result",
+      currentStep: "plans",
+    }));
     expect(interaction.editReply).toHaveBeenCalledWith({
-      content: expect.stringContaining("Queued NAS audit request"),
+      content: expect.stringContaining("as audit job"),
     });
     expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
       kind: "task",
       status: "nas-request-queued",
       channelId: "channel-1",
     }, expect.any(String));
+  });
+
+  it("does not queue a NAS handoff request while an audit job is active", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_HANDOFF: true });
+    mocks.getActiveAuditJob.mockReturnValue({
+      id: "audit-job-active",
+      status: "running_checks",
+    });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "request"),
+        getString: vi.fn(() => "plans"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: expect.stringContaining("An audit job is already active"),
+    });
+    expect(mocks.writeHandoffEnvelope).not.toHaveBeenCalled();
+    expect(mocks.createNasHandoffRequest).not.toHaveBeenCalled();
   });
 
   it("derives project labels from Windows and POSIX paths", () => {
@@ -846,6 +887,18 @@ describe("/nas", () => {
   });
 
   it("builds a public-safe NAS result report", () => {
+    mocks.getNasHandoffRequest.mockImplementation((requestId: string) => ({
+      id: requestId,
+      audit_job_id: `audit-${requestId}`,
+      channel_id: "channel-1",
+      project_label: "Attys_DC_BOT",
+      check_name: requestId === "request-two" ? "tests" : "plans",
+      status: "queued",
+      result_summary: null,
+      created_at: "2026-08-01T11:59:00.000Z",
+      updated_at: "2026-08-01T11:59:00.000Z",
+    }));
+
     const report = buildNasResultsReport("E:\\private\\repo", "channel-1", 2);
 
     expect(report).toContain("NAS Handoff Results");
@@ -863,6 +916,38 @@ describe("/nas", () => {
       "request-two",
       "failed",
       "0/1 passed",
+      "2026-08-01T12:01:00.000Z",
+    );
+    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith(
+      "audit-request-one",
+      expect.objectContaining({
+        name: "plans",
+        status: "passed",
+        exitCode: 0,
+        publicOutput: "1/1 passed",
+      }),
+    );
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-request-one",
+      "completed",
+      null,
+      1,
+      "2026-08-01T12:00:00.000Z",
+    );
+    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith(
+      "audit-request-two",
+      expect.objectContaining({
+        name: "tests",
+        status: "failed",
+        exitCode: 1,
+        publicOutput: "0/1 passed",
+      }),
+    );
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-request-two",
+      "waiting_manual_review",
+      null,
+      1,
       "2026-08-01T12:01:00.000Z",
     );
     expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
