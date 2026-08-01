@@ -4,7 +4,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createHandoffEnvelope,
+  archiveHandoffEnvelope,
   ensureHandoffStore,
+  listHandoffEnvelopeFiles,
   readHandoffEnvelope,
   readPublicHandoffStore,
   writeHandoffEnvelope,
@@ -131,5 +133,28 @@ describe("NAS handoff store", () => {
     expect(() => writeHandoffEnvelope(root, "outbox", envelope)).toThrow(
       "Refusing to overwrite existing handoff message.",
     );
+  });
+
+  it("lists and archives handoff envelope files without overwriting", () => {
+    const root = makeTempDir();
+    const envelope = createHandoffEnvelope({
+      id: "archive-me",
+      type: "control.status",
+      source: "nas-control-plane",
+      target: "discord-control",
+      status: "completed",
+      publicSummary: "Control plane ready",
+    });
+
+    writeHandoffEnvelope(root, "inbox", envelope);
+
+    expect(listHandoffEnvelopeFiles(root, "inbox").map((filePath) => path.basename(filePath))).toEqual([
+      "archive-me.json",
+    ]);
+    expect(archiveHandoffEnvelope(root, "inbox", "archive-me").endsWith(path.join("archive", "archive-me.json"))).toBe(true);
+    expect(listHandoffEnvelopeFiles(root, "inbox")).toEqual([]);
+    expect(listHandoffEnvelopeFiles(root, "archive").map((filePath) => path.basename(filePath))).toEqual([
+      "archive-me.json",
+    ]);
   });
 });

@@ -165,6 +165,36 @@ export function readHandoffEnvelope(filePath: string): HandoffEnvelope {
   return handoffEnvelopeSchema.parse(JSON.parse(fs.readFileSync(filePath, "utf8")));
 }
 
+export function listHandoffEnvelopeFiles(rootPath: string, box: HandoffBox): string[] {
+  if (!isHandoffBox(box)) {
+    throw new Error("Invalid handoff box.");
+  }
+  const boxPath = resolveBoxPath(rootPath, box);
+  if (!fs.existsSync(boxPath)) return [];
+
+  return fs.readdirSync(boxPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => path.join(boxPath, entry.name))
+    .sort();
+}
+
+export function archiveHandoffEnvelope(rootPath: string, box: HandoffBox, id: string): string {
+  if (!isHandoffBox(box)) {
+    throw new Error("Invalid handoff box.");
+  }
+  ensureHandoffStore(rootPath);
+  const sourcePath = resolveEnvelopePath(rootPath, box, id);
+  const archivePath = resolveEnvelopePath(rootPath, "archive", id);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error("Handoff message does not exist.");
+  }
+  if (fs.existsSync(archivePath)) {
+    throw new Error("Refusing to overwrite archived handoff message.");
+  }
+  fs.renameSync(sourcePath, archivePath);
+  return archivePath;
+}
+
 export function readPublicHandoffStore(rootPath: string): PublicHandoffStoreStatus {
   if (!fs.existsSync(rootPath)) {
     return {

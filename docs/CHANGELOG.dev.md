@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- Handoff worker once: uj `src/nas/handoff-worker.ts`, `src/cli/worker-handoff-once.ts` es `npm run worker:handoff:once` parancs keszult. Ez az inbox `audit.request` uzeneteit egyszeri futasban dolgozza fel, csak fix catalog checket futtat, public-safe `audit.result` valaszt ir az outboxba, majd archive-ba mozgatja a requestet. Nincs arbitrary shell, repair, install vagy Git write.
 - NAS worker status/check visibility: a control-plane status snapshot most mar a worker health mellett public-safe `workerRepoStatus` mezot is ir a beallitott `ATTYS_NAS_STATUS_PROJECT` projektre. Az `ATTYS_NAS_STATUS_CHECK` uresen default-off, de `plans` ertekkel konnyu fix named-check smoke is logolhato. A NAS tovabbra sem fogad arbitrary commandot es nem futtat Codexet.
 - PC worker lifecycle helpers: uj `scripts/worker-http-lifecycle.ps1`, `npm run worker:http:status`, `npm run worker:http:restart` es `npm run worker:http:stop` segitseg keszult. Ezek csak a repohoz tartozo worker HTTP processz-agat kezelik, a live Discord botot nem.
 - PC worker start helper: uj `scripts/start-worker-http.ps1` es `npm run worker:http:start` parancs keszult a default-off Windows worker HTTP szerver operatorbarat inditasahoz. A helper ignored env fajlt tud betolteni, `0.0.0.0:8787` alap bindot hasznal, es nem inditja ujra a live Discord botot. A meglevo `win-start.bat` / desktop shortcut tovabbra is csak a live bot launcher, nem indit LAN worker portot automatikusan.

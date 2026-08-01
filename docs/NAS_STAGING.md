@@ -84,6 +84,14 @@ By default this uses `data\handoff` from the current working directory. On NAS, 
 
 The handoff mailbox is only a public-safe file contract in this slice. It does not start a network endpoint, run Codex, install dependencies, write Git state, or perform repair.
 
+PC worker handoff processor:
+
+```powershell
+npm run worker:handoff:once
+```
+
+This processes queued `audit.request` JSON files from the configured `ATTYS_NAS_HANDOFF_ROOT` inbox once, runs only the fixed audit check named in the public request fields, writes a public-safe `audit.result` JSON file to `outbox`, and archives the processed request. It does not accept arbitrary shell commands, does not repair code, does not install dependencies, and does not write Git state.
+
 Worker health probe:
 
 ```powershell

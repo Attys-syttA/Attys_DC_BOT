@@ -24,6 +24,7 @@
     "worker:http:status": "pwsh -NoProfile -File scripts/worker-http-lifecycle.ps1 -Action status",
     "worker:http:stop": "pwsh -NoProfile -File scripts/worker-http-lifecycle.ps1 -Action stop",
     "worker:http:restart": "pwsh -NoProfile -File scripts/worker-http-lifecycle.ps1 -Action restart",
+    "worker:handoff:once": "tsx src/cli/worker-handoff-once.ts",
     "worker:smoke": "pwsh -NoProfile -File scripts/worker-http-smoke.ps1",
     "audit:check": "tsx src/cli/audit-check.ts",
     "plans:check": "tsx src/cli/plans-check.ts",
