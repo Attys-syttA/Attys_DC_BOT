@@ -11,6 +11,7 @@ import type {
   AuditStepRecord,
   NasHandoffRequestCreateInput,
   NasHandoffRequestRecord,
+  NasHandoffRequestStatusFilter,
   NasHandoffRequestStatus,
   NasHandoffRequestStatusCounts,
   Project,
@@ -372,6 +373,27 @@ export function listNasHandoffRequests(channelId: string, limit = 5): NasHandoff
   return db
     .prepare("SELECT * FROM nas_handoff_requests WHERE channel_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?")
     .all(channelId, safeLimit) as NasHandoffRequestRecord[];
+}
+
+export function listNasHandoffRequestsByStatus(
+  channelId: string,
+  status: NasHandoffRequestStatusFilter = "all",
+  limit = 5,
+): NasHandoffRequestRecord[] {
+  const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
+  if (status === "all") {
+    return listNasHandoffRequests(channelId, safeLimit);
+  }
+
+  return db
+    .prepare(`
+      SELECT * FROM nas_handoff_requests
+      WHERE channel_id = ?
+        AND status = ?
+      ORDER BY updated_at DESC, created_at DESC
+      LIMIT ?
+    `)
+    .all(channelId, status, safeLimit) as NasHandoffRequestRecord[];
 }
 
 export function countNasHandoffRequestsByStatus(channelId: string): NasHandoffRequestStatusCounts {

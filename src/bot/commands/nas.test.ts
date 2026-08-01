@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   countNasHandoffRequestsByStatus: vi.fn(),
   getNasHandoffRequest: vi.fn(),
   listNasHandoffRequests: vi.fn(),
+  listNasHandoffRequestsByStatus: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
   runLocalCommand: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock("../../db/database.js", () => ({
   expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
   listNasHandoffRequests: mocks.listNasHandoffRequests,
+  listNasHandoffRequestsByStatus: mocks.listNasHandoffRequestsByStatus,
   updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
 }));
 
@@ -65,6 +67,7 @@ import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
   buildNasDeployStatusReport,
+  buildNasRequestsReport,
   buildNasResultsReport,
   buildNasStatusReport,
   buildNasSyncStatusReport,
@@ -120,6 +123,16 @@ describe("/nas", () => {
         check_name: "tests",
         status: "failed",
         result_summary: "0/1 passed",
+      },
+    ]);
+    mocks.listNasHandoffRequestsByStatus.mockReturnValue([
+      {
+        id: "request-queued-one",
+        check_name: "plans",
+        status: "queued",
+        result_summary: null,
+        created_at: new Date(Date.now() - 8 * 60_000).toISOString(),
+        updated_at: new Date(Date.now() - 3 * 60_000).toISOString(),
       },
     ]);
     mocks.existsSync.mockReturnValue(true);
@@ -434,6 +447,24 @@ describe("/nas", () => {
     });
   });
 
+  it("keeps NAS requests disabled with the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "requests"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas requests` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+    expect(mocks.listNasHandoffRequestsByStatus).not.toHaveBeenCalled();
+  });
+
   it("shows public-safe NAS deploy verification details when enabled", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
     const interaction = {
@@ -715,6 +746,65 @@ describe("/nas", () => {
     );
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
+  });
+
+  it("builds a public-safe tracked NAS request report", () => {
+    mocks.listNasHandoffRequestsByStatus.mockReturnValue([
+      {
+        id: "request-visible-one",
+        check_name: "plans",
+        status: "queued",
+        result_summary: null,
+        created_at: "2026-08-01T19:00:00.000Z",
+        updated_at: "2026-08-01T19:05:00.000Z",
+      },
+      {
+        id: "request-visible-two",
+        check_name: "tests",
+        status: "failed",
+        result_summary: "failed at K:\\data token=secret",
+        created_at: "2026-08-01T18:00:00.000Z",
+        updated_at: "2026-08-01T18:01:00.000Z",
+      },
+    ]);
+
+    const report = buildNasRequestsReport("channel-1", "all", 10);
+
+    expect(report).toContain("NAS Handoff Requests");
+    expect(report).toContain("filter=all");
+    expect(report).toContain("request request-visi");
+    expect(report).toContain("check=plans status=queued");
+    expect(report).toContain("summary=waiting");
+    expect(report).toContain("check=tests status=failed");
+    expect(report).toContain("summary=failed at <local-path> token=<redacted>");
+    expect(mocks.expireStaleNasHandoffRequests).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      "channel-1",
+    );
+    expect(mocks.listNasHandoffRequestsByStatus).toHaveBeenCalledWith("channel-1", "all", 10);
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+  });
+
+  it("executes NAS requests with a status filter and limit", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "requests"),
+        getString: vi.fn(() => "queued"),
+        getInteger: vi.fn(() => 3),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.listNasHandoffRequestsByStatus).toHaveBeenCalledWith("channel-1", "queued", 3);
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Handoff Requests");
+    expect(content).toContain("filter=queued");
   });
 
   it("keeps NAS result summaries compact and public-safe", () => {

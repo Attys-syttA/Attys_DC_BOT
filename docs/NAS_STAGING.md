@@ -202,6 +202,14 @@ This is disabled by default. When enabled on the Windows Discord bot, the bot pe
 
 The `/nas status` Discord response also shows whether this notifier is enabled, the configured stale timeout, and the current channel's tracked NAS request counts by status (`queued`, `completed`, `failed`). These are local SQLite counters only; they do not expose request payloads, channel IDs, NAS paths, or raw result logs.
 
+Read-only Discord request ledger:
+
+```text
+/nas requests status:<all|queued|completed|failed> limit:<1-10>
+```
+
+This uses the same `DISCORD_ENABLE_NAS_STATUS=true` gate as the other NAS status views. It lists locally tracked NAS handoff requests from SQLite with short request IDs, fixed check names, status, age/update minutes, and public-safe summaries. It does not write to the NAS share, read raw request payloads, expose paths or tokens, or execute Codex.
+
 Read-only worker repo status:
 
 ```powershell

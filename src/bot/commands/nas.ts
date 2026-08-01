@@ -14,8 +14,10 @@ import {
   getNasHandoffRequest,
   getProject,
   listNasHandoffRequests,
+  listNasHandoffRequestsByStatus,
   updateNasHandoffRequestResult,
 } from "../../db/database.js";
+import type { NasHandoffRequestStatusFilter } from "../../db/types.js";
 import {
   listHandoffEnvelopeFiles,
   readHandoffEnvelope,
@@ -106,6 +108,23 @@ export const data = new SlashCommandBuilder()
     .addIntegerOption((option) => option
       .setName("limit")
       .setDescription("Maximum results to show")
+      .setMinValue(1)
+      .setMaxValue(10)))
+  .addSubcommand((subcommand) => subcommand
+    .setName("requests")
+    .setDescription("Show tracked public-safe NAS handoff requests")
+    .addStringOption((option) => option
+      .setName("status")
+      .setDescription("Request status filter")
+      .addChoices(
+        { name: "all", value: "all" },
+        { name: "queued", value: "queued" },
+        { name: "completed", value: "completed" },
+        { name: "failed", value: "failed" },
+      ))
+    .addIntegerOption((option) => option
+      .setName("limit")
+      .setDescription("Maximum requests to show")
       .setMinValue(1)
       .setMaxValue(10)))
   .addSubcommand((subcommand) => subcommand
@@ -335,9 +354,26 @@ function requestTrackingLine(channelId: string | undefined): string {
   return `OK request tracking: queued:${counts.queued} completed:${counts.completed} failed:${counts.failed}`;
 }
 
+function requestAgeLine(createdAt: string, updatedAt: string, now = new Date()): string {
+  const createdTime = Date.parse(createdAt);
+  const updatedTime = Date.parse(updatedAt);
+  const ageMinutes = Number.isFinite(createdTime)
+    ? Math.max(0, Math.floor((now.getTime() - createdTime) / 60_000))
+    : null;
+  const updatedMinutes = Number.isFinite(updatedTime)
+    ? Math.max(0, Math.floor((now.getTime() - updatedTime) / 60_000))
+    : null;
+  const age = ageMinutes === null ? "age=unknown" : `age=${ageMinutes}m`;
+  const updated = updatedMinutes === null ? "updated=unknown" : `updated=${updatedMinutes}m`;
+  return `${age} ${updated}`;
+}
+
 export function nasRequestStaleCutoff(now = new Date()): string {
   const staleAfterMs = getConfig().DISCORD_NAS_REQUEST_STALE_AFTER_MS;
-  return new Date(now.getTime() - staleAfterMs).toISOString();
+  const safeStaleAfterMs = typeof staleAfterMs === "number" && Number.isFinite(staleAfterMs) && staleAfterMs > 0
+    ? staleAfterMs
+    : 900_000;
+  return new Date(now.getTime() - safeStaleAfterMs).toISOString();
 }
 
 export function expireStaleNasHandoffRequestsForChannel(channelId: string, now = new Date()): number {
@@ -509,6 +545,36 @@ export function buildNasResultsReport(repoRoot: string, channelId: string, limit
   ].join("\n");
 }
 
+function normalizeRequestStatusFilter(value: string | null): NasHandoffRequestStatusFilter {
+  if (value === "queued" || value === "completed" || value === "failed" || value === "all") {
+    return value;
+  }
+  return "all";
+}
+
+export function buildNasRequestsReport(channelId: string, status: NasHandoffRequestStatusFilter = "all", limit = 5): string {
+  expireStaleNasHandoffRequestsForChannel(channelId);
+  const rows = listNasHandoffRequestsByStatus(channelId, status, limit)
+    .map((request) => {
+      const summary = sanitizePublicText(request.result_summary ?? "waiting", 100) || "waiting";
+      return [
+        `- request ${request.id.slice(0, 12)}`,
+        `check=${sanitizePublicText(request.check_name, 40) || "unknown"}`,
+        `status=${request.status}`,
+        requestAgeLine(request.created_at, request.updated_at),
+        `summary=${summary}`,
+      ].join(" ");
+    });
+
+  return [
+    "**NAS Handoff Requests**",
+    "```text",
+    `filter=${status}`,
+    rows.length > 0 ? rows.join("\n") : "INFO no tracked NAS handoff requests",
+    "```",
+  ].join("\n");
+}
+
 async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot: string): Promise<void> {
   const config = getConfig();
   if (!config.DISCORD_ENABLE_NAS_HANDOFF) {
@@ -658,6 +724,23 @@ export async function execute(
     }
     await interaction.editReply({
       content: buildNasResultsReport(process.cwd(), interaction.channelId, interaction.options.getInteger("limit") ?? 5),
+    });
+    return;
+  }
+
+  if (subcommand === "requests") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas requests` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas requests` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: buildNasRequestsReport(
+        interaction.channelId,
+        normalizeRequestStatusFilter(interaction.options.getString("status")),
+        interaction.options.getInteger("limit") ?? 5,
+      ),
     });
     return;
   }

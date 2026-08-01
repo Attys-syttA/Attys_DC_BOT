@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS request ledger view: uj read-only `/nas requests status:<all|queued|completed|failed> limit:<1-10>` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A helyileg tracked NAS handoff requesteket listazza public-safe rovid ID, check, status, age/updated es summary mezokkel, NAS iras, raw path, token, process ID vagy raw payload nelkul.
 - NAS build identity: a NAS staging most `app/NAS_BUILD_INFO.json` fajlt general public-safe source commit, package version, generatedAt es includeSource mezokkel. A staged Docker image bemasolja, a `nas:status` es a `nas-control-plane-status` log pedig `buildInfo` blokkban mutatja, melyik staging/build fut.
 - NAS latest status file: a long-running NAS control-plane loop most atomikusan frissiti a `logs/nas-control-plane-status.json` snapshotot, igy a Windows oldal a megosztott mappabol is lathatja a legutobbi NAS control-plane allapotot Synology log scraping nelkul.
 - NAS latest status Discord visibility: a `/nas status` most, ha eleri a NAS latest snapshot fajlt, rovid public-safe build/version/handoff/checked sort mutat a Discordon raw JSON, path, worker URL vagy process ID nelkul.

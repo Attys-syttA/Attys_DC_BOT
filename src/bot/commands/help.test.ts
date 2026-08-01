@@ -83,6 +83,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("**/nas**");
     expect(content).toContain("/nas status");
     expect(content).toContain("/nas request");
+    expect(content).toContain("/nas requests");
     expect(content).toContain("/nas results");
     expect(content).toContain("/nas smoke");
     expect(content).toContain("/nas sync-status");

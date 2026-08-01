@@ -66,6 +66,7 @@ export interface AuditStepRecord {
 }
 
 export type NasHandoffRequestStatus = "queued" | "completed" | "failed";
+export type NasHandoffRequestStatusFilter = NasHandoffRequestStatus | "all";
 
 export interface NasHandoffRequestRecord {
   id: string;

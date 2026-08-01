@@ -37,6 +37,7 @@ import {
   expireStaleNasHandoffRequests,
   getNasHandoffRequest,
   listNasHandoffRequests,
+  listNasHandoffRequestsByStatus,
   updateNasHandoffRequestResult,
 } from "./database.js";
 import { defaultAuditCapabilities } from "../audit/types.js";
@@ -422,6 +423,47 @@ describe("database", () => {
         completed: 2,
         failed: 0,
       });
+    });
+
+    it("lists NAS handoff requests by status for one channel", () => {
+      const base = {
+        projectLabel: "proj",
+        checkName: "plans",
+        resultSummary: null,
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      };
+      createNasHandoffRequest({ ...base, id: "queued-1", channelId: "ch1", status: "queued" });
+      createNasHandoffRequest({
+        ...base,
+        id: "failed-1",
+        channelId: "ch1",
+        status: "failed",
+        updatedAt: "2026-08-01T12:01:00.000Z",
+      });
+      createNasHandoffRequest({
+        ...base,
+        id: "queued-2",
+        channelId: "ch1",
+        status: "queued",
+        updatedAt: "2026-08-01T12:02:00.000Z",
+      });
+
+      registerProject("ch2", "/p2", "guild1");
+      createNasHandoffRequest({ ...base, id: "queued-other-channel", channelId: "ch2", status: "queued" });
+
+      expect(listNasHandoffRequestsByStatus("ch1", "queued", 10).map((entry) => entry.id)).toEqual([
+        "queued-2",
+        "queued-1",
+      ]);
+      expect(listNasHandoffRequestsByStatus("ch1", "failed", 10).map((entry) => entry.id)).toEqual([
+        "failed-1",
+      ]);
+      expect(listNasHandoffRequestsByStatus("ch1", "all", 10).map((entry) => entry.id)).toEqual([
+        "queued-2",
+        "failed-1",
+        "queued-1",
+      ]);
     });
 
     it("expires stale queued NAS handoff requests for one channel", () => {
