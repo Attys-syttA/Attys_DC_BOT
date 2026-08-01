@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS compose startup: a staging `docker-compose.yml` mar nem hasznal kulon `manual` profile-t, igy Synology Container Managerben es sima `docker compose up -d` paranccsal is kozvetlenul indithato. A kontener tovabbra is csak a public-safe `npm run nas:control-plane` loopot futtatja, nem indit Discord botot, Codexet vagy repair/audit vegrehajtast.
 - Read-only Discord audit command: új default-off `/audit start|status|stop` parancs készült `DISCORD_ENABLE_AUDIT=true` flag mögött. A `start` csak regisztrált csatornán, fix named-check catalogból futtat; az eredményeket SQLite audit job/step store-ba menti; siker esetén `completed`, hiba esetén `waiting_manual_review`, runner kivételnél `failed` állapotot ad.
 - Audit observability/recovery: a `/dashboard` és `/status` most rövid public-safe audit állapotot is mutat a legutóbbi jobról és legutóbbi step-ről. Startupkor az aktív processzhez kötött, félbeszakadt audit állapotok (`queued`, `planning`, `running_checks`, `preparing_isolated_worktree`, `repairing`, `rechecking`) `failed` állapotba normalizálódnak, hogy ne ragadjanak aktívként restart után.
 - Audit stop hardening: a `full` pipeline lépések között ellenőrzi a DB-ben rögzített stop requestet; ha közben `/audit stop` érkezett, a következő check már `stopped` eredménnyel zárul, és nem indul el. A már futó child process az első verzióban még nem kap valódi abortot.

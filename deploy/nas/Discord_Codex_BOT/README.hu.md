@@ -17,6 +17,7 @@ Jelenlegi szelet:
 - az `ATTYS_NAS_WORKERS_JSON` mar a kesobbi PC worker celpontokat irja le public-safe modon;
 - a `data/handoff` mappa publikus, fajlalapu inbox/outbox/archive atadast keszit elo;
 - a kontener alapertelmezett parancsa mar a hosszan futo `npm run nas:control-plane`, amely periodikus public-safe statuszt ir a logba;
+- a compose service alapbol indithato, nincs kulon Docker Compose profile kovetelmeny;
 - nincs NAS oldali Codex futtatas;
 - nincs Windows workspace kozvetlen NAS filesystem hasznalat;
 - nincs VS Code shim;

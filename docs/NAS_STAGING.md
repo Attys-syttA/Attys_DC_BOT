@@ -59,6 +59,14 @@ The worker heartbeat command writes only public-safe worker fields:
 
 The staged Dockerfile uses `npm run nas:control-plane` as its default command. This is deliberate: the current NAS slice should stay alive as a control-plane/status baseline without starting the main Discord bot or Codex on the NAS.
 
+NAS compose startup:
+
+```powershell
+docker compose up -d
+```
+
+The service has no extra Compose profile requirement. This keeps Synology Container Manager startup simple while the container still runs only the safe control-plane/status loop.
+
 Archive reuse note:
 
 - `E:\NAS_Archivumok\Discord_Codex_BOT.zip` is useful as a reference for the older NAS bridge design;
