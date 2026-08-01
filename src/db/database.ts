@@ -4,6 +4,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { sanitizePublicFileLabel, sanitizePublicText } from "../utils/public-safety.js";
 import type { AuditCheckRunResult } from "../audit/check-runner.js";
+import { isTerminalAuditStatus, type AuditJobStatus } from "../audit/types.js";
 import type {
   AuditJobCreateInput,
   AuditJobRecord,
@@ -73,6 +74,7 @@ export function initDatabase(): void {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  normalizeInterruptedAuditJobs();
 }
 
 export function getDb(): Database.Database {
@@ -209,6 +211,33 @@ export function getLatestAuditJob(channelId: string): AuditJobRecord | undefined
   return db
     .prepare("SELECT * FROM audit_jobs WHERE channel_id = ? ORDER BY updated_at DESC LIMIT 1")
     .get(channelId) as AuditJobRecord | undefined;
+}
+
+export function getActiveAuditJob(channelId: string): AuditJobRecord | undefined {
+  const jobs = db
+    .prepare("SELECT * FROM audit_jobs WHERE channel_id = ? ORDER BY updated_at DESC")
+    .all(channelId) as AuditJobRecord[];
+  return jobs.find((job) => !isTerminalAuditStatus(job.status as AuditJobStatus));
+}
+
+export function normalizeInterruptedAuditJobs(now = new Date()): number {
+  const interruptedStatuses = [
+    "queued",
+    "planning",
+    "running_checks",
+    "preparing_isolated_worktree",
+    "repairing",
+    "rechecking",
+  ];
+  const result = db.prepare(`
+    UPDATE audit_jobs
+    SET status = 'failed',
+        current_step = NULL,
+        stop_requested = 0,
+        updated_at = ?
+    WHERE status IN (${interruptedStatuses.map(() => "?").join(", ")})
+  `).run(now.toISOString(), ...interruptedStatuses);
+  return Number(result.changes);
 }
 
 export function updateAuditJobProgress(

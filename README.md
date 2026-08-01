@@ -49,6 +49,7 @@ Because it reads local Codex thread storage where supported, sessions created fr
 - Codex user-input questions surfaced in Discord
 - Queue confirmation and queue management
 - `/ask` attachment support for up to three files
+- Default-off read-only `/audit` named-check workflow
 - Public-safe `/health`, `/events`, `/logs`, `/doctor`, and `/dashboard`
 - Windows launcher, tray/control panel, and desktop lifecycle controls
 - Linux launcher plus Python tray/control panel for desktop host operation
@@ -309,6 +310,7 @@ Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS 
 | `/mappings` | List project-channel mappings and clean duplicate legacy mappings |
 | `/git-status` | Run read-only `git status --short --branch` for the registered project |
 | `/run-tests` | Run `npm test` in the registered project when enabled |
+| `/audit start/status/stop` | Run fixed read-only audit checks when enabled |
 | `/usage` | Show local Codex usage/rate-limit information when available |
 | `/auto-approve` | Toggle approval bypass when explicitly enabled |
 | `/clear-sessions` | Delete local session files when explicitly enabled |
@@ -361,6 +363,7 @@ Optional source-repo parity mode:
 - no custom HTTP execution server is opened by this project
 - message prompts require Discord's privileged Message Content intent; slash commands and the explicit `Send to Codex` file handoff can run without normal message prompts
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
+- read-only audit checks are disabled unless `DISCORD_ENABLE_AUDIT=true`
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/logs`, `/events`, `/health`, `/doctor`, and `/dashboard` avoid tokens, raw Discord IDs, private paths, and config values
@@ -384,6 +387,7 @@ Important `.env` keys:
 | `DISCORD_ENABLE_ATTACHMENT_MESSAGES` | Whether normal text+attachment messages can become prompts |
 | `DISCORD_REGISTER_COMMANDS` | Whether startup registers slash commands |
 | `DISCORD_ENABLE_RUN_TESTS` | Enables `/run-tests` |
+| `DISCORD_ENABLE_AUDIT` | Enables default-off read-only `/audit` named checks |
 | `DISCORD_ENABLE_AUTO_APPROVE` | Enables approval bypass toggle |
 | `DISCORD_ENABLE_SESSION_DELETE` | Enables destructive session deletion |
 | `DISCORD_ENABLE_BOT_LIFECYCLE` | Enables Discord-triggered bot restart |

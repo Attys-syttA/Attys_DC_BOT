@@ -34,17 +34,19 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Aktív/done tervfájl-rend és CI-ben futó `npm run plans:check`.
 - Windows prerelease baseline és külön external-platform acceptance terv.
 - 2026-08-01 döntés: a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa lesz az új NAS deploy célhely; a régi ARM bundle ZIP csak érzékeny történeti referencia.
-- Szelet NAS-0 első biztonságos alapja: worker registry, NAS config parser, public-safe worker store/status, heartbeat writer, tracked NAS sablon és ignored copy-ready staging kimenet.
+- Szelet NAS-0 első biztonságos alapja: worker registry, NAS config parser, public-safe worker-target config, public-safe worker store/status, heartbeat writer, archive-kompatibilis worker health/repo-status/named-check probe, default-off PC worker health/repo-status/named-check server, file-backed handoff mailbox, tracked NAS sablon és ignored copy-ready staging kimenet.
 - Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
 - Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.
+- Első read-only Discord integráció: default-off `/audit start|status|stop` `DISCORD_ENABLE_AUDIT=true` flag mögött, regisztrált csatornához kötve, repair nélkül.
+- Observability/recovery integráció: `/dashboard` és `/status` audit összefoglaló, startup interrupted-normalization, és pipeline-lépések közötti stop-request ellenőrzés.
 
 ## Nyitott reszek
 
-- NAS control-plane és Windows worker transport/auth kapcsolatának külön megtervezése és tesztelése, a mostani file-backed dry-run store után.
+- NAS control-plane és Windows worker transport/auth kapcsolatának külön megtervezése és tesztelése, a mostani file-backed dry-run worker store és handoff mailbox után.
 - Audit job és audit step tartós store Discord-integrációja és interrupted recovery normalizálása.
 - Fix, server-side named-check catalog bevezetése tetszőleges shell parancs nélkül.
-- Read-only `/audit start|status|stop` első vertikális szelet.
+- Read-only `/audit start|status|stop` első vertikális szelet alapja elkészült; hátralévő a háttérben futó process stop/abort és mélyebb events/dashboard komponensfrissítés.
 - Tartós, újraindítás után is olvasható audit-job állapot.
 - `/dashboard` és `/events` audit progress integráció.
 - Explicit operátori repair-jóváhagyás.
@@ -479,14 +481,27 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - létrejött a minimális `src/nas/worker-registry.ts` contract modul;
 - létrejött a fókuszált `src/nas/worker-registry.test.ts` teszt;
 - létrejött a `src/nas/control-plane-config.ts` NAS config parser és a hozzá tartozó fókuszált teszt;
+- a config parser az ARM-korszakos archive-ból menthető worker-target mintát is kezeli `ATTYS_NAS_WORKERS_JSON` alatt, de csak public-safe metadata jelenik meg statuszban;
 - létrejött a `src/nas/worker-store.ts` file-backed public-safe worker store olvasó és a `src/cli/nas-status.ts` dry-run status CLI;
 - létrejött a `src/cli/nas-worker-heartbeat.ts` Windows worker heartbeat writer;
+- létrejött a `src/nas/worker-http-client.ts` archive-kompatibilis `GET /health` worker kliens és a `src/cli/nas-workers-health.ts` CLI;
+- létrejött a default-off `src/worker/worker-http-server.ts` PC worker health szerver és a `src/cli/worker-http.ts` CLI;
+- létrejött a read-only `src/worker/repo-status.ts`, a worker `GET /repo-status?project=...` endpointja és az `npm run nas:workers:repo-status` kliens CLI;
+- létrejött a fixed-catalog `POST /checks/<name>?project=...` worker endpoint és az `npm run nas:workers:check` kliens CLI;
+- létrejött a `src/nas/handoff-store.ts` file-backed public-safe handoff mailbox contract;
+- létrejött a `src/cli/nas-handoff-status.ts` és az `npm run nas:handoff:status` dry-run status CLI;
 - a modul kizárólag message type, worker state, heartbeat timestamp, timeout és public-safe status modell;
 - a config parser csak public-safe control-plane nevet, opcionális HTTP(S) public URL-t és korlátozott heartbeat timeoutot fogad;
 - a NAS oldali Codex execution flag `true` értéke fail-closed hibával megáll;
-- nincs hálózati endpoint, NAS runtime, Codex prompt, named check, repair vagy VS Code shim.
+- a worker secret csak `sharedSecretEnv` env-var névként szerepelhet a JSON-ban; a tényleges érték nem kerül public statuszba vagy tracked fájlba;
+- a worker health probe a régi archive `x-telecodex-shared-secret` headerét használja kompatibilitásból, de csak env-változóból olvasott értékkel;
+- a PC worker health server csak `GET /health` endpointot szolgál ki, loopback alapértelmezéssel, prompt/session/Git/filesystem/Codex endpoint nélkül;
+- a PC worker repo-status endpoint csak read-only `git rev-parse --abbrev-ref HEAD` és `git status --short` információt ad vissza a beállított workspace root alatti projektről;
+- a PC worker named-check endpoint csak a fix audit catalogot fogadja, tetszőleges shell parancs nélkül, és a meglévő read-only audit runnert használja;
+- nincs NAS oldali endpoint/runtime, Codex prompt, repair vagy VS Code shim; a PC worker endpoint ebben a szeletben csak default-off health/repo-status/fixed named-check.
 - a NAS Dockerfile alapértelmezett parancsa csak `npm run nas:status`, vagyis nem indítja el a fő Discord botot.
 - a heartbeat writer csak public-safe worker mezőket ír, és invalid store esetén nem ír felül vakon.
+- a handoff mailbox `inbox`, `outbox`, `archive` és `tmp` könyvtárakat használ, atomic temp write-tal ír, nem ír felül meglévő message fájlt, és csak public-safe mezőket tárol.
 
 2026-08-01 staging checkpoint:
 
@@ -494,6 +509,7 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - létrejött a másolható, Gitből kizárt staging kimenet: `nas-staging/Discord_Codex_BOT/`;
 - a staging kimenet belseje a NAS `Discord_Codex_BOT` megosztott mappájának belsejét tükrözi;
 - `npm run nas:prepare` újragenerálja a staging mappát;
+- a staging kimenetben létrejön a `data/handoff/inbox`, `data/handoff/outbox`, `data/handoff/archive` és `data/handoff/tmp` mailbox struktúra;
 - `-IncludeSource` mód dirty checkoutból alapból megtagadja a forrásmásolást, hogy user változás vagy titok ne kerüljön véletlenül a NAS stagingbe.
 
 2026-08-01 audit contract/runner checkpoint:
@@ -513,6 +529,15 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - a store public-safe project labelt és public-safe step outputot tárol;
 - a store támogatja a progress update-et és stop requestet;
 - a meglévő project/session táblák változatlanul működnek.
+- létrejött a default-off Discord `/audit start|status|stop` parancs;
+- a `/audit start` csak regisztrált csatornán és `DISCORD_ENABLE_AUDIT=true` mellett fut;
+- a `/audit start` kizárólag named-check catalogból futtat;
+- a `/audit status` a legutóbbi audit job store-állapotot mutatja;
+- a `/audit stop` stop requestet rögzít az aktív jobhoz;
+- a `/dashboard` és `/status` rövid audit összefoglalót mutat;
+- startupkor a processzhez kötött félbemaradt audit állapotok `failed` állapotba normalizálódnak;
+- a `full` pipeline lépések között ellenőrzi a stop requestet;
+- a `/audit` még nem fut háttérben és nem tartalmaz izolált repairt vagy child-process abortot.
 
 Érintett területek:
 
@@ -520,6 +545,7 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - worker registry típusok és timeout/public-safe status helper;
 - tracked NAS staging sablon és ignored copy-ready staging kimenet;
 - NAS control-plane config parser;
+- NAS handoff mailbox contract;
 - `.env.example` csak synthetic placeholderrel, ha új feature flag vagy endpoint név kell;
 - NAS deploy célhely dokumentáció: `Discord_Codex_BOT` megosztott mappa.
 
@@ -529,6 +555,10 @@ Minimális üzenettípusok:
 - `worker.heartbeat`
 - `worker.health`
 - `worker.status`
+- `control.status`
+- `audit.request`
+- `audit.status`
+- `audit.result`
 
 Minimális worker mezők:
 
@@ -544,10 +574,16 @@ Elfogadási feltételek:
 
 - a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa az új deploy célhelyként dokumentált;
 - a régi `Discord_Codex_BOT.zip` érzékeny történeti referencia, nem aktuális futtatási alap;
+- a régi archive ignored `_reference_nas_archive/Discord_Codex_BOT/` alatt vizsgálható, a benne lévő `.env.nas` nem olvasható/logolható/commitolható;
 - az első contract nem tartalmaz Codex promptot, named checket, approval routingot, repairt vagy VS Code shimet;
 - a worker státusz public-safe: nincs raw local path, token, Discord ID, `.env` érték, Codex auth vagy Git credential;
 - a Windows worker végrehajtói szerepe megmarad, a NAS nem futtat Codexet Windows workspace-hez;
 - a fókuszált registry/timeout teszt bizonyítja a fenti public-safe contractot;
+- a fókuszált handoff teszt bizonyítja az ID-normalizálást, path escape tiltást, duplikált message elutasítást és invalid mailbox public-safe jelentését;
+- a fókuszált worker HTTP kliens teszt bizonyítja a header contractot, a public-safe failure outputot és a több worker egymás utáni health probe-ját;
+- a fókuszált PC worker HTTP server teszt bizonyítja a public-safe health payloadot, az opcionális shared-secret header kötelezését és a raw path maszkolást;
+- a NAS worker HTTP integrációs teszt loopback szerverrel bizonyítja, hogy a NAS kliens health és repo-status adatot tud olvasni a PC worker szervertől;
+- a fókuszált worker server/kliens tesztek bizonyítják, hogy unsupported check név elutasításra kerül, és csak a fix catalog kaphat futási útvonalat;
 - a staging script nem másol `.env`, Codex auth state, Git credential, `node_modules`, `dist`, log vagy SQLite runtime state fájlokat;
 - a config parser tesztelt, de endpoint vagy runtime kapcsolat előtt külön transport/auth szelet kell.
 
@@ -583,11 +619,11 @@ Megjegyzés: a process execution már külön, read-only runner előkészítők�
 
 Elfogadási feltételek:
 
-- `/audit start` csak engedélyezett principalnak és regisztrált projectben működik;
-- kizárólag catalog check fut; **helyi CLI-runner szinten kész**
-- timeout és stop működik; **runner contract szinten kész**
-- output public-safe és korlátozott; **runner contract szinten kész**
-- nincs repair, install vagy Git write;
+- `/audit start` csak engedélyezett principalnak és regisztrált projectben működik; **kész, bot-global auth + registered channel + feature flag mellett**
+- kizárólag catalog check fut; **kész**
+- timeout és stop működik; **timeout kész, stop request store szinten és pipeline-lépések között kész; futó process abort még hátralévő**
+- output public-safe és korlátozott; **kész**
+- nincs repair, install vagy Git write; **kész**
 - `/run-tests` továbbra is kompatibilis.
 
 ### Szelet 2 — Tartós job/step állapot és observability
@@ -602,10 +638,10 @@ Elfogadási feltételek:
 
 Elfogadási feltételek:
 
-- restart után a befejezett/megakadt job diagnosztizálható;
-- aktív processz nélküli korábbi `running` job `interrupted`-szerű kezelt állapotra normalizálódik;
+- restart után a befejezett/megakadt job diagnosztizálható; **kész a `/audit status`, `/dashboard`, `/status` alapnézetben**
+- aktív processz nélküli korábbi `running` job `interrupted`-szerű kezelt állapotra normalizálódik; **kész `failed` állapotba**
 - raw log és privát path nem kerül DB summaryba vagy Discordra; **store helper szinten kész**
-- egy projectre nincs két aktív audit job.
+- egy projectre nincs két aktív audit job; **csatorna-szinten kész, project-path szintű globális lock még hátralévő**
 
 Megjegyzés: az additive SQLite táblák és helper függvények elkészültek, de a Discord observability, interrupted normalization és per-project active-job enforcement még hátralévő vertikális integráció.
 

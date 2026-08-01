@@ -36,6 +36,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     DISCORD_EPHEMERAL_RESPONSES: true,
     DISCORD_REGISTER_COMMANDS: false,
     DISCORD_ENABLE_RUN_TESTS: false,
+    DISCORD_ENABLE_AUDIT: false,
     DISCORD_ENABLE_AUTO_APPROVE: false,
     DISCORD_ENABLE_SESSION_DELETE: false,
     DISCORD_ENABLE_BOT_LIFECYCLE: false,
@@ -53,7 +54,7 @@ describe("startup notifications", () => {
       }),
       {
         botTag: "Codex_Dscrd_BOT#2018",
-        commandCount: 19,
+        commandCount: 20,
         launchReason: "windows-tray-restart",
         operatorToolsStatus: "ready",
       },
@@ -65,7 +66,7 @@ describe("startup notifications", () => {
     expect(message).toContain("operator tools: ready");
     expect(message).toContain("message prompt mode: enabled");
     expect(message).toContain("application command registration: enabled");
-    expect(message).toContain("application commands loaded: 19");
+    expect(message).toContain("application commands loaded: 20");
     expect(message).not.toContain("token");
     expect(message).not.toContain("guild-id");
   });

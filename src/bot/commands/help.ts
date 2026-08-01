@@ -1,8 +1,9 @@
 import {
+  AutocompleteInteraction,
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import { commandChoices, renderHelpDetail, renderHelpList } from "./help-renderer.js";
+import { commandAutocompleteChoices, renderHelpDetail, renderHelpList } from "./help-renderer.js";
 
 export const data = new SlashCommandBuilder()
   .setName("help")
@@ -12,8 +13,12 @@ export const data = new SlashCommandBuilder()
       .setName("parancs")
       .setDescription("Melyik parancsrol kersz reszletesebb sugot?")
       .setRequired(false)
-      .addChoices(...commandChoices()),
+      .setAutocomplete(true),
   );
+
+export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+  await interaction.respond(commandAutocompleteChoices(interaction.options.getFocused()));
+}
 
 export async function execute(
   interaction: ChatInputCommandInteraction,

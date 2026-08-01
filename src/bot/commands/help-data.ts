@@ -22,6 +22,19 @@ export const HELP_ENTRIES: HelpEntry[] = [
     ],
   },
   {
+    name: "audit",
+    category: "repo",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop",
+    short: "Fix, read-only audit checkeket futtat a regisztralt projecten, ha az env engedi.",
+    details: [
+      "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
+      "Csak a source-controlled named-check catalogbol valaszthato check fut.",
+      "A `full` kulon lathato `plans`, `lint`, `typecheck`, `tests`, `build` lepesekre bomlik.",
+      "Nem futtat tetszoleges shell parancsot, nem telepit dependencyt, nem javit kodot, es nem ir Gitbe.",
+      "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
+    ],
+  },
+  {
     name: "auto-approve",
     category: "safety",
     usage: "/auto-approve mode: on|off",
@@ -175,6 +188,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     details: [
       "Ez a channel = project modell alapja.",
       "A path csak a `BASE_PROJECT_DIR` alatt lehet, igy Discordbol nem lehet kimaszni a megengedett workspace-bol.",
+      "A Discord autocomplete legfeljebb 25 talalatot mutat, ezert ha nem latszik a repo, kezd el beirni a mappa nevet, peldaul `r_cube` vagy `solution`.",
       "Sikeres regisztracio utan ebben a channelben a Codex ehhez a projecthez dolgozik.",
     ],
   },

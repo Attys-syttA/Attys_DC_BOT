@@ -370,6 +370,7 @@ Optional local commands:
 - `/dashboard` shows pending operator action state for approvals, Codex questions, custom answers, and queue confirmations.
 - `/health` shows the bot runtime health: process uptime, error log, operator tools, usage cache, and bot repo sync state.
 - `/run-tests` is disabled unless `DISCORD_ENABLE_RUN_TESTS=true` is set in `.env`.
+- `/audit start check:<plans|lint|typecheck|tests|build|full>` is disabled unless `DISCORD_ENABLE_AUDIT=true` is set in `.env`; it is read-only and does not repair code.
 
 ## 9. Troubleshooting
 

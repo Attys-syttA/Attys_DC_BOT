@@ -3,6 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mocks = vi.hoisted(() => ({
   getAllProjects: vi.fn(),
   getSession: vi.fn(),
+  getLatestAuditJob: vi.fn(),
+  listAuditSteps: vi.fn(),
   isActive: vi.fn(),
   getQueueSize: vi.fn(),
   getOperatorRuntimeSnapshot: vi.fn(),
@@ -11,6 +13,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../db/database.js", () => ({
   getAllProjects: mocks.getAllProjects,
   getSession: mocks.getSession,
+  getLatestAuditJob: mocks.getLatestAuditJob,
+  listAuditSteps: mocks.listAuditSteps,
 }));
 
 vi.mock("../../codex/session-manager.js", () => ({
@@ -52,6 +56,8 @@ describe("/status", () => {
       pendingCustomInput: false,
       pendingQueuePrompt: false,
     });
+    mocks.getLatestAuditJob.mockReturnValue(undefined);
+    mocks.listAuditSteps.mockReturnValue([]);
   });
 
   it("reports no registered projects", async () => {
@@ -85,6 +91,25 @@ describe("/status", () => {
     expect(fieldValue).toContain("Runtime: **active**");
     expect(fieldValue).toContain("Queue: **2**");
     expect(fieldValue).toContain("Pending: **question**");
+    expect(fieldValue).toContain("Audit: **none**");
     expect(fieldValue).not.toContain("/projects/app");
+  });
+
+  it("shows latest audit state for each project", async () => {
+    mocks.getLatestAuditJob.mockReturnValue({
+      id: "audit-job-1",
+      status: "waiting_manual_review",
+    });
+    mocks.listAuditSteps.mockReturnValue([{
+      step_name: "tests",
+      status: "failed",
+    }]);
+    const interaction = makeInteraction();
+
+    await execute(interaction as never);
+
+    const payload = interaction.editReply.mock.calls[0][0];
+    const fieldValue = payload.embeds[0].data.fields[0].value;
+    expect(fieldValue).toContain("Audit: **waiting_manual_review tests:failed**");
   });
 });

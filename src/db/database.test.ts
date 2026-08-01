@@ -24,8 +24,10 @@ import {
   updateSessionStatus,
   getAllSessions,
   createAuditJob,
+  getActiveAuditJob,
   getAuditJob,
   getLatestAuditJob,
+  normalizeInterruptedAuditJobs,
   updateAuditJobProgress,
   requestAuditJobStop,
   insertAuditStepResult,
@@ -185,6 +187,7 @@ describe("database", () => {
       });
       expect(job!.capabilities_json).toContain("read-context");
       expect(getLatestAuditJob("ch1")!.id).toBe("audit-1");
+      expect(getActiveAuditJob("ch1")!.id).toBe("audit-1");
     });
 
     it("updates audit progress and stop requests without touching sessions", () => {
@@ -222,6 +225,74 @@ describe("database", () => {
         updated_at: "2026-08-01T12:00:20.000Z",
       });
       expect(getSession("ch1")!.status).toBe("idle");
+    });
+
+    it("does not return terminal audit jobs as active", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "completed",
+        currentStep: null,
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      expect(getLatestAuditJob("ch1")!.id).toBe("audit-1");
+      expect(getActiveAuditJob("ch1")).toBeUndefined();
+    });
+
+    it("normalizes process-like interrupted jobs to failed on startup recovery", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "running_checks",
+        currentStep: "tests",
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      expect(normalizeInterruptedAuditJobs(new Date("2026-08-01T12:05:00.000Z"))).toBe(1);
+      expect(getAuditJob("audit-1")).toMatchObject({
+        status: "failed",
+        current_step: null,
+        updated_at: "2026-08-01T12:05:00.000Z",
+      });
+      expect(getActiveAuditJob("ch1")).toBeUndefined();
+    });
+
+    it("does not normalize manual-review audit jobs", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "check-only",
+        status: "waiting_manual_review",
+        currentStep: null,
+        iteration: 0,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("check-only"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      expect(normalizeInterruptedAuditJobs(new Date("2026-08-01T12:05:00.000Z"))).toBe(0);
+      expect(getAuditJob("audit-1")).toMatchObject({
+        status: "waiting_manual_review",
+        updated_at: "2026-08-01T12:00:00.000Z",
+      });
     });
 
     it("stores only public-safe audit step output", () => {

@@ -6,7 +6,8 @@ import {
   EmbedBuilder,
   SlashCommandBuilder,
 } from "discord.js";
-import { getProject, getSession } from "../../db/database.js";
+import { getLatestAuditJob, getProject, getSession, listAuditSteps } from "../../db/database.js";
+import type { AuditJobRecord, AuditStepRecord } from "../../db/types.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { resolveCodexCommand } from "../../codex/command-resolver.js";
 import { L } from "../../utils/i18n.js";
@@ -51,6 +52,8 @@ export async function execute(
   const recentEvents = readOperatorEvents(process.cwd(), 3)
     .map(describeOperatorEventLine)
     .reverse();
+  const latestAuditJob = getLatestAuditJob(channelId);
+  const latestAuditSteps = latestAuditJob ? listAuditSteps(latestAuditJob.id) : [];
 
   const embed = new EmbedBuilder()
     .setTitle(L("Local Codex Dashboard", "Helyi Codex Dashboard"))
@@ -90,6 +93,11 @@ export async function execute(
           : "none",
         inline: false,
       },
+      {
+        name: "Audit",
+        value: describeAuditJob(latestAuditJob, latestAuditSteps),
+        inline: false,
+      },
     );
 
   const buttons: ButtonBuilder[] = [];
@@ -116,6 +124,17 @@ export async function execute(
       ? [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
       : [],
   });
+}
+
+function describeAuditJob(job: AuditJobRecord | undefined, steps: AuditStepRecord[]): string {
+  if (!job) return "none";
+  const latestStep = steps.at(-1);
+  return [
+    `Job: \`${job.id.slice(0, 8)}...\``,
+    `Status: **${job.status}**`,
+    `Current step: **${job.current_step ?? "none"}**`,
+    latestStep ? `Latest step: **${latestStep.step_name} ${latestStep.status}**` : "Latest step: none",
+  ].join("\n");
 }
 
 function describePendingOperatorAction(runtime: {

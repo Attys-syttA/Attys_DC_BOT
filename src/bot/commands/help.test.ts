@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { APIApplicationCommandOptionChoice } from "discord.js";
-import { execute as executeHelp, data as helpData } from "./help.js";
-import { execute as executeSugo, data as sugoData } from "./sugo.js";
+import { execute as executeHelp, data as helpData, autocomplete as autocompleteHelp } from "./help.js";
+import { execute as executeSugo, data as sugoData, autocomplete as autocompleteSugo } from "./sugo.js";
 
 function makeInteraction(commandName: "help" | "sugo", selected: string | null = null) {
   return {
@@ -13,13 +12,8 @@ function makeInteraction(commandName: "help" | "sugo", selected: string | null =
   };
 }
 
-function firstChoice(commandJson: ReturnType<typeof helpData.toJSON>): APIApplicationCommandOptionChoice<string> | undefined {
-  const option = commandJson.options?.[0] as { choices?: APIApplicationCommandOptionChoice<string>[] } | undefined;
-  return option?.choices?.[0];
-}
-
 describe("/help and /sugo", () => {
-  it("registers the parancs option on both aliases", () => {
+  it("registers the parancs autocomplete option on both aliases", () => {
     const helpJson = helpData.toJSON();
     const sugoJson = sugoData.toJSON();
 
@@ -27,14 +21,24 @@ describe("/help and /sugo", () => {
     expect(sugoJson.name).toBe("sugo");
     expect(helpJson.options?.[0]?.name).toBe("parancs");
     expect(sugoJson.options?.[0]?.name).toBe("parancs");
-    expect(firstChoice(helpJson)).toMatchObject({
-      name: "kezdetek",
-      value: "kezdetek",
-    });
-    expect(firstChoice(sugoJson)).toMatchObject({
-      name: "kezdetek",
-      value: "kezdetek",
-    });
+    expect(helpJson.options?.[0]).toMatchObject({ autocomplete: true });
+    expect(sugoJson.options?.[0]).toMatchObject({ autocomplete: true });
+  });
+
+  it("keeps help autocomplete under the Discord 25-choice limit", async () => {
+    const interaction = {
+      options: {
+        getFocused: vi.fn(() => ""),
+      },
+      respond: vi.fn(),
+    };
+
+    await autocompleteHelp(interaction as never);
+    await autocompleteSugo(interaction as never);
+
+    expect(interaction.respond.mock.calls[0][0].length).toBeLessThanOrEqual(25);
+    expect(interaction.respond.mock.calls[0][0]).toContainEqual({ name: "kezdetek", value: "kezdetek" });
+    expect(interaction.respond.mock.calls[1][0].length).toBeLessThanOrEqual(25);
   });
 
   it("lists known commands in Hungarian", async () => {
@@ -49,6 +53,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("**Codex work**");
     expect(content).toContain("**Operator diagnostics**");
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
+    expect(content).toContain("`/audit` - Fix, read-only audit checkeket futtat");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Elso lepesek: `/help parancs: kezdetek`");
     expect(content).toContain("Fajlfeltoltes: `/help parancs: fajlfeltoltes`");
@@ -66,6 +71,17 @@ describe("/help and /sugo", () => {
     expect(content).toContain("Hasznalat: `/ask prompt: <szoveg> file/file2/file3: <opcionalis>`");
     expect(content).toContain("A megadott promptot");
     expect(content).toContain("Send to Codex");
+  });
+
+  it("explains the /register autocomplete limit", async () => {
+    const interaction = makeInteraction("help", "register");
+
+    await executeHelp(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("Discord autocomplete legfeljebb 25 talalatot mutat");
+    expect(content).toContain("r_cube");
+    expect(content).toContain("solution");
   });
 
   it("shows a getting-started workflow topic for remote repo work", async () => {

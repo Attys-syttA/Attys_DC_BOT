@@ -38,6 +38,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_AUDIT: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   DISCORD_ENABLE_AUTO_APPROVE: z
     .enum(["true", "false"])
     .default("false")
@@ -60,10 +64,19 @@ export type Config = z.infer<typeof envSchema>;
 
 let _config: Config | null = null;
 
+function withLegacyEnvAliases(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...env,
+    DISCORD_BOT_TOKEN: env.DISCORD_BOT_TOKEN || env.DISCORD_TOKEN,
+    ALLOWED_USER_IDS: env.ALLOWED_USER_IDS || env.DISCORD_ALLOWED_USER_IDS,
+    ALLOWED_ROLE_IDS: env.ALLOWED_ROLE_IDS || env.DISCORD_ALLOWED_ROLE_IDS,
+  };
+}
+
 export function loadConfig(): Config {
   if (_config) return _config;
 
-  const result = envSchema.safeParse(process.env);
+  const result = envSchema.safeParse(withLegacyEnvAliases(process.env));
   if (!result.success) {
     const errors = result.error.issues
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)

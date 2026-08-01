@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseNasControlPlaneConfig } from "./control-plane-config.js";
+import {
+  buildPublicNasWorkerTargets,
+  parseNasControlPlaneConfig,
+} from "./control-plane-config.js";
 
 describe("NAS control-plane config", () => {
   it("uses safe defaults for the staging slice", () => {
@@ -7,6 +10,7 @@ describe("NAS control-plane config", () => {
       controlPlaneName: "attys-dc-bot-nas",
       publicBaseUrl: "",
       workerHeartbeatTimeoutMs: 120_000,
+      workers: [],
       codexExecutionEnabled: false,
     });
   });
@@ -21,8 +25,51 @@ describe("NAS control-plane config", () => {
       controlPlaneName: "home-nas-control",
       publicBaseUrl: "https://nas.example.invalid/discord-codex",
       workerHeartbeatTimeoutMs: 60_000,
+      workers: [],
       codexExecutionEnabled: false,
     });
+  });
+
+  it("parses archive-derived worker targets without exposing shared secrets", () => {
+    const config = parseNasControlPlaneConfig({
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([{
+        id: "Otthon",
+        label: "Otthoni Worker",
+        baseUrl: "http://worker-home.example.invalid:8787/",
+        sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+        workspaceRootLabel: "E:\\codex_works",
+      }]),
+    });
+
+    expect(config.workers).toEqual([{
+      id: "otthon",
+      label: "Otthoni Worker",
+      baseUrl: "http://worker-home.example.invalid:8787",
+      sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+      workspaceRootLabel: "<local-path>",
+    }]);
+    expect(buildPublicNasWorkerTargets(config.workers)).toEqual([{
+      id: "otthon",
+      label: "Otthoni Worker",
+      baseUrl: "http://worker-home.example.invalid:8787",
+      hasSharedSecret: true,
+      workspaceRootLabel: "<local-path>",
+    }]);
+  });
+
+  it("rejects duplicate or non-http worker targets", () => {
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([
+        { id: "home", label: "Home", baseUrl: "http://worker-home.example.invalid" },
+        { id: "home", label: "Home 2", baseUrl: "http://worker-home-2.example.invalid" },
+      ]),
+    })).toThrow("Duplicate worker id");
+
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([
+        { id: "home", label: "Home", baseUrl: "file:///tmp/worker.sock" },
+      ]),
+    })).toThrow("worker baseUrl must be an http(s) URL");
   });
 
   it("rejects unsupported NAS-side Codex execution", () => {

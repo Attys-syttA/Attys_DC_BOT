@@ -3,6 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mocks = vi.hoisted(() => ({
   getProject: vi.fn(),
   getSession: vi.fn(),
+  getLatestAuditJob: vi.fn(),
+  listAuditSteps: vi.fn(),
   isActive: vi.fn(),
   getQueueSize: vi.fn(),
   getOperatorRuntimeSnapshot: vi.fn(),
@@ -14,6 +16,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../db/database.js", () => ({
   getProject: mocks.getProject,
   getSession: mocks.getSession,
+  getLatestAuditJob: mocks.getLatestAuditJob,
+  listAuditSteps: mocks.listAuditSteps,
 }));
 
 vi.mock("../../codex/session-manager.js", () => ({
@@ -58,6 +62,8 @@ describe("/dashboard", () => {
     });
     mocks.readOperatorEvents.mockReturnValue([]);
     mocks.describeOperatorEventLine.mockImplementation((line: string) => line.replace(/^timestamp /, ""));
+    mocks.getLatestAuditJob.mockReturnValue(undefined);
+    mocks.listAuditSteps.mockReturnValue([]);
   });
 
   it("prompts unregistered channels to register first", async () => {
@@ -97,6 +103,8 @@ describe("/dashboard", () => {
     expect(fields[2].value).toContain("`codex.cmd`");
     expect(fields[3].name).toBe("Recent operator events");
     expect(fields[3].value).toBe("none");
+    expect(fields[4].name).toBe("Audit");
+    expect(fields[4].value).toBe("none");
     expect(payload.components).toHaveLength(1);
   });
 
@@ -118,6 +126,33 @@ describe("/dashboard", () => {
     const payload = interaction.editReply.mock.calls[0][0];
     const fields = payload.embeds[0].data.fields;
     expect(fields[3].value).toBe("- task completed\n- lifecycle session-new");
+  });
+
+  it("shows the latest audit job summary", async () => {
+    mocks.getProject.mockReturnValue({
+      channel_id: "channel-1",
+      project_path: "/projects/app",
+      auto_approve: 0,
+    });
+    mocks.getSession.mockReturnValue(undefined);
+    mocks.getLatestAuditJob.mockReturnValue({
+      id: "audit-job-1",
+      status: "waiting_manual_review",
+      current_step: null,
+    });
+    mocks.listAuditSteps.mockReturnValue([{
+      step_name: "tests",
+      status: "failed",
+    }]);
+    const interaction = makeInteraction();
+
+    await execute(interaction as never);
+
+    const payload = interaction.editReply.mock.calls[0][0];
+    const auditField = payload.embeds[0].data.fields[4];
+    expect(auditField.value).toContain("Job: `audit-jo...`");
+    expect(auditField.value).toContain("Status: **waiting_manual_review**");
+    expect(auditField.value).toContain("Latest step: **tests failed**");
   });
 
   it("shows pending Codex user-input state", async () => {

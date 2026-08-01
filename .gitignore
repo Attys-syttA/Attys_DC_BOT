@@ -43,6 +43,7 @@ codex-discord-runtime.json
 rate-limits-cache.json
 
 nas-staging/
+_reference_nas_archive/
 
 .DS_Store
 Thumbs.db

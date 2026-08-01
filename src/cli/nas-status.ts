@@ -1,5 +1,8 @@
 import path from "node:path";
-import { parseNasControlPlaneConfig } from "../nas/control-plane-config.js";
+import {
+  buildPublicNasWorkerTargets,
+  parseNasControlPlaneConfig,
+} from "../nas/control-plane-config.js";
 import { readPublicWorkerStore } from "../nas/worker-store.js";
 
 const config = parseNasControlPlaneConfig(process.env);
@@ -11,6 +14,7 @@ const status = {
   controlPlaneName: config.controlPlaneName,
   publicBaseUrl: config.publicBaseUrl,
   codexExecutionEnabled: config.codexExecutionEnabled,
+  configuredWorkers: buildPublicNasWorkerTargets(config.workers),
   workerStore: readPublicWorkerStore(
     workerStorePath,
     new Date(),

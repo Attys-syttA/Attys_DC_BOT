@@ -140,4 +140,34 @@ describe("audit check runner", () => {
     expect(timeoutResult[0].status).toBe("timed_out");
     expect(stopResult[0].status).toBe("stopped");
   });
+
+  it("stops a pipeline before starting the next command when requested", async () => {
+    const projectPath = makeProject({
+      "plans:check": "tsx src/cli/plans-check.ts",
+      lint: "eslint .",
+      typecheck: "tsc --noEmit",
+      test: "vitest run",
+      build: "tsup src/index.ts",
+    });
+    const runner = vi.fn<AuditProcessRunner>().mockResolvedValue({
+      exitCode: 0,
+      timedOut: false,
+      stopped: false,
+      output: "ok\n",
+    });
+    let calls = 0;
+
+    const results = await runAuditCheckPipeline(projectPath, "full", {
+      runner,
+      shouldStop: () => calls++ > 0,
+    });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    expect(results.map((result) => result.status)).toEqual(["passed", "stopped"]);
+    expect(results[1]).toMatchObject({
+      name: "lint",
+      publicOutput: "stop requested before command start",
+      stopped: true,
+    });
+  });
 });

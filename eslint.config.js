@@ -8,6 +8,7 @@ export default [
       "coverage/**",
       "dist/**",
       "node_modules/**",
+      "_reference_nas_archive/**",
     ],
   },
   js.configs.recommended,

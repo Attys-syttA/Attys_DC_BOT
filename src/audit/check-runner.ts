@@ -43,6 +43,7 @@ export interface AuditCheckRunnerOptions {
   runner?: AuditProcessRunner;
   signal?: AbortSignal;
   now?: () => Date;
+  shouldStop?: () => boolean | Promise<boolean>;
 }
 
 const packageJsonSchema = z.object({
@@ -80,6 +81,24 @@ function unsupportedResult(
     timedOut: false,
     stopped: false,
     publicOutput: reason,
+    startedAt: startedAt.toISOString(),
+    finishedAt: finishedAt.toISOString(),
+    durationMs: Math.max(0, finishedAt.getTime() - startedAt.getTime()),
+  };
+}
+
+function stoppedResult(
+  definition: AuditCheckDefinition,
+  startedAt: Date,
+  finishedAt: Date,
+): AuditCheckRunResult {
+  return {
+    name: definition.name,
+    status: "stopped",
+    exitCode: null,
+    timedOut: false,
+    stopped: true,
+    publicOutput: "stop requested before command start",
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     durationMs: Math.max(0, finishedAt.getTime() - startedAt.getTime()),
@@ -171,6 +190,12 @@ export async function runAuditCheckPipeline(
 
   for (const definition of buildAuditCheckPipeline(checkName)) {
     const startedAt = now();
+    if (options.signal?.aborted || await options.shouldStop?.()) {
+      const finishedAt = now();
+      results.push(stoppedResult(definition, startedAt, finishedAt));
+      break;
+    }
+
     const support = checkAuditScriptSupport(definition, packageScripts);
     if (support.status === "unsupported") {
       const finishedAt = now();

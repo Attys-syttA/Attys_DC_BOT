@@ -23,6 +23,7 @@ describe("config", () => {
     delete process.env.DISCORD_EPHEMERAL_RESPONSES;
     delete process.env.DISCORD_REGISTER_COMMANDS;
     delete process.env.DISCORD_ENABLE_RUN_TESTS;
+    delete process.env.DISCORD_ENABLE_AUDIT;
     delete process.env.DISCORD_ENABLE_AUTO_APPROVE;
     delete process.env.DISCORD_ENABLE_SESSION_DELETE;
     delete process.env.DISCORD_ENABLE_BOT_LIFECYCLE;
@@ -57,6 +58,7 @@ describe("config", () => {
     expect(config.DISCORD_EPHEMERAL_RESPONSES).toBe(true);
     expect(config.DISCORD_REGISTER_COMMANDS).toBe(false);
     expect(config.DISCORD_ENABLE_RUN_TESTS).toBe(false);
+    expect(config.DISCORD_ENABLE_AUDIT).toBe(false);
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(false);
     expect(config.DISCORD_ENABLE_SESSION_DELETE).toBe(false);
     expect(config.DISCORD_ENABLE_BOT_LIFECYCLE).toBe(false);
@@ -131,6 +133,29 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_BOT_LIFECYCLE).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_AUDIT as boolean", async () => {
+    process.env.DISCORD_ENABLE_AUDIT = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_AUDIT).toBe(true);
+  });
+
+  it("accepts legacy NAS archive env names without overriding current names", async () => {
+    delete process.env.DISCORD_BOT_TOKEN;
+    delete process.env.ALLOWED_USER_IDS;
+    delete process.env.ALLOWED_ROLE_IDS;
+    process.env.DISCORD_TOKEN = "legacy-token";
+    process.env.DISCORD_ALLOWED_USER_IDS = "legacy-user";
+    process.env.DISCORD_ALLOWED_ROLE_IDS = "legacy-role";
+
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+
+    expect(config.DISCORD_BOT_TOKEN).toBe("legacy-token");
+    expect(config.ALLOWED_USER_IDS).toEqual(["legacy-user"]);
+    expect(config.ALLOWED_ROLE_IDS).toEqual(["legacy-role"]);
   });
 
   it("calls process.exit(1) when required env vars are missing", async () => {

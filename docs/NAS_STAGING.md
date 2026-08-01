@@ -31,9 +31,12 @@ Current slice status:
 
 - the staging folder is a NAS control-plane deploy skeleton;
 - `npm run nas:status` can print a public-safe dry-run control-plane status from a local worker store;
+- `ATTYS_NAS_WORKERS_JSON` describes future PC worker targets with `id`, `label`, `baseUrl`, `sharedSecretEnv`, and `workspaceRootLabel`;
+- `npm run nas:handoff:status` can print a public-safe dry-run status for the file-backed handoff mailbox;
+- the staged `data\handoff\` mailbox contains `inbox`, `outbox`, `archive`, and `tmp`;
 - NAS-side Codex execution is explicitly disabled;
 - Windows remains the future Codex worker host;
-- no NAS endpoint or runtime bridge is implemented yet.
+- no NAS-side endpoint or prompt/runtime bridge is implemented yet; the PC worker endpoint is default-off and read-only.
 
 Dry-run local status:
 
@@ -54,6 +57,64 @@ The worker heartbeat command writes only public-safe worker fields:
 - `status`
 
 The staged Dockerfile also uses `npm run nas:status` as its default command. This is deliberate: the current NAS slice is a dry-run control-plane/status baseline only.
+
+Archive reuse note:
+
+- `E:\NAS_Archivumok\Discord_Codex_BOT.zip` is useful as a reference for the older NAS bridge design;
+- the archive's `.env.nas` can be reused later on the NAS as an operator-owned local secret file, but it must not be committed, printed, or copied into tracked source;
+- the runtime accepts the old archive names `DISCORD_TOKEN`, `DISCORD_ALLOWED_USER_IDS`, and `DISCORD_ALLOWED_ROLE_IDS` as fallbacks when the current `DISCORD_BOT_TOKEN`, `ALLOWED_USER_IDS`, and `ALLOWED_ROLE_IDS` names are not set;
+- the archive's ARM64 Docker image is not the target artifact for the current AMD64/Ryzen NAS.
+
+Dry-run handoff mailbox status:
+
+```powershell
+npm run nas:handoff:status
+```
+
+By default this uses `data\handoff` from the current working directory. On NAS, set `ATTYS_NAS_HANDOFF_ROOT=./data/handoff` in `.env.nas`.
+
+The handoff mailbox is only a public-safe file contract in this slice. It does not start a network endpoint, run Codex, install dependencies, write Git state, or perform repair.
+
+Worker health probe:
+
+```powershell
+npm run nas:workers:health
+```
+
+This probes configured worker `baseUrl` values with `GET /health`. It uses the historical archive-compatible `x-telecodex-shared-secret` header when the configured `sharedSecretEnv` exists in the local environment. The output reports only public-safe worker IDs, HTTP status, and compact status summaries.
+
+PC worker health server:
+
+```powershell
+$env:ATTYS_WORKER_HTTP_ENABLED="true"
+npm run worker:http
+```
+
+The worker server is disabled by default. When enabled, it binds to `ATTYS_WORKER_HTTP_HOST` and `ATTYS_WORKER_HTTP_PORT`, serves only `GET /health`, and requires the archive-compatible `x-telecodex-shared-secret` header when the configured `ATTYS_WORKER_SHARED_SECRET_ENV` variable has a value. It does not expose prompt, filesystem, Git, repair, session, or Codex execution endpoints in this slice.
+
+Read-only worker repo status:
+
+```powershell
+npm run nas:workers:repo-status -- --project Attys_DC_BOT
+```
+
+This asks each configured worker for `GET /repo-status?project=...`. The PC worker resolves the project under `ATTYS_WORKER_WORKSPACE_ROOT`, rejects path escapes, and returns only a public-safe project label, branch, clean/dirty state, and compact summary. It does not run tests, install dependencies, modify Git state, or send Codex prompts.
+
+Read-only named checks through the worker:
+
+```powershell
+npm run nas:workers:check -- --project Attys_DC_BOT --check plans
+```
+
+This calls `POST /checks/<name>?project=...` on the configured PC workers. Supported check names are the fixed audit catalog only: `plans`, `lint`, `typecheck`, `tests`, `build`, and `full`. The worker reuses the local read-only audit runner; it does not accept arbitrary shell commands, does not repair, does not install dependencies, does not write Git state, and does not send Codex prompts.
+
+Local end-to-end smoke:
+
+```powershell
+npm run worker:smoke
+```
+
+This starts the default-off PC worker server on loopback, probes it through the NAS worker client, runs the `plans` named check by default, and then stops the temporary worker process. It is intended as the last local check before copying a prepared package to the NAS.
 
 When source packaging is needed later, use:
 

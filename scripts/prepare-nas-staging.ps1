@@ -63,7 +63,7 @@ if ($IncludeSource) {
   }
 }
 
-foreach ($dir in @("data", "logs")) {
+foreach ($dir in @("data", "data\handoff", "data\handoff\inbox", "data\handoff\outbox", "data\handoff\archive", "data\handoff\tmp", "logs")) {
   New-Item -ItemType Directory -Force -Path (Join-Path $resolvedTargetRoot $dir) | Out-Null
 }
 
