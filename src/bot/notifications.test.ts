@@ -37,6 +37,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     DISCORD_REGISTER_COMMANDS: false,
     DISCORD_ENABLE_RUN_TESTS: false,
     DISCORD_ENABLE_AUDIT: false,
+    DISCORD_ENABLE_NAS_STATUS: false,
     DISCORD_ENABLE_AUTO_APPROVE: false,
     DISCORD_ENABLE_SESSION_DELETE: false,
     DISCORD_ENABLE_BOT_LIFECYCLE: false,

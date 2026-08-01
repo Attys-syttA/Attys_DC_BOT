@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS Discord status command: uj default-off `/nas status` parancs keszult `DISCORD_ENABLE_NAS_STATUS=true` flag mogott. Csak public-safe PC worker HTTP, handoff poller es mailbox darabszam allapotot mutat; nem ir ki IP-t, meghajtot, raw pathot, tokent vagy process ID-t.
 - Handoff worker loop: uj `src/cli/worker-handoff-loop.ts`, `scripts/start-worker-handoff.ps1`, `scripts/worker-handoff-lifecycle.ps1`, valamint `worker:handoff:status/restart/stop` parancsok keszultek. A loop csak explicit `ATTYS_NAS_HANDOFF_ROOT` mellett indul, es fail-fast megall, ha a Windows NAS share nincs csatolva.
 - Handoff worker once: uj `src/nas/handoff-worker.ts`, `src/cli/worker-handoff-once.ts` es `npm run worker:handoff:once` parancs keszult. Ez az inbox `audit.request` uzeneteit egyszeri futasban dolgozza fel, csak fix catalog checket futtat, public-safe `audit.result` valaszt ir az outboxba, majd archive-ba mozgatja a requestet. Nincs arbitrary shell, repair, install vagy Git write.
 - NAS worker status/check visibility: a control-plane status snapshot most mar a worker health mellett public-safe `workerRepoStatus` mezot is ir a beallitott `ATTYS_NAS_STATUS_PROJECT` projektre. Az `ATTYS_NAS_STATUS_CHECK` uresen default-off, de `plans` ertekkel konnyu fix named-check smoke is logolhato. A NAS tovabbra sem fogad arbitrary commandot es nem futtat Codexet.

@@ -24,6 +24,7 @@ describe("config", () => {
     delete process.env.DISCORD_REGISTER_COMMANDS;
     delete process.env.DISCORD_ENABLE_RUN_TESTS;
     delete process.env.DISCORD_ENABLE_AUDIT;
+    delete process.env.DISCORD_ENABLE_NAS_STATUS;
     delete process.env.DISCORD_ENABLE_AUTO_APPROVE;
     delete process.env.DISCORD_ENABLE_SESSION_DELETE;
     delete process.env.DISCORD_ENABLE_BOT_LIFECYCLE;
@@ -59,6 +60,7 @@ describe("config", () => {
     expect(config.DISCORD_REGISTER_COMMANDS).toBe(false);
     expect(config.DISCORD_ENABLE_RUN_TESTS).toBe(false);
     expect(config.DISCORD_ENABLE_AUDIT).toBe(false);
+    expect(config.DISCORD_ENABLE_NAS_STATUS).toBe(false);
     expect(config.DISCORD_ENABLE_AUTO_APPROVE).toBe(false);
     expect(config.DISCORD_ENABLE_SESSION_DELETE).toBe(false);
     expect(config.DISCORD_ENABLE_BOT_LIFECYCLE).toBe(false);
@@ -140,6 +142,13 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_AUDIT).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_NAS_STATUS as boolean", async () => {
+    process.env.DISCORD_ENABLE_NAS_STATUS = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_NAS_STATUS).toBe(true);
   });
 
   it("accepts legacy NAS archive env names without overriding current names", async () => {
