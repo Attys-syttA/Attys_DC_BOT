@@ -14,4 +14,4 @@ COPY src ./src
 
 RUN npm run build
 
-CMD ["npm", "run", "nas:status"]
+CMD ["npm", "run", "nas:control-plane"]

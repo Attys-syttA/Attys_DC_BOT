@@ -195,3 +195,4 @@
 - PC worker repo status: bekerult a read-only `GET /repo-status?project=...` endpoint es az `npm run nas:workers:repo-status` kliens CLI; a worker csak a beallitott workspace root alatt dolgozik, path escape-et elutasit, es public-safe branch/clean osszegzest ad.
 - PC worker named checks: bekerult a `POST /checks/<name>?project=...` worker endpoint es az `npm run nas:workers:check` CLI; csak a fix audit catalog futtathato, arbitrary shell, repair, dependency install, Git write es Codex prompt nelkul.
 - PC worker smoke: bekerult az `npm run worker:smoke`, amely loopback worker szervert indit, NAS kliensen at ellenorzi a health/repo-status/named-check utat, majd leallitja az ideiglenes worker jobot.
+- NAS control-plane loop: bekerult az `npm run nas:control-plane`, es a staged Dockerfile mar ezt inditja; a kontener igy hosszan futo public-safe status loop, nem egyszeri `nas:status` parancs.

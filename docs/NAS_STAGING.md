@@ -30,6 +30,7 @@ deploy\nas\Discord_Codex_BOT\
 Current slice status:
 
 - the staging folder is a NAS control-plane deploy skeleton;
+- the staged Dockerfile starts `npm run nas:control-plane`, a long-running public-safe status loop;
 - `npm run nas:status` can print a public-safe dry-run control-plane status from a local worker store;
 - `ATTYS_NAS_WORKERS_JSON` describes future PC worker targets with `id`, `label`, `baseUrl`, `sharedSecretEnv`, and `workspaceRootLabel`;
 - `npm run nas:handoff:status` can print a public-safe dry-run status for the file-backed handoff mailbox;
@@ -56,7 +57,7 @@ The worker heartbeat command writes only public-safe worker fields:
 - `lastSeenAt`
 - `status`
 
-The staged Dockerfile also uses `npm run nas:status` as its default command. This is deliberate: the current NAS slice is a dry-run control-plane/status baseline only.
+The staged Dockerfile uses `npm run nas:control-plane` as its default command. This is deliberate: the current NAS slice should stay alive as a control-plane/status baseline without starting the main Discord bot or Codex on the NAS.
 
 Archive reuse note:
 

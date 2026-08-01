@@ -488,6 +488,7 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - létrejött a default-off `src/worker/worker-http-server.ts` PC worker health szerver és a `src/cli/worker-http.ts` CLI;
 - létrejött a read-only `src/worker/repo-status.ts`, a worker `GET /repo-status?project=...` endpointja és az `npm run nas:workers:repo-status` kliens CLI;
 - létrejött a fixed-catalog `POST /checks/<name>?project=...` worker endpoint és az `npm run nas:workers:check` kliens CLI;
+- létrejött az `npm run nas:control-plane` hosszan futó NAS status loop, és a staged Dockerfile ezt indítja;
 - létrejött a `src/nas/handoff-store.ts` file-backed public-safe handoff mailbox contract;
 - létrejött a `src/cli/nas-handoff-status.ts` és az `npm run nas:handoff:status` dry-run status CLI;
 - a modul kizárólag message type, worker state, heartbeat timestamp, timeout és public-safe status modell;
@@ -499,6 +500,7 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - a PC worker repo-status endpoint csak read-only `git rev-parse --abbrev-ref HEAD` és `git status --short` információt ad vissza a beállított workspace root alatti projektről;
 - a PC worker named-check endpoint csak a fix audit catalogot fogadja, tetszőleges shell parancs nélkül, és a meglévő read-only audit runnert használja;
 - nincs NAS oldali endpoint/runtime, Codex prompt, repair vagy VS Code shim; a PC worker endpoint ebben a szeletben csak default-off health/repo-status/fixed named-check.
+- a NAS konténer továbbra sem Discord bot és nem Codex runtime; csak public-safe status loopként marad életben.
 - a NAS Dockerfile alapértelmezett parancsa csak `npm run nas:status`, vagyis nem indítja el a fő Discord botot.
 - a heartbeat writer csak public-safe worker mezőket ír, és invalid store esetén nem ír felül vakon.
 - a handoff mailbox `inbox`, `outbox`, `archive` és `tmp` könyvtárakat használ, atomic temp write-tal ír, nem ír felül meglévő message fájlt, és csak public-safe mezőket tárol.

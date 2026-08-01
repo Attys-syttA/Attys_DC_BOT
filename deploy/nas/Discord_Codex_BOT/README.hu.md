@@ -16,12 +16,13 @@ Jelenlegi szelet:
 - ez meg csak NAS control-plane staging alap;
 - az `ATTYS_NAS_WORKERS_JSON` mar a kesobbi PC worker celpontokat irja le public-safe modon;
 - a `data/handoff` mappa publikus, fajlalapu inbox/outbox/archive atadast keszit elo;
+- a kontener alapertelmezett parancsa mar a hosszan futo `npm run nas:control-plane`, amely periodikus public-safe statuszt ir a logba;
 - nincs NAS oldali Codex futtatas;
 - nincs Windows workspace kozvetlen NAS filesystem hasznalat;
 - nincs VS Code shim;
 - nincs repair, named check vagy audit futtatas.
 
-A NAS oldali mappa celja kesobb az lesz, hogy a 24/7 control-plane elemek egy helyen legyenek, mikozben a Windows gep marad a Codex worker.
+A NAS oldali mappa celja az, hogy a 24/7 control-plane elemek egy helyen legyenek, mikozben a Windows gep marad a Codex worker.
 
 Archive reuse:
 
