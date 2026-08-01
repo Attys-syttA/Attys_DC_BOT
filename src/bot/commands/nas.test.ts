@@ -64,6 +64,7 @@ vi.mock("../operator-events.js", () => ({
 import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
+  buildNasDeployStatusReport,
   buildNasResultsReport,
   buildNasStatusReport,
   buildNasSyncStatusReport,
@@ -123,6 +124,21 @@ describe("/nas", () => {
     ]);
     mocks.existsSync.mockReturnValue(true);
     mocks.readFileSync.mockImplementation((filePath: string) => {
+      if (filePath.endsWith("NAS_STAGING_MANIFEST.json")) {
+        return JSON.stringify({
+          sourceCommit: "ebfa22a9abcd",
+          packageVersion: "0.1.1-prerelease.2",
+          includeSource: true,
+        });
+      }
+      if (filePath.endsWith("NAS_BUILD_INFO.json")) {
+        return JSON.stringify({
+          sourceCommit: "ebfa22a9abcd",
+          packageVersion: "0.1.1-prerelease.2",
+          generatedAt: "2026-08-01T19:19:43Z",
+          includeSource: true,
+        });
+      }
       if (filePath.endsWith("nas-control-plane-status.json")) {
         return JSON.stringify({
           buildInfo: {
@@ -134,7 +150,11 @@ describe("/nas", () => {
           handoffStore: {
             rootStatus: "ready",
           },
-          checkedAt: "2026-08-01T19:20:00.000Z",
+          codexExecutionEnabled: false,
+          workerHealth: [
+            { workerId: "otthon", ok: true, statusCode: 200, summary: "worker health ready" },
+          ],
+          checkedAt: new Date().toISOString(),
         });
       }
       return "ATTYS_NAS_HANDOFF_ROOT=K:\\data\\handoff\nATTYS_WORKER_SHARED_SECRET_HOME=hidden\n";
@@ -397,6 +417,45 @@ describe("/nas", () => {
     expect(mocks.runLocalCommand).not.toHaveBeenCalled();
   });
 
+  it("keeps NAS deploy status disabled with the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "deploy-status"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas deploy-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+  });
+
+  it("shows public-safe NAS deploy verification details when enabled", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "deploy-status"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Deploy Status");
+    expect(content).toContain("OK deploy verified");
+    expect(content).toContain("build=ebfa22a9abcd version=0.1.1-prerelease.2");
+    expect(content).toContain("OK snapshot-build-match: snapshot matches staged build");
+    expect(content).toContain("OK nas-codex-disabled: NAS-side Codex disabled");
+    expect(content).not.toContain("K:\\");
+    expect(content).not.toContain("private");
+  });
+
   it("shows a public-safe NAS sync dry-run status when enabled", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_SYNC_STATUS: true });
     mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
@@ -470,7 +529,8 @@ describe("/nas", () => {
     expect(report).toContain("OK worker http: listening on configured port, processes 3");
     expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
     expect(report).toContain("OK handoff mailbox: inbox:0 outbox:2 archive:2");
-    expect(report).toContain("OK NAS control-plane snapshot: build=ebfa22a9abcd version=0.1.1-prerelease.2 handoff=ready checked=2026-08-01T19:20:00.000Z");
+    expect(report).toContain("OK NAS control-plane snapshot: build=ebfa22a9abcd version=0.1.1-prerelease.2 handoff=ready checked=");
+    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=10/10");
     expect(report).toContain("OK result notifier: enabled, poll 30s");
     expect(report).toContain("OK request stale timeout: 15m");
     expect(report).toContain("OK request tracking: queued:1 completed:2 failed:3");
@@ -562,6 +622,16 @@ describe("/nas", () => {
     expect(report).toContain("writes=disabled");
     expect(report).not.toContain("raw failure");
     expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+  });
+
+  it("builds a public-safe NAS deploy status report", () => {
+    const report = buildNasDeployStatusReport("E:\\private\\repo");
+
+    expect(report).toContain("NAS Deploy Status");
+    expect(report).toContain("OK deploy verified");
+    expect(report).toContain("checks=10/10");
+    expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
   });
 

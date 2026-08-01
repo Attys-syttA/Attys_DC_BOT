@@ -65,6 +65,14 @@ The long-running control-plane loop also writes its latest status snapshot to `l
 
 When the Windows bot can derive the NAS share root from `ATTYS_NAS_HANDOFF_ROOT`, `/nas status` also reads this latest snapshot and shows a short public-safe NAS control-plane line with build commit, package version, handoff status, and checked timestamp. It does not print the snapshot path, worker URL, process ID, or raw JSON to Discord.
 
+After a NAS container rebuild, verify the deployed share and the running control-plane snapshot together:
+
+```powershell
+npm run nas:deploy:verify -- --target-root K:\
+```
+
+This checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, and `logs\nas-control-plane-status.json` together. It fails if the running container snapshot does not match the staged source commit/package version, the snapshot is stale, NAS-side Codex execution is not disabled, the handoff store is not ready, or the configured worker health is not OK. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
+
 NAS compose startup:
 
 ```powershell

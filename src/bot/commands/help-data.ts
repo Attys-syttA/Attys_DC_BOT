@@ -172,10 +172,11 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
+      "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
       "`/nas bridge` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` mellett inditja vagy allitja le a helyi PC bridge folyamatokat.",

@@ -22,6 +22,7 @@ import {
   writeHandoffEnvelope,
   type HandoffEnvelope,
 } from "../../nas/handoff-store.js";
+import { verifyNasDeploy } from "../../nas/deploy-verification.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicText } from "../../utils/public-safety.js";
@@ -125,7 +126,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Run one fixed public-safe NAS bridge smoke"))
   .addSubcommand((subcommand) => subcommand
     .setName("sync-status")
-    .setDescription("Dry-run check whether NAS staging differs from the NAS share"));
+    .setDescription("Dry-run check whether NAS staging differs from the NAS share"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("deploy-status")
+    .setDescription("Verify NAS deployed files against the running control-plane snapshot"));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -243,6 +247,12 @@ function nasControlPlaneStatusPath(repoRoot: string): string | null {
   return path.join(path.dirname(path.dirname(handoffRoot)), "logs", "nas-control-plane-status.json");
 }
 
+function nasShareRoot(repoRoot: string): string | null {
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot) return null;
+  return path.dirname(path.dirname(handoffRoot));
+}
+
 function nasControlPlaneSnapshotLine(repoRoot: string): string {
   const statusPath = nasControlPlaneStatusPath(repoRoot);
   if (!statusPath || !fs.existsSync(statusPath)) {
@@ -259,6 +269,47 @@ function nasControlPlaneSnapshotLine(repoRoot: string): string {
   } catch {
     return "WARN NAS control-plane snapshot: unreadable";
   }
+}
+
+function nasDeployVerificationLine(repoRoot: string): string {
+  const shareRoot = nasShareRoot(repoRoot);
+  if (!shareRoot || !fs.existsSync(shareRoot)) {
+    return "INFO NAS deploy verification: unavailable";
+  }
+
+  const result = verifyNasDeploy(shareRoot);
+  const passed = result.checks.filter((check) => check.ok).length;
+  const total = result.checks.length;
+  const sourceCommit = smokeField(result.sourceCommit, "unknown", 40);
+  const packageVersion = smokeField(result.packageVersion, "unknown", 40);
+  return result.ok
+    ? `OK NAS deploy verification: build=${sourceCommit} version=${packageVersion} checks=${passed}/${total}`
+    : `WARN NAS deploy verification: build=${sourceCommit} version=${packageVersion} checks=${passed}/${total}`;
+}
+
+export function buildNasDeployStatusReport(repoRoot: string): string {
+  const shareRoot = nasShareRoot(repoRoot);
+  if (!shareRoot || !fs.existsSync(shareRoot)) {
+    return "**NAS Deploy Status**\n```text\nINFO deploy verification unavailable\n```";
+  }
+
+  const result = verifyNasDeploy(shareRoot);
+  const passed = result.checks.filter((check) => check.ok).length;
+  const total = result.checks.length;
+  const rows = result.checks.map((check) => {
+    const status = check.ok ? "OK" : "FAIL";
+    return `${status} ${check.name}: ${smokeField(check.summary, "unknown", 120)}`;
+  });
+
+  return [
+    "**NAS Deploy Status**",
+    "```text",
+    result.ok ? "OK deploy verified" : "WARN deploy verification needs attention",
+    `build=${smokeField(result.sourceCommit, "unknown", 40)} version=${smokeField(result.packageVersion, "unknown", 40)}`,
+    `checks=${passed}/${total}`,
+    ...rows,
+    "```",
+  ].join("\n");
 }
 
 function resultNotifierLine(): string {
@@ -324,6 +375,7 @@ export async function buildNasStatusReport(repoRoot: string, channelId?: string)
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),
     nasControlPlaneSnapshotLine(repoRoot),
+    nasDeployVerificationLine(repoRoot),
     resultNotifierLine(),
     requestStaleTimeoutLine(),
     requestTrackingLine(channelId),
@@ -574,6 +626,20 @@ export async function execute(
 
     await interaction.editReply({
       content: await buildNasSyncStatusReport(process.cwd()),
+    });
+    return;
+  }
+
+  if (subcommand === "deploy-status") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas deploy-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas deploy-status` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: buildNasDeployStatusReport(process.cwd()),
     });
     return;
   }
