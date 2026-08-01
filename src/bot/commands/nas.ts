@@ -63,6 +63,19 @@ interface NasSyncDryRunResult {
   protectedPathsPreserved?: unknown;
 }
 
+interface NasControlPlaneStatusSnapshot {
+  buildInfo?: {
+    sourceCommit?: unknown;
+    packageVersion?: unknown;
+    generatedAt?: unknown;
+    includeSource?: unknown;
+  };
+  handoffStore?: {
+    rootStatus?: unknown;
+  };
+  checkedAt?: unknown;
+}
+
 type NasBridgeAction = "status" | "start" | "stop" | "restart";
 
 export const data = new SlashCommandBuilder()
@@ -224,6 +237,30 @@ function handoffStoreLine(repoRoot: string): string {
   return `OK handoff mailbox: ${boxes}`;
 }
 
+function nasControlPlaneStatusPath(repoRoot: string): string | null {
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot) return null;
+  return path.join(path.dirname(path.dirname(handoffRoot)), "logs", "nas-control-plane-status.json");
+}
+
+function nasControlPlaneSnapshotLine(repoRoot: string): string {
+  const statusPath = nasControlPlaneStatusPath(repoRoot);
+  if (!statusPath || !fs.existsSync(statusPath)) {
+    return "INFO NAS control-plane snapshot: unavailable";
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(statusPath, "utf8")) as NasControlPlaneStatusSnapshot;
+    const sourceCommit = smokeField(parsed.buildInfo?.sourceCommit, "unknown", 40);
+    const packageVersion = smokeField(parsed.buildInfo?.packageVersion, "unknown", 40);
+    const handoffStatus = smokeField(parsed.handoffStore?.rootStatus, "unknown", 40);
+    const checkedAt = smokeField(parsed.checkedAt, "unknown", 40);
+    return `OK NAS control-plane snapshot: build=${sourceCommit} version=${packageVersion} handoff=${handoffStatus} checked=${checkedAt}`;
+  } catch {
+    return "WARN NAS control-plane snapshot: unreadable";
+  }
+}
+
 function resultNotifierLine(): string {
   const config = getConfig();
   if (config.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS === true) {
@@ -286,6 +323,7 @@ export async function buildNasStatusReport(repoRoot: string, channelId?: string)
     workerHttpLine(workerHttpStatus),
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),
+    nasControlPlaneSnapshotLine(repoRoot),
     resultNotifierLine(),
     requestStaleTimeoutLine(),
     requestTrackingLine(channelId),

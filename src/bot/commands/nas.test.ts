@@ -122,7 +122,23 @@ describe("/nas", () => {
       },
     ]);
     mocks.existsSync.mockReturnValue(true);
-    mocks.readFileSync.mockReturnValue("ATTYS_NAS_HANDOFF_ROOT=K:\\data\\handoff\nATTYS_WORKER_SHARED_SECRET_HOME=hidden\n");
+    mocks.readFileSync.mockImplementation((filePath: string) => {
+      if (filePath.endsWith("nas-control-plane-status.json")) {
+        return JSON.stringify({
+          buildInfo: {
+            sourceCommit: "ebfa22a9abcd",
+            packageVersion: "0.1.1-prerelease.2",
+            generatedAt: "2026-08-01T19:19:43Z",
+            includeSource: true,
+          },
+          handoffStore: {
+            rootStatus: "ready",
+          },
+          checkedAt: "2026-08-01T19:20:00.000Z",
+        });
+      }
+      return "ATTYS_NAS_HANDOFF_ROOT=K:\\data\\handoff\nATTYS_WORKER_SHARED_SECRET_HOME=hidden\n";
+    });
     mocks.readPublicHandoffStore.mockReturnValue({
       rootStatus: "ready",
       boxes: [
@@ -454,6 +470,7 @@ describe("/nas", () => {
     expect(report).toContain("OK worker http: listening on configured port, processes 3");
     expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
     expect(report).toContain("OK handoff mailbox: inbox:0 outbox:2 archive:2");
+    expect(report).toContain("OK NAS control-plane snapshot: build=ebfa22a9abcd version=0.1.1-prerelease.2 handoff=ready checked=2026-08-01T19:20:00.000Z");
     expect(report).toContain("OK result notifier: enabled, poll 30s");
     expect(report).toContain("OK request stale timeout: 15m");
     expect(report).toContain("OK request tracking: queued:1 completed:2 failed:3");
@@ -464,6 +481,7 @@ describe("/nas", () => {
     );
     expect(mocks.countNasHandoffRequestsByStatus).toHaveBeenCalledWith("channel-1");
     expect(report).not.toContain("8787");
+    expect(report).not.toContain("K:\\");
     expect(report).not.toContain("processIds");
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("hidden");

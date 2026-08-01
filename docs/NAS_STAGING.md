@@ -59,6 +59,12 @@ The worker heartbeat command writes only public-safe worker fields:
 
 The staged Dockerfile uses `npm run nas:control-plane` as its default command. This is deliberate: the current NAS slice should stay alive as a control-plane/status baseline without starting the main Discord bot or Codex on the NAS.
 
+The staging script also writes `app\NAS_BUILD_INFO.json`. The Docker image copies this into `/app/NAS_BUILD_INFO.json`, and both `npm run nas:status` and the long-running `nas-control-plane-status` log include a public-safe `buildInfo` block with the short source commit, package version, staging generation time, and whether source was included. This is the preferred way to verify which staged source the rebuilt NAS container is running.
+
+The long-running control-plane loop also writes its latest status snapshot to `logs/nas-control-plane-status.json` by default (`ATTYS_NAS_STATUS_SNAPSHOT_PATH`). The file is written through a temp-file and rename sequence. On the Windows side it should appear under the mapped NAS share's `logs` folder after the rebuilt container has produced at least one status tick. This gives the PC-side tools a stable latest-status file without scraping Synology's container log UI.
+
+When the Windows bot can derive the NAS share root from `ATTYS_NAS_HANDOFF_ROOT`, `/nas status` also reads this latest snapshot and shows a short public-safe NAS control-plane line with build commit, package version, handoff status, and checked timestamp. It does not print the snapshot path, worker URL, process ID, or raw JSON to Discord.
+
 NAS compose startup:
 
 ```powershell
@@ -224,6 +230,12 @@ Before copying to the NAS, run:
 
 ```powershell
 npm run nas:check
+```
+
+To refresh the build identity file together with app source, regenerate staging from a clean checkout:
+
+```powershell
+npm run nas:prepare -- -IncludeSource
 ```
 
 The check verifies the manifest hashes and fails if forbidden local/runtime files appear in the staging output.

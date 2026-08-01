@@ -185,6 +185,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`DISCORD_NAS_REQUEST_STALE_AFTER_MS` allitja, mennyi ido utan zaruljon le egy valasz nelkuli queued request failed allapotba.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
+      "Ha elerheto, a NAS control-plane latest snapshotbol rovid build/handoff/status sort is mutat.",
       "A status mutatja a result notifier allapotat, a stale timeoutot es az aktualis channel tracked request darabszamait is.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",
       "A smoke csak a repo-lokalis `nas:bridge:smoke` helpert hivja, es egy synthetic `plans` request eredmenyet foglalja ossze.",

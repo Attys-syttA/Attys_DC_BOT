@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseNasControlPlaneConfig } from "./control-plane-config.js";
-import { buildNasControlPlaneSnapshot } from "./control-plane-runtime.js";
+import {
+  buildNasControlPlaneSnapshot,
+  readNasControlPlaneBuildInfo,
+} from "./control-plane-runtime.js";
 
 const tempDirs: string[] = [];
 
@@ -36,6 +39,7 @@ describe("NAS control-plane runtime", () => {
     const snapshot = await buildNasControlPlaneSnapshot(config, {
       workerStorePath: path.join(root, "data", "workers.json"),
       handoffRoot: path.join(root, "data", "handoff"),
+      buildInfoPath: path.join(root, "NAS_BUILD_INFO.json"),
     }, {
       now: () => new Date("2026-08-01T12:00:00.000Z"),
       probeWorkersHealth: async () => [{
@@ -58,6 +62,12 @@ describe("NAS control-plane runtime", () => {
     expect(snapshot).toEqual({
       controlPlaneName: "home-nas",
       publicBaseUrl: "",
+      buildInfo: {
+        sourceCommit: "unknown",
+        packageVersion: "unknown",
+        generatedAt: "unknown",
+        includeSource: false,
+      },
       codexExecutionEnabled: false,
       configuredWorkers: [{
         id: "otthon",
@@ -134,5 +144,43 @@ describe("NAS control-plane runtime", () => {
       project: "Attys_DC_BOT",
       summary: "1/1 passed",
     }]);
+  });
+
+  it("reads public-safe NAS build info for status snapshots", () => {
+    const root = makeTempDir();
+    const buildInfoPath = path.join(root, "NAS_BUILD_INFO.json");
+    fs.writeFileSync(buildInfoPath, JSON.stringify({
+      sourceCommit: "ebfa22a9abcd",
+      packageVersion: "0.1.1-prerelease.2",
+      generatedAt: "2026-08-01T19:19:43Z",
+      includeSource: true,
+      localPath: "E:\\private\\repo",
+    }));
+
+    expect(readNasControlPlaneBuildInfo(buildInfoPath)).toEqual({
+      sourceCommit: "ebfa22a9abcd",
+      packageVersion: "0.1.1-prerelease.2",
+      generatedAt: "2026-08-01T19:19:43Z",
+      includeSource: true,
+    });
+  });
+
+  it("falls back safely when NAS build info is missing or invalid", () => {
+    const root = makeTempDir();
+    const invalidPath = path.join(root, "NAS_BUILD_INFO.json");
+    fs.writeFileSync(invalidPath, "{ nope");
+
+    expect(readNasControlPlaneBuildInfo(path.join(root, "missing.json"))).toEqual({
+      sourceCommit: "unknown",
+      packageVersion: "unknown",
+      generatedAt: "unknown",
+      includeSource: false,
+    });
+    expect(readNasControlPlaneBuildInfo(invalidPath)).toEqual({
+      sourceCommit: "unknown",
+      packageVersion: "unknown",
+      generatedAt: "unknown",
+      includeSource: false,
+    });
   });
 });

@@ -40,6 +40,26 @@ New-Item -ItemType Directory -Force -Path $resolvedTargetRoot | Out-Null
 Copy-Item -Path (Join-Path $templateRoot "*") -Destination $resolvedTargetRoot -Recurse -Force
 
 $appRoot = Join-Path $resolvedTargetRoot "app"
+$sourceCommit = "unknown"
+$packageVersion = "unknown"
+
+try {
+  $sourceCommitValue = git -C $repoRoot rev-parse --short=12 HEAD
+  if ($LASTEXITCODE -eq 0 -and $sourceCommitValue) {
+    $sourceCommit = [string]$sourceCommitValue
+  }
+} catch {
+  $sourceCommit = "unknown"
+}
+
+try {
+  $packageJson = Get-Content -LiteralPath (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
+  if ($packageJson.version) {
+    $packageVersion = [string]$packageJson.version
+  }
+} catch {
+  $packageVersion = "unknown"
+}
 
 if ($IncludeSource) {
   $sourceItems = @(
@@ -62,6 +82,15 @@ if ($IncludeSource) {
     }
   }
 }
+
+$buildInfo = [ordered]@{
+  sourceCommit = $sourceCommit
+  packageVersion = $packageVersion
+  generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  includeSource = [bool]$IncludeSource
+}
+$buildInfoJson = $buildInfo | ConvertTo-Json -Depth 4
+[System.IO.File]::WriteAllText((Join-Path $appRoot "NAS_BUILD_INFO.json"), $buildInfoJson + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
 foreach ($dir in @("data", "data\handoff", "data\handoff\inbox", "data\handoff\outbox", "data\handoff\archive", "data\handoff\tmp", "logs")) {
   New-Item -ItemType Directory -Force -Path (Join-Path $resolvedTargetRoot $dir) | Out-Null
@@ -104,6 +133,8 @@ $manifest = [ordered]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   layoutRoot = "Discord_Codex_BOT"
   includeSource = [bool]$IncludeSource
+  sourceCommit = $sourceCommit
+  packageVersion = $packageVersion
   notes = @(
     "Copy the contents of this folder into the NAS Discord_Codex_BOT shared folder.",
     "Do not add real .env.nas values to Git.",

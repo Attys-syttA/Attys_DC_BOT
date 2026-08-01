@@ -2,6 +2,9 @@
 
 ## 2026-08-01
 
+- NAS build identity: a NAS staging most `app/NAS_BUILD_INFO.json` fajlt general public-safe source commit, package version, generatedAt es includeSource mezokkel. A staged Docker image bemasolja, a `nas:status` es a `nas-control-plane-status` log pedig `buildInfo` blokkban mutatja, melyik staging/build fut.
+- NAS latest status file: a long-running NAS control-plane loop most atomikusan frissiti a `logs/nas-control-plane-status.json` snapshotot, igy a Windows oldal a megosztott mappabol is lathatja a legutobbi NAS control-plane allapotot Synology log scraping nelkul.
+- NAS latest status Discord visibility: a `/nas status` most, ha eleri a NAS latest snapshot fajlt, rovid public-safe build/version/handoff/checked sort mutat a Discordon raw JSON, path, worker URL vagy process ID nelkul.
 - NAS request stale timeout: uj `DISCORD_NAS_REQUEST_STALE_AFTER_MS` beallitas keszult 15 perces defaulttal. A `/nas status`, `/nas results` es az automatikus result notifier ugyanazzal a szaballyal failed allapotba zarja a tul regi queued NAS requesteket public-safe timeout summaryval.
 - NAS stale timeout visibility: a `/nas status` most public-safe sorban mutatja a beallitott request stale timeoutot percben.
 - NAS stale timeout notifier hardening: az automatikus stale request lezaras most NAS outbox eleres elott fut, ezert a tul regi queued requestek akkor is failed/notified allapotba kerulnek, ha a NAS handoff root epp nem erheto el.
