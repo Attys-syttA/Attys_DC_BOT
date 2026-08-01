@@ -1,13 +1,20 @@
 import { afterEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { createWorkerHttpServer } from "./worker-http-server.js";
 import type { WorkerHttpConfig } from "./worker-http-config.js";
 
 const servers: Array<ReturnType<typeof createWorkerHttpServer>> = [];
+const tempRoots: string[] = [];
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   })));
+  for (const root of tempRoots.splice(0)) {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
 });
 
 const config: WorkerHttpConfig = {
@@ -74,10 +81,12 @@ describe("worker HTTP server", () => {
   });
 
   it("runs only fixed named checks through the injected runner", async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "attys-worker-http-"));
+    tempRoots.push(workspaceRoot);
     const server = createWorkerHttpServer({
       config: {
         ...config,
-        workspaceRoot: "E:\\codex_works",
+        workspaceRoot,
       },
       runCheck: async () => [{
         name: "plans",

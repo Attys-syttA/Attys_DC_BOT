@@ -35,6 +35,7 @@ export function createWorkerHttpServer(options: WorkerHttpServerOptions): http.S
       config: options.config,
       env,
       now,
+      runCheck: options.runCheck,
       startedAt,
     });
   });

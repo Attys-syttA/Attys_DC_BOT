@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS CI fix: a worker HTTP server most tenylegesen tovabbadja az injected `runCheck` fuggvenyt a request handlernek, a `/nas request` projektcimke Windows es POSIX pathbol is stabil mappanevet kepez, a worker HTTP integration teszt pedig platformfuggetlen ideiglenes Git repot hasznal. Ez javitja a Linux GitHub Actions Node 20/22 piros tesztjeit.
 - NAS bridge lifecycle: uj `scripts/nas-bridge-lifecycle.ps1` es `nas:bridge:status/start/restart/stop` parancsok keszultek. Ezek a PC worker HTTP es a persistent handoff worker lifecycle helperjeit fogjak ossze egy public-safe statuszba, a live Discord bot erintese nelkul.
 - NAS bridge smoke: uj `scripts/nas-bridge-smoke.ps1` es `npm run nas:bridge:smoke` parancs keszult. Ez egy synthetic fixed-check requestet ir a NAS inboxba, megvarja a persistent handoff worker outbox eredmenyet, es csak public-safe osszegzest ir ki.
 - NAS Discord status polish: a `/nas status` most elso sorban kulon `bridge ready` osszegzest mutat, hogy mobilrol gyorsan latszodjon, a PC worker es a handoff poller egyutt kesz allapotban van-e.

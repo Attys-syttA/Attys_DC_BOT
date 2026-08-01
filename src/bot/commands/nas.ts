@@ -100,6 +100,10 @@ export function readHandoffRootFromWorkerEnv(repoRoot: string): string {
   return line.replace(/^\s*ATTYS_NAS_HANDOFF_ROOT\s*=\s*/, "").trim().replace(/^["']|["']$/g, "");
 }
 
+export function projectFolderLabel(projectPath: string): string {
+  return projectPath.trim().replace(/[\\/]+$/, "").split(/[\\/]/).filter(Boolean).at(-1) ?? projectPath;
+}
+
 function workerHttpLine(status: WorkerHttpStatus | null): string {
   if (!status) return "FAIL worker http: status unavailable";
   if (ok(status.running) && ok(status.listening)) {
@@ -259,8 +263,9 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
   }
 
   try {
+    const projectLabel = projectFolderLabel(project.project_path);
     const envelope = createAuditRequestHandoff({
-      projectLabel: path.basename(project.project_path),
+      projectLabel,
       checkName: requestedCheck,
     });
     writeHandoffEnvelope(handoffRoot, "inbox", envelope);
@@ -268,7 +273,7 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
     createNasHandoffRequest({
       id: envelope.id,
       channelId: interaction.channelId,
-      projectLabel: path.basename(project.project_path),
+      projectLabel,
       checkName: requestedCheck,
       status: "queued",
       resultSummary: null,

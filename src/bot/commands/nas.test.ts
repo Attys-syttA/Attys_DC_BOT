@@ -52,7 +52,7 @@ vi.mock("./local-command.js", () => ({
   runLocalCommand: mocks.runLocalCommand,
 }));
 
-import { buildNasResultsReport, buildNasStatusReport, execute } from "./nas.js";
+import { buildNasResultsReport, buildNasStatusReport, execute, projectFolderLabel } from "./nas.js";
 
 function makeInteraction() {
   return {
@@ -189,6 +189,11 @@ describe("/nas", () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("Queued NAS audit request"),
     });
+  });
+
+  it("derives project labels from Windows and POSIX paths", () => {
+    expect(projectFolderLabel("E:\\codex_works\\Attys_DC_BOT")).toBe("Attys_DC_BOT");
+    expect(projectFolderLabel("/home/operator/codex_works/Attys_DC_BOT")).toBe("Attys_DC_BOT");
   });
 
   it("keeps NAS handoff request disabled by default", async () => {
