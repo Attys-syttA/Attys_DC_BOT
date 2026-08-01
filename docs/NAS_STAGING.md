@@ -209,6 +209,7 @@ Read-only Discord request ledger:
 /nas request-status request:<id-prefix>
 /nas mailbox box:<inbox|outbox|archive> limit:<1-10>
 /nas mailbox-status
+/nas doctor
 ```
 
 This uses the same `DISCORD_ENABLE_NAS_STATUS=true` gate as the other NAS status views. It lists locally tracked NAS handoff requests from SQLite with short request IDs, fixed check names, status, age/update minutes, public-safe summaries, and a public-safe mailbox state when the Windows bot can reach the handoff mailbox. It does not write to the NAS share, read raw request payloads, expose paths or tokens, or execute Codex.
@@ -218,6 +219,8 @@ Use `/nas request-status` when one request from the ledger needs a closer look. 
 Use `/nas mailbox` when the operator needs a short read-only look at one handoff box. It shows only message id prefix, type, status, check, request prefix, age, and sanitized summary. Invalid JSON files are counted, but raw parse errors, file names, paths, tokens, worker URLs, and raw payloads are never printed.
 
 Use `/nas mailbox-status` when the operator needs a compact consistency check instead of a message list. It compares public-safe mailbox counts with local SQLite request tracking, showing pending tracked outbox results, orphan outbox results, and queued current-channel requests that are missing from the mailbox. It never prints file names, paths, raw payloads, tokens, worker URLs, process IDs, or raw parse errors.
+
+Use `/nas doctor` for the broad read-only operator check. It combines bridge readiness, worker status, handoff status, deploy verification, NAS share sync dry-run freshness, mailbox consistency, result notifier status, and stale timeout into one public-safe report. It never passes `-Apply`, never writes to the NAS share, and does not expose raw command output, paths, file names, payloads, tokens, worker URLs, process IDs, or parse errors.
 
 The Windows bot also records public-safe NAS request lifecycle events into `/events`: `nas-request-queued`, `nas-result-completed`, `nas-result-failed`, and `nas-request-timeout`. These are status tokens only; old NAS outbox files do not re-record already closed local requests.
 

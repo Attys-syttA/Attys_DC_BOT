@@ -69,6 +69,7 @@ import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
   buildNasDeployStatusReport,
+  buildNasDoctorReport,
   buildNasMailboxReport,
   buildNasMailboxStatusReport,
   buildNasRequestStatusReport,
@@ -573,6 +574,81 @@ describe("/nas", () => {
     expect(content).not.toContain("K:\\");
     expect(content).not.toContain("secret");
     expect(content).not.toContain("targetRoot");
+  });
+
+  it("builds a public-safe NAS doctor report", async () => {
+    mocks.runLocalCommand.mockReset()
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"listening\":true,\"port\":8787,\"processCount\":3,\"processIds\":[1,2,3]}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"processCount\":2,\"processIds\":[4,5],\"handoffRootConfigured\":true,\"handoffRootReachable\":true}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: [
+          "raw preface K:\\private token=secret",
+          "{\"mode\":\"dry-run\",\"stagingSource\":{\"status\":\"fresh\"},\"copiedOrReplaced\":0,\"skipped\":160,\"protectedSkipped\":6,\"removeBeforeCopy\":true}",
+        ].join("\n"),
+      });
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
+
+    const report = await buildNasDoctorReport("E:\\private\\repo", "channel-1");
+
+    expect(report).toContain("NAS Doctor");
+    expect(report).toContain("overall=ok");
+    expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
+    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=10/10");
+    expect(report).toContain("OK sync dry-run: staging-source=fresh pending=0 unchanged=160 protected=6");
+    expect(report).toContain("root=ready");
+    expect(report).toContain("tracked=queued:1 completed:2 failed:3");
+    expect(report).toContain("writes=disabled");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+    expect(report).not.toContain("8787");
+    expect(report).not.toContain("processIds");
+  });
+
+  it("executes NAS doctor report when enabled", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.runLocalCommand.mockReset()
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"listening\":true,\"processCount\":1}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"processCount\":1,\"handoffRootReachable\":true}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"mode\":\"dry-run\",\"stagingSource\":{\"status\":\"fresh\"},\"copiedOrReplaced\":0,\"skipped\":160,\"protectedSkipped\":6}",
+      });
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "doctor"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Doctor");
+    expect(content).toContain("writes=disabled");
   });
 
   it("requires a registered project before queuing a NAS request", async () => {

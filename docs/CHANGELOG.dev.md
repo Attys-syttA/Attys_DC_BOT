@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS doctor summary: uj read-only `/nas doctor` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. Egyetlen public-safe riportban foglalja ossze a bridge readiness, worker/handoff status, deploy verification, NAS share sync dry-run, mailbox consistency, result notifier es stale timeout allapotot, NAS iras, `-Apply`, raw output/path/payload/token/worker URL/process ID nelkul.
 - NAS mailbox consistency status: uj read-only `/nas mailbox-status` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A handoff mailbox valid/invalid doboz darabszamait, a helyi request tracking szamokat, pending tracked outbox resultokat, orphan outbox resultokat es missing queued requesteket foglalja ossze public-safe modon, raw path/payload/token nelkul.
 - NAS mailbox message view: uj read-only `/nas mailbox box:<inbox|outbox|archive> limit:<1-10>` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. Egy handoff box olvashato uzeneteit listazza public-safe rovid sorokban, invalid JSON darabszammal, de fajlnev, NAS path, raw payload, parse error, token, worker URL vagy process ID nelkul.
 - NAS request mailbox locator: a `/nas requests` lista es a `/nas request-status request:<id-prefix>` reszletes nezet public-safe `mailbox=<inbox|outbox|archive|missing|unavailable|invalid>` sort is mutat, hogy egy tracked request operatori hibakeresésnél útvonal, fájlnév, raw payload vagy token nélkül követhető legyen a NAS handoff mailboxban.

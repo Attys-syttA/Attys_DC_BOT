@@ -172,10 +172,11 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas doctor | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
+      "`/nas doctor` ugyanilyen read-only status flag alatt egyetlen public-safe diagnosztikai osszkepet ad a NAS bridge/deploy/sync/mailbox allapotrol.",
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas requests` a helyileg tracked NAS requesteket listazza statusz szerint, csak public-safe mezokkel.",

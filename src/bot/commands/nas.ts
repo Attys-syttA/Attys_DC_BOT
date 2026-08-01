@@ -90,6 +90,9 @@ export const data = new SlashCommandBuilder()
     .setName("status")
     .setDescription("Show PC worker and NAS handoff status"))
   .addSubcommand((subcommand) => subcommand
+    .setName("doctor")
+    .setDescription("Run a public-safe read-only NAS bridge diagnostic"))
+  .addSubcommand((subcommand) => subcommand
     .setName("request")
     .setDescription("Queue a fixed audit request through the NAS handoff inbox")
     .addStringOption((option) => option
@@ -536,6 +539,71 @@ export async function buildNasSyncStatusReport(repoRoot: string): Promise<string
   ].join("\n");
 }
 
+function syncDryRunLine(result: Awaited<ReturnType<typeof runLocalCommand>>): string {
+  const parsed = result.exitCode === 0
+    ? parseJsonObject(result.output) as NasSyncDryRunResult | null
+    : null;
+  const changed = summaryCount(parsed?.copiedOrReplaced);
+  const skipped = summaryCount(parsed?.skipped);
+  const protectedSkipped = summaryCount(parsed?.protectedSkipped);
+  const stagingSourceStatus = smokeField(parsed?.stagingSource?.status, "unknown", 40);
+
+  if (result.exitCode !== 0) {
+    return "FAIL sync dry-run: unavailable";
+  }
+  if (stagingSourceStatus === "stale") {
+    return `WARN sync dry-run: staging-source=stale pending=${changed} unchanged=${skipped} protected=${protectedSkipped}`;
+  }
+  if (changed === "0") {
+    return `OK sync dry-run: staging-source=${stagingSourceStatus} pending=0 unchanged=${skipped} protected=${protectedSkipped}`;
+  }
+  return `INFO sync dry-run: staging-source=${stagingSourceStatus} pending=${changed} unchanged=${skipped} protected=${protectedSkipped}`;
+}
+
+function mailboxStatusLines(repoRoot: string, channelId: string): string[] {
+  return buildNasMailboxStatusReport(repoRoot, channelId)
+    .split(/\r?\n/)
+    .filter((line) => line && line !== "**NAS Handoff Mailbox Status**" && line !== "```");
+}
+
+export async function buildNasDoctorReport(repoRoot: string, channelId: string): Promise<string> {
+  const [workerHttp, handoffWorker, syncDryRun] = await Promise.all([
+    runLocalCommand(npmCommand(), ["run", "--silent", "worker:http:status"], repoRoot, 15_000),
+    runLocalCommand(npmCommand(), ["run", "--silent", "worker:handoff:status"], repoRoot, 15_000),
+    runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share"], repoRoot, 60_000),
+  ]);
+
+  const workerHttpStatus = workerHttp.exitCode === 0
+    ? parseJsonObject(workerHttp.output) as WorkerHttpStatus | null
+    : null;
+  const handoffWorkerStatus = handoffWorker.exitCode === 0
+    ? parseJsonObject(handoffWorker.output) as WorkerHandoffStatus | null
+    : null;
+
+  const lines = [
+    bridgeReadyLine(workerHttpStatus, handoffWorkerStatus),
+    workerHttpLine(workerHttpStatus),
+    handoffWorkerLine(handoffWorkerStatus),
+    handoffStoreLine(repoRoot),
+    nasControlPlaneSnapshotLine(repoRoot),
+    nasDeployVerificationLine(repoRoot),
+    syncDryRunLine(syncDryRun),
+    ...mailboxStatusLines(repoRoot, channelId),
+    resultNotifierLine(),
+    requestStaleTimeoutLine(),
+  ];
+  const needsAttention = lines.some((line) => /^(FAIL|WARN)\b/.test(line));
+
+  return [
+    "**NAS Doctor**",
+    "```text",
+    needsAttention ? "overall=attention" : "overall=ok",
+    ...lines,
+    "writes=disabled",
+    "```",
+  ].join("\n");
+}
+
 export function buildNasResultsReport(repoRoot: string, channelId: string, limit = 5): string {
   expireStaleNasHandoffRequestsForChannel(channelId, new Date(), repoRoot);
   const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
@@ -940,6 +1008,19 @@ export async function execute(
 
   if (subcommand === "request") {
     await executeRequest(interaction, process.cwd());
+    return;
+  }
+
+  if (subcommand === "doctor") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas doctor` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas doctor` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: await buildNasDoctorReport(process.cwd(), interaction.channelId),
+    });
     return;
   }
 
