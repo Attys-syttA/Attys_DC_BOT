@@ -1,10 +1,14 @@
 import fs from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import {
   PublicWorkerStatus,
+  WorkerRegistrationInput,
   WorkerState,
   WorkerStatus,
   buildPublicWorkerStatus,
+  createWorkerRegistration,
+  markWorkerHeartbeat,
 } from "./worker-registry.js";
 
 export type WorkerStoreStatus = "ready" | "missing" | "invalid";
@@ -61,6 +65,47 @@ export function createWorkerStoreSnapshot(
     generatedAt: now.toISOString(),
     workers,
   };
+}
+
+function readWorkerStoreSnapshot(storePath: string): WorkerStoreSnapshot | null {
+  if (!fs.existsSync(storePath)) return null;
+  const parsed = workerStoreSchema.parse(JSON.parse(fs.readFileSync(storePath, "utf8")));
+  return {
+    schemaVersion: 1,
+    generatedAt: parsed.generatedAt,
+    workers: parsed.workers.map(toWorkerState),
+  };
+}
+
+export function writeWorkerStoreSnapshot(storePath: string, snapshot: WorkerStoreSnapshot): void {
+  fs.mkdirSync(path.dirname(storePath), { recursive: true });
+  fs.writeFileSync(storePath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+}
+
+export function upsertWorkerHeartbeat(
+  storePath: string,
+  input: WorkerRegistrationInput,
+  now = new Date(),
+): WorkerState {
+  const snapshot = readWorkerStoreSnapshot(storePath) ?? createWorkerStoreSnapshot([], now);
+  const nextWorker = createWorkerRegistration(input, now);
+  const existingIndex = snapshot.workers.findIndex((worker) => worker.workerId === nextWorker.workerId);
+  const worker = existingIndex >= 0
+    ? markWorkerHeartbeat({
+      ...nextWorker,
+      registeredAt: snapshot.workers[existingIndex].registeredAt,
+    }, now)
+    : nextWorker;
+
+  const workers = [...snapshot.workers];
+  if (existingIndex >= 0) {
+    workers[existingIndex] = worker;
+  } else {
+    workers.push(worker);
+  }
+
+  writeWorkerStoreSnapshot(storePath, createWorkerStoreSnapshot(workers, now));
+  return worker;
 }
 
 export function readPublicWorkerStore(

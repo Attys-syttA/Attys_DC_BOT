@@ -6,6 +6,7 @@ import { createWorkerRegistration } from "./worker-registry.js";
 import {
   createWorkerStoreSnapshot,
   readPublicWorkerStore,
+  upsertWorkerHeartbeat,
 } from "./worker-store.js";
 
 const tempDirs: string[] = [];
@@ -105,5 +106,58 @@ describe("NAS worker store", () => {
     expect(serialized).not.toContain("abc123");
     expect(serialized).not.toContain("DISCORD_BOT_TOKEN");
     expect(serialized).not.toContain("discord_bot_token");
+  });
+
+  it("upserts a worker heartbeat into the local store", () => {
+    const dir = makeTempDir();
+    const storePath = path.join(dir, "data", "workers.json");
+
+    const first = upsertWorkerHeartbeat(storePath, {
+      workerId: "home-worker",
+      label: "Home Worker",
+      hostKind: "windows-worker",
+      workspaceRootLabel: "codex_works-home",
+      capabilities: ["health"],
+    }, new Date("2026-08-01T12:00:00.000Z"));
+
+    const second = upsertWorkerHeartbeat(storePath, {
+      workerId: "home-worker",
+      label: "Home Worker Updated",
+      hostKind: "windows-worker",
+      workspaceRootLabel: "codex_works-home",
+      capabilities: ["health", "heartbeat"],
+    }, new Date("2026-08-01T12:01:00.000Z"));
+
+    expect(first.registeredAt).toBe("2026-08-01T12:00:00.000Z");
+    expect(second.registeredAt).toBe("2026-08-01T12:00:00.000Z");
+    expect(second.lastSeenAt).toBe("2026-08-01T12:01:00.000Z");
+
+    const publicStore = readPublicWorkerStore(
+      storePath,
+      new Date("2026-08-01T12:01:01.000Z"),
+      120_000,
+    );
+
+    expect(publicStore.workers).toHaveLength(1);
+    expect(publicStore.workers[0]).toMatchObject({
+      workerId: "home-worker",
+      label: "Home Worker Updated",
+      capabilities: ["health", "heartbeat"],
+      status: "online",
+    });
+  });
+
+  it("refuses to overwrite an invalid store during heartbeat upsert", () => {
+    const dir = makeTempDir();
+    const storePath = path.join(dir, "workers.json");
+    fs.writeFileSync(storePath, "{not json", "utf8");
+
+    expect(() => upsertWorkerHeartbeat(storePath, {
+      workerId: "home-worker",
+      label: "Home Worker",
+      hostKind: "windows-worker",
+      workspaceRootLabel: "codex_works-home",
+      capabilities: ["health"],
+    })).toThrow();
   });
 });

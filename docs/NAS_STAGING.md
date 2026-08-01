@@ -38,10 +38,20 @@ Current slice status:
 Dry-run local status:
 
 ```powershell
+npm run nas:worker:heartbeat
 npm run nas:status
 ```
 
-By default, this reads `data\workers.json` from the current working directory. On NAS, set `ATTYS_NAS_WORKER_STORE_PATH=./data/workers.json` in `.env.nas`. The command never prints the raw store path.
+By default, both commands use `data\workers.json` from the current working directory. On NAS, set `ATTYS_NAS_WORKER_STORE_PATH=./data/workers.json` in `.env.nas`. The status command never prints the raw store path.
+
+The worker heartbeat command writes only public-safe worker fields:
+
+- `workerId`
+- `label`
+- `workspaceRootLabel`
+- `capabilities`
+- `lastSeenAt`
+- `status`
 
 The staged Dockerfile also uses `npm run nas:status` as its default command. This is deliberate: the current NAS slice is a dry-run control-plane/status baseline only.
 

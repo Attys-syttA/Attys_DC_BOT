@@ -2,6 +2,8 @@
 
 ## 2026-08-01
 
+- NAS worker heartbeat writer: új `src/cli/nas-worker-heartbeat.ts` és `npm run nas:worker:heartbeat` parancs készült. Ez a Windows worker public-safe azonosítóját, címkéjét, workspace labeljét, capability listáját és heartbeat idejét írja a lokális/NAS `data/workers.json` store-ba.
+- Worker store hardening: a store upsert megtartja az eredeti `registeredAt` értéket, frissíti a `lastSeenAt` mezőt, és invalid JSON store esetén fail-closed hibával megáll, nem írja felül vakon a sérült állapotot.
 - NAS dry-run status folytatás: új `src/nas/worker-store.ts`, `src/nas/worker-store.test.ts` és `src/cli/nas-status.ts` készült. A `npm run nas:status` public-safe JSON státuszt ad a NAS control-plane configról és a helyi worker store-ról, raw store path kiírása nélkül.
 - NAS template védelem: a staging Dockerfile alapértelmezett `CMD` parancsa `npm run nas:status`, tehát nem indítja el a fő Discord botot és nem futtat Codexet NAS-on. Bekerült egy synthetic `data/workers.example.json` is.
 - NAS-first prioritásváltás: a `bounded-audit-orchestration-and-nas-handoff.md` aktív terv első checkpointja már nem a local audit Szelet 0-1, hanem az új `Szelet NAS-0` health/heartbeat-only NAS control-plane / Windows worker kapcsolat.
@@ -12,7 +14,7 @@
 - NAS staging alap: új tracked `deploy/nas/Discord_Codex_BOT/` sablon, ignored `nas-staging/Discord_Codex_BOT/` másolható kimenet, `scripts/prepare-nas-staging.ps1`, `npm run nas:prepare`, valamint `docs/NAS_STAGING.md` útmutató készült. A staging belseje a NAS `Discord_Codex_BOT` megosztott mappájának belsejét tükrözi.
 - Source staging védelem: a `-IncludeSource` mód dirty checkoutból alapból megtagadja a forrásmásolást, így review nélkül nem kerülhet user változás, `.env`, Codex auth state, Git credential, `node_modules`, `dist`, log vagy SQLite runtime state a NAS stagingbe.
 - Scope: nem történt NAS-futtatás, hálózati endpoint, VS Code shim beállítás, Codex prompt-futtatás, named-check implementáció, repair/worktree/retry logika vagy `Attys_DC_BOT_NAS` repo módosítás ebben a szeletben.
-- Validáció: célzott `npx vitest run src/nas` sikeres (3 tesztfájl / 15 teszt), `npm run nas:status` public-safe dry-run státuszt adott, `npm run nas:prepare` létrehozta a copy-ready staginget, `npm run nas:check` ellenőrizte a manifestet és tiltott fájlokat, `scripts/prepare-nas-staging.ps1 -IncludeSource` dirty checkoutból biztonságosan megállt, teljes `npm run check` sikeres (42 tesztfájl / 266 teszt, builddel).
+- Validáció: célzott `npx vitest run src/nas` sikeres (3 tesztfájl / 17 teszt), `npm run nas:worker:heartbeat` ideiglenes ignored store-ba írt, `npm run nas:status` public-safe dry-run státusszal visszaolvasta, `npm run nas:prepare` létrehozta a copy-ready staginget, `npm run nas:check` ellenőrizte a manifestet és tiltott fájlokat, `scripts/prepare-nas-staging.ps1 -IncludeSource` dirty checkoutból biztonságosan megállt, teljes `npm run check` sikeres (42 tesztfájl / 268 teszt, builddel).
 - Verziós döntés: belső contract/test alap, runtime viselkedés és release package változás nélkül; nincs application version bump.
 
 ## 2026-07-22
