@@ -139,6 +139,17 @@ npm run worker:http:stop
 
 These helpers only target the repo-local worker HTTP process tree and do not stop or restart the live Discord bot.
 
+Combined PC-side NAS bridge lifecycle:
+
+```powershell
+npm run nas:bridge:status
+npm run nas:bridge:start
+npm run nas:bridge:restart
+npm run nas:bridge:stop
+```
+
+This wraps the worker HTTP lifecycle and the persistent handoff worker lifecycle into one operator command. It still targets only the PC-side NAS bridge worker processes, not the live Discord bot. The status output is public-safe and summarizes readiness without printing worker secrets, NAS paths, or process IDs.
+
 Read-only worker repo status:
 
 ```powershell
