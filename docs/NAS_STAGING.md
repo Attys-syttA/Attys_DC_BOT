@@ -92,6 +92,16 @@ npm run worker:handoff:once
 
 This processes queued `audit.request` JSON files from the configured `ATTYS_NAS_HANDOFF_ROOT` inbox once, runs only the fixed audit check named in the public request fields, writes a public-safe `audit.result` JSON file to `outbox`, and archives the processed request. It does not accept arbitrary shell commands, does not repair code, does not install dependencies, and does not write Git state.
 
+Persistent handoff worker:
+
+```powershell
+npm run worker:handoff:status
+npm run worker:handoff:restart
+npm run worker:handoff:stop
+```
+
+The loop requires `ATTYS_NAS_HANDOFF_ROOT` in `.env.worker.local` and fails fast if the mapped NAS path is not reachable. This is intentional: if Windows has not reconnected the NAS share after boot, the worker should stop with a clear local error instead of silently processing a local fallback folder.
+
 Worker health probe:
 
 ```powershell
