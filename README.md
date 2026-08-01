@@ -310,7 +310,7 @@ Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS 
 | `/mappings` | List project-channel mappings and clean duplicate legacy mappings |
 | `/git-status` | Run read-only `git status --short --branch` for the registered project |
 | `/run-tests` | Run `npm test` in the registered project when enabled |
-| `/audit start/status/stop/repair` | Run fixed read-only audit checks and request explicit repair approval when enabled |
+| `/audit start/status/stop/repair/recheck` | Run fixed read-only audit checks, request explicit repair approval, and recheck an isolated repair workspace when enabled |
 | `/usage` | Show local Codex usage/rate-limit information when available |
 | `/auto-approve` | Toggle approval bypass when explicitly enabled |
 | `/clear-sessions` | Delete local session files when explicitly enabled |
@@ -365,7 +365,7 @@ Optional source-repo parity mode:
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
 - read-only audit checks are disabled unless `DISCORD_ENABLE_AUDIT=true`
 - audit repair approval/worktree preparation is disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true`
-- audit repair approval records the isolated repair workspace for later review, but never starts a Codex repair turn, merge, commit, or push in the current slice
+- audit repair approval records the isolated repair workspace for later review, and `/audit recheck` can rerun the original named check there while respecting the job iteration budget; repeated matching public-safe failures stop as `stagnated`; neither starts a Codex repair turn, merge, commit, or push in the current slice
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/logs`, `/events`, `/health`, `/doctor`, and `/dashboard` avoid tokens, raw Discord IDs, private paths, and config values
@@ -390,7 +390,7 @@ Important `.env` keys:
 | `DISCORD_REGISTER_COMMANDS` | Whether startup registers slash commands |
 | `DISCORD_ENABLE_RUN_TESTS` | Enables `/run-tests` |
 | `DISCORD_ENABLE_AUDIT` | Enables default-off read-only `/audit` named checks |
-| `DISCORD_ENABLE_AUDIT_REPAIR` | Enables default-off explicit `/audit repair` approval, isolated worktree preflight, and public-safe repair workspace status |
+| `DISCORD_ENABLE_AUDIT_REPAIR` | Enables default-off explicit `/audit repair` approval, isolated worktree preflight, public-safe repair workspace status, and isolated `/audit recheck` |
 | `DISCORD_ENABLE_AUTO_APPROVE` | Enables approval bypass toggle |
 | `DISCORD_ENABLE_SESSION_DELETE` | Enables destructive session deletion |
 | `DISCORD_ENABLE_BOT_LIFECYCLE` | Enables Discord-triggered bot restart |

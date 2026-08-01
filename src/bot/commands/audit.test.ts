@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getLatestAuditJob: vi.fn(),
   createAuditJob: vi.fn(),
   updateAuditJobProgress: vi.fn(),
+  updateAuditRepairWorktreeStatus: vi.fn(),
   requestAuditJobStop: vi.fn(),
   insertAuditStepResult: vi.fn(),
   listAuditSteps: vi.fn(),
@@ -17,9 +18,13 @@ const mocks = vi.hoisted(() => ({
   recordOperatorEvent: vi.fn(),
 }));
 
-vi.mock("node:crypto", () => ({
-  randomUUID: () => "audit-job-1",
-}));
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
+  return {
+    ...actual,
+    randomUUID: () => "audit-job-1",
+  };
+});
 
 vi.mock("../../utils/config.js", () => ({
   getConfig: mocks.getConfig,
@@ -34,6 +39,7 @@ vi.mock("../../db/database.js", () => ({
   getLatestAuditJob: mocks.getLatestAuditJob,
   createAuditJob: mocks.createAuditJob,
   updateAuditJobProgress: mocks.updateAuditJobProgress,
+  updateAuditRepairWorktreeStatus: mocks.updateAuditRepairWorktreeStatus,
   requestAuditJobStop: mocks.requestAuditJobStop,
   insertAuditStepResult: mocks.insertAuditStepResult,
   listAuditSteps: mocks.listAuditSteps,
@@ -51,7 +57,7 @@ import { execute } from "./audit.js";
 import type { AuditCheckName } from "../../audit/check-catalog.js";
 import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
-function makeInteraction(subcommand: "start" | "status" | "stop" | "repair", check = "tests") {
+function makeInteraction(subcommand: "start" | "status" | "stop" | "repair" | "recheck", check = "tests") {
   return {
     channelId: "channel-1",
     options: {
@@ -413,5 +419,212 @@ describe("/audit", () => {
     const payload = interaction.editReply.mock.calls[0][0];
     expect(payload.content).toContain("No repair, worktree, Codex turn");
     expect(payload.components[0].components[0].data.custom_id).toBe("audit-repair-approve:audit-job-1");
+  });
+
+  it("rechecks the requested check in the isolated repair worktree", async () => {
+    mocks.getLatestAuditJob
+      .mockReturnValueOnce(makeJob({
+        status: "waiting_manual_review",
+        requested_check: "tests",
+        iteration: 0,
+      }))
+      .mockReturnValueOnce(makeJob({
+        status: "completed",
+        requested_check: "tests",
+        iteration: 1,
+      }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.listAuditSteps.mockReturnValue([makeStep({ status: "passed" })]);
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "rechecking",
+      "tests",
+      1,
+      expect.any(String),
+    );
+    expect(mocks.runAuditCheckPipeline).toHaveBeenCalledWith(
+      "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      "tests",
+      {
+        signal: expect.any(AbortSignal),
+        shouldStop: expect.any(Function),
+      },
+    );
+    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith("audit-job-1", expect.objectContaining({
+      name: "tests",
+      status: "passed",
+    }));
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "prepared", expect.any(String));
+    expect(mocks.updateAuditJobProgress).toHaveBeenLastCalledWith(
+      "audit-job-1",
+      "completed",
+      null,
+      1,
+      expect.any(String),
+    );
+    expect(interaction.followUp).toHaveBeenCalledWith({
+      content: expect.stringContaining("**Audit recheck completed**"),
+    });
+    expect(interaction.followUp.mock.calls[0][0].content).not.toContain("/projects/app");
+  });
+
+  it("rejects recheck when no repair workspace exists", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue(undefined);
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` has no prepared repair workspace to recheck.",
+    });
+  });
+
+  it("rejects recheck when the iteration budget is exhausted", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 2,
+      max_iterations: 2,
+    }));
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(mocks.getAuditRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` has reached its recheck budget (2/2).",
+    });
+  });
+
+  it("retains the repair workspace when recheck still fails", async () => {
+    mocks.getLatestAuditJob
+      .mockReturnValueOnce(makeJob({
+        status: "waiting_manual_review",
+        requested_check: "tests",
+        iteration: 0,
+      }))
+      .mockReturnValueOnce(makeJob({
+        status: "waiting_manual_review",
+        requested_check: "tests",
+        iteration: 1,
+      }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.runAuditCheckPipeline.mockResolvedValue([{
+      name: "tests",
+      status: "failed",
+      exitCode: 1,
+      timedOut: false,
+      stopped: false,
+      publicOutput: "failed",
+      startedAt: "2026-08-01T12:00:00.000Z",
+      finishedAt: "2026-08-01T12:00:01.000Z",
+      durationMs: 1_000,
+    }]);
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "retained", expect.any(String));
+    expect(mocks.updateAuditJobProgress).toHaveBeenLastCalledWith(
+      "audit-job-1",
+      "waiting_manual_review",
+      null,
+      1,
+      expect.any(String),
+    );
+    expect(interaction.followUp).toHaveBeenCalledWith({
+      content: expect.stringContaining("**Audit recheck waiting_manual_review**"),
+    });
+  });
+
+  it("stops as stagnated when recheck repeats the same failed fingerprint", async () => {
+    mocks.getLatestAuditJob
+      .mockReturnValueOnce(makeJob({
+        status: "waiting_manual_review",
+        requested_check: "tests",
+        iteration: 1,
+      }))
+      .mockReturnValueOnce(makeJob({
+        status: "stagnated",
+        requested_check: "tests",
+        iteration: 2,
+      }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "retained",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.listAuditSteps
+      .mockReturnValueOnce([makeStep({
+        status: "failed",
+        exit_code: 1,
+        public_output: "same failure",
+      })])
+      .mockReturnValueOnce([makeStep({
+        status: "failed",
+        exit_code: 1,
+        public_output: "same failure",
+      })]);
+    mocks.runAuditCheckPipeline.mockResolvedValue([{
+      name: "tests",
+      status: "failed",
+      exitCode: 1,
+      timedOut: false,
+      stopped: false,
+      publicOutput: "same failure",
+      startedAt: "2026-08-01T12:00:00.000Z",
+      finishedAt: "2026-08-01T12:00:01.000Z",
+      durationMs: 1_000,
+    }]);
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "retained", expect.any(String));
+    expect(mocks.updateAuditJobProgress).toHaveBeenLastCalledWith(
+      "audit-job-1",
+      "stagnated",
+      null,
+      2,
+      expect.any(String),
+    );
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-stagnated",
+      channelId: "channel-1",
+    });
+    expect(interaction.followUp).toHaveBeenCalledWith({
+      content: expect.stringContaining("**Audit recheck stagnated**"),
+    });
   });
 });

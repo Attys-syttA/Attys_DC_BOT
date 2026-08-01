@@ -2,6 +2,10 @@
 
 ## 2026-08-01
 
+- Audit recheck stagnation/budget: uj public-safe issue fingerprint helper keszult. Az `/audit recheck` tiszteletben tartja a job iteration budgetjet, majd a korabbi failed step public-safe outputjahoz meri az uj failed eredmenyt. Azonos fingerprint eseten `stagnated` allapotban megall, `audit-stagnated` eventtel es retained repair workspace-szel. Tovabbra sincs Codex repair turn, merge, commit vagy push.
+- Version bump: a package verzio `0.1.1-prerelease.6`, mert a `/audit recheck` user-visible stagnation viselkedese bovult.
+- Audit isolated recheck: uj `/audit recheck` subcommand keszult a `DISCORD_ENABLE_AUDIT_REPAIR=true` flag alatt. Csak akkor fut, ha az audit job `waiting_manual_review` allapotban van, van hozza `prepared` vagy `retained` repair workspace rekord, es van tamogatott `requested_check`. A recheck az izolalt worktree-ben futtatja ujra az eredeti named checket, public-safe step/event/status outputtal, Codex repair turn, merge, commit vagy push nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.5`, mert uj user-visible `/audit recheck` subcommand jelent meg.
 - Audit repair workspace tracking: az approval utan letrejott izolalt repair worktree most tartos helyi SQLite rekordot kap `prepared/retained/cleanup_failed/removed` statuszmezovel. Az `/audit status` public-safe modon mutatja a repair workspace statuszt, branchet es head commit roviditeset, de nem ir ki lokalis worktree pathot. Tovabbra sincs Codex repair turn, merge, commit vagy push.
 - Audit requested-check tracking: az `audit_jobs` tabla additive `requested_check` mezot kapott, igy a kesobbi repair/recheck fazis nem a torlodhetö `current_step` mezobol probalja kitalalni, melyik named checket kell ujrafuttatni. Uj `/audit start` es `/nas request` linked audit jobok kitoltik ezt a mezot.
 - Version bump: a package verzio `0.1.1-prerelease.4`, mert a NAS deploy verifier CLI kimenete es az audit repair workspace status user-visible valtozas.

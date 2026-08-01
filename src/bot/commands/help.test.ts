@@ -53,7 +53,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("**Codex work**");
     expect(content).toContain("**Operator diagnostics**");
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
-    expect(content).toContain("`/audit` - Fix, read-only audit checkeket futtat");
+    expect(content).toContain("`/audit` - Fix audit checkeket futtat, repair approvalt");
     expect(content).toContain("`/nas` - Public-safe NAS bridge");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Elso lepesek: `/help parancs: kezdetek`");
@@ -90,10 +90,22 @@ describe("/help and /sugo", () => {
     expect(content).toContain("/nas sync-status");
     expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
     expect(content).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
-    expect(content).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
-    expect(content).toContain("DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true");
-    expect(content).toContain("DISCORD_ENABLE_NAS_SYNC_STATUS=true");
-    expect(content).toContain("DISCORD_NAS_REQUEST_STALE_AFTER_MS");
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content).toContain("Tovabbi reszletekhez");
+  });
+
+  it("keeps detailed /sugo nas help under Discord's content limit", async () => {
+    const interaction = makeInteraction("sugo", "nas");
+
+    await executeSugo(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content).toContain("**/nas**");
+    expect(content).toContain("/nas status");
+    expect(content).toContain("/nas request");
+    expect(content).toContain("DISCORD_ENABLE_NAS_STATUS=true");
+    expect(content).toContain("Tovabbi reszletekhez");
   });
 
   it("explains the /register autocomplete limit", async () => {

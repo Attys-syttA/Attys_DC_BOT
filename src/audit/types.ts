@@ -79,7 +79,7 @@ const AUDIT_STATUS_TRANSITIONS: Readonly<Record<AuditJobStatus, readonly AuditJo
   preparing_isolated_worktree: ["repairing", "waiting_manual_review", "stopped", "failed"],
   repairing: ["rechecking", "stopped", "failed"],
   rechecking: ["completed", "repairing", "stagnated", "waiting_manual_review", "stopped", "failed"],
-  waiting_manual_review: ["stopped"],
+  waiting_manual_review: ["rechecking", "stopped"],
   completed: [],
   failed: [],
   stagnated: [],

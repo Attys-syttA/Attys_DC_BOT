@@ -31,6 +31,7 @@ describe("audit domain contract", () => {
     expect(canTransitionAuditStatus("running_checks", "completed")).toBe(true);
     expect(canTransitionAuditStatus("waiting_nas_result", "completed")).toBe(true);
     expect(canTransitionAuditStatus("waiting_nas_result", "running_checks")).toBe(false);
+    expect(canTransitionAuditStatus("waiting_manual_review", "rechecking")).toBe(true);
     expect(canTransitionAuditStatus("running_checks", "repairing")).toBe(false);
     expect(canTransitionAuditStatus("completed", "running_checks")).toBe(false);
     expect(canTransitionAuditStatus("stagnated", "repairing")).toBe(false);

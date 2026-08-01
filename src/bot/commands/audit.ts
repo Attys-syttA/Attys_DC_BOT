@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
+import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
 import {
   assertAuditModeAllowsCapabilities,
@@ -24,6 +25,7 @@ import {
   insertAuditStepResult,
   listAuditSteps,
   requestAuditJobStop,
+  updateAuditRepairWorktreeStatus,
   updateAuditJobProgress,
 } from "../../db/database.js";
 import type { AuditJobRecord, AuditStepRecord } from "../../db/types.js";
@@ -58,7 +60,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Request stop for the active audit job"))
   .addSubcommand((subcommand) => subcommand
     .setName("repair")
-    .setDescription("Request explicit approval for an isolated repair attempt"));
+    .setDescription("Request explicit approval for an isolated repair attempt"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("recheck")
+    .setDescription("Rerun the original named check in the isolated repair worktree"));
 
 const activeAuditControllers = new Map<string, AbortController>();
 
@@ -100,6 +105,15 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
 function finalStatusFromSteps(steps: AuditStepRecord[]): AuditJobRecord["status"] {
   if (steps.some((step) => step.status === "stopped")) return "stopped";
   return steps.every((step) => step.status === "passed") ? "completed" : "waiting_manual_review";
+}
+
+function finalStatusFromRunResults(
+  results: AuditCheckRunResult[],
+  previousSteps: AuditStepRecord[] = [],
+): AuditJobRecord["status"] {
+  if (results.some((result) => result.status === "stopped")) return "stopped";
+  if (results.some((result) => hasMatchingPreviousFailure(previousSteps, result))) return "stagnated";
+  return results.every((result) => result.status === "passed") ? "completed" : "waiting_manual_review";
 }
 
 async function executeStart(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -281,6 +295,102 @@ async function executeRepair(interaction: ChatInputCommandInteraction): Promise<
   });
 }
 
+async function executeRecheck(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit recheck` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` in `.env` to enable it.",
+    });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+
+  if (job.status !== "waiting_manual_review") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not waiting for isolated recheck.`,
+    });
+    return;
+  }
+
+  if (!job.requested_check || !isAuditCheckName(job.requested_check)) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no supported requested check to rerun.`,
+    });
+    return;
+  }
+
+  if (job.iteration >= job.max_iterations) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has reached its recheck budget (${job.iteration}/${job.max_iterations}).`,
+    });
+    return;
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  if (!repairWorktree || (repairWorktree.status !== "prepared" && repairWorktree.status !== "retained")) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no prepared repair workspace to recheck.`,
+    });
+    return;
+  }
+
+  const nextIteration = job.iteration + 1;
+  updateAuditJobProgress(job.id, "rechecking", job.requested_check, nextIteration, new Date().toISOString());
+  recordOperatorEvent({ kind: "task", status: "audit-recheck-started", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: `Rechecking \`${job.requested_check}\` in the isolated repair workspace for audit job \`${job.id.slice(0, 8)}...\`.`,
+  });
+  const previousSteps = listAuditSteps(job.id);
+
+  const controller = new AbortController();
+  activeAuditControllers.set(job.id, controller);
+  let results: AuditCheckRunResult[];
+  try {
+    results = await runAuditCheckPipeline(repairWorktree.worktree_path, job.requested_check, {
+      signal: controller.signal,
+      shouldStop: () => getAuditJob(job.id)?.stop_requested === 1,
+    });
+  } catch {
+    updateAuditJobProgress(job.id, "failed", null, nextIteration, new Date().toISOString());
+    updateAuditRepairWorktreeStatus(job.id, "retained", new Date().toISOString());
+    recordOperatorEvent({ kind: "task", status: "audit-recheck-failed", channelId: interaction.channelId });
+    await interaction.followUp({
+      content: `**Audit recheck failed**\n\`\`\`text\njob: ${job.id.slice(0, 8)}...\nstatus: failed\nreason: check runner error\nrepair workspace: retained\n\`\`\``,
+    });
+    return;
+  } finally {
+    activeAuditControllers.delete(job.id);
+  }
+
+  for (const result of results) {
+    insertAuditStepResult(job.id, result);
+    recordAuditStepEvent(result, interaction.channelId);
+  }
+
+  const finalStatus = finalStatusFromRunResults(results, previousSteps);
+  updateAuditRepairWorktreeStatus(job.id, finalStatus === "completed" ? "prepared" : "retained", new Date().toISOString());
+  updateAuditJobProgress(job.id, finalStatus, null, nextIteration, new Date().toISOString());
+  recordOperatorEvent({
+    kind: "task",
+    status: finalStatus === "completed"
+      ? "audit-recheck-completed"
+      : finalStatus === "stagnated"
+        ? "audit-stagnated"
+        : "audit-recheck-manual-review",
+    channelId: interaction.channelId,
+  });
+
+  const refreshedJob = getLatestAuditJob(interaction.channelId);
+  await interaction.followUp({
+    content: `**Audit recheck ${finalStatus}**\n\`\`\`text\n${renderAuditJob(refreshedJob!, listAuditSteps(job.id))}\n\`\`\``,
+  });
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -299,5 +409,9 @@ export async function execute(
   }
   if (subcommand === "repair") {
     await executeRepair(interaction);
+    return;
+  }
+  if (subcommand === "recheck") {
+    await executeRecheck(interaction);
   }
 }

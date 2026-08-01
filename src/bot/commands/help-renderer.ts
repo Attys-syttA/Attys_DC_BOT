@@ -10,6 +10,9 @@ const CATEGORY_LABELS = {
 
 const CATEGORY_ORDER = ["codex", "sessions", "repo", "ops", "safety"] as const;
 const HELP_LIST_DESCRIPTION_MAX = 48;
+const DISCORD_CONTENT_LIMIT = 2_000;
+const HELP_DETAIL_LIMIT = 1_900;
+const HELP_TRUNCATED_NOTE = "\n\n_Tovabbi reszletekhez hasznald a README/SETUP dokumentaciot vagy a celzott `/nas ...` status parancsokat._";
 const TOPIC_CHOICES = [
   { name: "kezdetek", value: "kezdetek" },
   { name: "fajlfeltoltes", value: "fajlfeltoltes" },
@@ -19,6 +22,17 @@ function compactDescription(value: string): string {
   return value.length > HELP_LIST_DESCRIPTION_MAX
     ? `${value.slice(0, HELP_LIST_DESCRIPTION_MAX - 3)}...`
     : value;
+}
+
+function fitDiscordContent(content: string, limit = DISCORD_CONTENT_LIMIT): string {
+  if (content.length <= limit) return content;
+
+  const note = HELP_TRUNCATED_NOTE;
+  const maxContentLength = Math.max(0, limit - note.length);
+  const candidate = content.slice(0, maxContentLength);
+  const lastLineBreak = candidate.lastIndexOf("\n");
+  const safePrefix = lastLineBreak > 0 ? candidate.slice(0, lastLineBreak) : candidate;
+  return `${safePrefix}${note}`;
 }
 
 export function commandChoices() {
@@ -46,7 +60,7 @@ export function renderHelpList(commandName: string): string {
     lines.push("");
   }
 
-  return [
+  return fitDiscordContent([
     "**Attys DC BOT sugo**",
     "Kezdes: `/dashboard`, `/health`, `/events`, `/logs`.",
     "",
@@ -54,7 +68,7 @@ export function renderHelpList(commandName: string): string {
     `Elso lepesek: \`/${commandName} parancs: kezdetek\``,
     `Fajlfeltoltes: \`/${commandName} parancs: fajlfeltoltes\``,
     `Reszletes parancs: \`/${commandName} parancs: ask\``,
-  ].join("\n");
+  ].join("\n"));
 }
 
 export function renderHelpDetail(entryName: string): string {
@@ -75,7 +89,7 @@ export function renderHelpDetail(entryName: string): string {
     ].join("\n");
   }
 
-  return [
+  return fitDiscordContent([
     `**/${entry.name}**`,
     `Kategoria: ${CATEGORY_LABELS[entry.category]}`,
     "",
@@ -84,7 +98,7 @@ export function renderHelpDetail(entryName: string): string {
     entry.short,
     "",
     ...entry.details.map((line) => `- ${line}`),
-  ].join("\n");
+  ].join("\n"), HELP_DETAIL_LIMIT);
 }
 
 export function renderGettingStartedHelp(): string {

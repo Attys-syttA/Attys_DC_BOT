@@ -59,6 +59,8 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Audit repair approval/worktree preflight: külön `DISCORD_ENABLE_AUDIT_REPAIR` flag, `/audit repair` approval kérés, approve/deny button handler, és isolated worktree előkészítő Git preflight elkészült. Ez még nem indít Codex repair turnt, merge-et, commitot vagy pusht.
 - Audit repair workspace tracking: approval után az izolált worktree tartós helyi SQLite rekordot kap, és `/audit status` public-safe státuszt mutat róla lokális path nélkül.
 - Audit requested-check tracking: az `audit_jobs.requested_check` additive mező elkészült, hogy a későbbi repair/recheck ugyanazt a named checket futtassa újra a törlődő `current_step` helyett.
+- Audit isolated recheck: `/audit recheck` elkészült a repair flag alatt; prepared/retained isolated repair worktree-ben futtatja újra az eredeti named checket public-safe outputtal, automatikus Codex repair/merge/commit/push nélkül.
+- Audit recheck stagnation/budget: public-safe issue fingerprint készült a sanitizált step output alapján; a `/audit recheck` nem lépi túl a job iteration budgetjét, és ha ugyanazt a named checket ugyanazzal a failed fingerprinttel bukja újra, a job `stagnated` állapotban megáll és a repair workspace retained marad.
 
 ## Nyitott reszek
 
@@ -692,6 +694,8 @@ Elfogadási feltételek:
 - failed repair megőrzi a diagnosztikai állapotot a retention policy szerint;
 - **részben kész előfeltételként:** approval-created worktree rekord és public-safe `/audit status` láthatóság elkészült, tényleges Codex repair turn/recheck még nincs.
 - **részben kész előfeltételként:** az eredetileg kért named check tartós `requested_check` mezőben megmarad, így a recheck célja nem vész el a job lezárásakor.
+- **részben kész:** ugyanaz a check catalog izolált repair worktree-ben újrafuttatható `/audit recheck` paranccsal; tényleges Codex repair turn továbbra sincs.
+- **részben kész:** azonos public-safe failed fingerprint esetén a recheck `stagnated` állapotban megáll, és a recheck nem lépi túl a job iteration budgetjét; retry-budgettel vezérelt új repair kör még nincs.
 
 ### Szelet 5 — Bounded loop és stagnation
 
@@ -702,6 +706,7 @@ Elfogadási feltételek:
 - stagnálásnál nincs újabb repair;
 - romlásnál manual review;
 - stop minden várakozó/futó fázisban idempotens.
+- **részben kész:** deterministic public-safe fingerprint, iteration budget guard és stagnation stop elkészült az isolated `/audit recheck` útvonalon.
 
 ### Szelet 6 — Planner/executor/validator prompt contract
 
@@ -841,7 +846,7 @@ Repair/worktree szeletnél ezen felül:
 
 - Ez a tervfájl docs-only előkészítés; most nincs version bump.
 - Read-only `/audit` command megjelenése user-visible feature, ezért majd prerelease version bumpot és README/SETUP/help frissítést igényel.
-- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt a következő package verzió `0.1.1-prerelease.4`.
+- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt `0.1.1-prerelease.4`; az isolated `/audit recheck` miatt `0.1.1-prerelease.5`; a recheck stagnation stop miatt `0.1.1-prerelease.6`.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

@@ -24,8 +24,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop | /audit repair",
-    short: "Fix, read-only audit checkeket futtat, es kulon engedelyezve repair approvalt ker.",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop | /audit repair | /audit recheck",
+    short: "Fix audit checkeket futtat, repair approvalt ker, es izolalt workspace-ben recheckel.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
@@ -35,7 +35,11 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit stop` stop requestet rogzit, es ha a check ugyanebben a bot processzben fut, abort signalt is kuld a futtatott processznek.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
-      "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk, de ebben a szeletben nem indul Codex repair, merge, commit vagy push.",
+      "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk.",
+      "`/audit recheck` ugyanennek a flagnek a hatasa alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
+      "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
+      "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
+      "Ebben a szeletben nem indul Codex repair, merge, commit vagy push.",
     ],
   },
   {
