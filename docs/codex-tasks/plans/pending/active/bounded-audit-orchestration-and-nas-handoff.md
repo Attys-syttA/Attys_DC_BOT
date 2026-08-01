@@ -36,6 +36,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - 2026-08-01 döntés: a NAS-on a kiürített `Discord_Codex_BOT` megosztott mappa lesz az új NAS deploy célhely; a régi ARM bundle ZIP csak érzékeny történeti referencia.
 - Szelet NAS-0 első biztonságos alapja: worker registry, NAS config parser, public-safe worker-target config, public-safe worker store/status, heartbeat writer, archive-kompatibilis worker health/repo-status/named-check probe, default-off PC worker health/repo-status/named-check server, file-backed handoff mailbox, tracked NAS sablon és ignored copy-ready staging kimenet.
 - NAS Discord vezérlés: a `/nas status`, `/nas request`, `/nas results` és default-off `/nas bridge action:<status|start|stop|restart>` útvonalak a PC worker, NAS handoff mailbox és bridge lifecycle kontrollját adják public-safe módon, arbitrary shell és NAS oldali Codex futtatás nélkül.
+- NAS observability: a `/nas status` a worker/handoff readiness mellett a result notifier állapotát és a csatornához tartozó tracked NAS request counts értékeket is mutatja.
 - Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
 - Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.

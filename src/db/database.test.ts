@@ -33,6 +33,7 @@ import {
   insertAuditStepResult,
   listAuditSteps,
   createNasHandoffRequest,
+  countNasHandoffRequestsByStatus,
   getNasHandoffRequest,
   listNasHandoffRequests,
   updateNasHandoffRequestResult,
@@ -397,6 +398,28 @@ describe("database", () => {
         status: "completed",
         result_summary: "1/1 passed <local-path>",
         updated_at: "2026-08-01T12:01:00.000Z",
+      });
+    });
+
+    it("counts NAS handoff requests by status for one channel", () => {
+      const base = {
+        projectLabel: "proj",
+        checkName: "plans",
+        resultSummary: null,
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      };
+      createNasHandoffRequest({ ...base, id: "queued-1", channelId: "ch1", status: "queued" });
+      createNasHandoffRequest({ ...base, id: "completed-1", channelId: "ch1", status: "completed" });
+      createNasHandoffRequest({ ...base, id: "completed-2", channelId: "ch1", status: "completed" });
+
+      registerProject("ch2", "/p2", "guild1");
+      createNasHandoffRequest({ ...base, id: "failed-other-channel", channelId: "ch2", status: "failed" });
+
+      expect(countNasHandoffRequestsByStatus("ch1")).toEqual({
+        queued: 1,
+        completed: 2,
+        failed: 0,
       });
     });
   });

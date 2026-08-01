@@ -88,3 +88,9 @@ export interface NasHandoffRequestCreateInput {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface NasHandoffRequestStatusCounts {
+  queued: number;
+  completed: number;
+  failed: number;
+}

@@ -182,6 +182,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS=true` mellett a bot automatikusan visszairja a sajat queued requestek eredmenyet.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
+      "A status mutatja a result notifier allapotat es az aktualis channel tracked request darabszamait is.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",
       "Nem ir ki IP-t, meghajto betut, lokalis pathot, tokent vagy process ID-t Discordra.",
     ],

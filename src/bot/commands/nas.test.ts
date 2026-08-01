@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createAuditRequestHandoff: vi.fn(),
   getProject: vi.fn(),
   createNasHandoffRequest: vi.fn(),
+  countNasHandoffRequestsByStatus: vi.fn(),
   getNasHandoffRequest: vi.fn(),
   listNasHandoffRequests: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("../../nas/audit-handoff.js", () => ({
 }));
 
 vi.mock("../../db/database.js", () => ({
+  countNasHandoffRequestsByStatus: mocks.countNasHandoffRequestsByStatus,
   getProject: mocks.getProject,
   createNasHandoffRequest: mocks.createNasHandoffRequest,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
@@ -77,7 +79,16 @@ function makeInteraction() {
 describe("/nas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_NAS_STATUS: true,
+      DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: false,
+      DISCORD_NAS_RESULT_POLL_INTERVAL_MS: 60_000,
+    });
+    mocks.countNasHandoffRequestsByStatus.mockReturnValue({
+      queued: 1,
+      completed: 2,
+      failed: 3,
+    });
     mocks.createAuditRequestHandoff.mockImplementation((input) => ({
       id: "request-1",
       type: "audit.request",
@@ -306,13 +317,22 @@ describe("/nas", () => {
   });
 
   it("builds a public-safe NAS status report", async () => {
-    const report = await buildNasStatusReport("E:\\private\\repo");
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_NAS_STATUS: true,
+      DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: true,
+      DISCORD_NAS_RESULT_POLL_INTERVAL_MS: 30_000,
+    });
+
+    const report = await buildNasStatusReport("E:\\private\\repo", "channel-1");
 
     expect(report).toContain("NAS Bridge Status");
     expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
     expect(report).toContain("OK worker http: listening on configured port, processes 3");
     expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
     expect(report).toContain("OK handoff mailbox: inbox:0 outbox:2 archive:2");
+    expect(report).toContain("OK result notifier: enabled, poll 30s");
+    expect(report).toContain("OK request tracking: queued:1 completed:2 failed:3");
+    expect(mocks.countNasHandoffRequestsByStatus).toHaveBeenCalledWith("channel-1");
     expect(report).not.toContain("8787");
     expect(report).not.toContain("processIds");
     expect(report).not.toContain("K:\\");
@@ -372,6 +392,8 @@ describe("/nas", () => {
     expect(report).toContain("INFO bridge ready: not fully ready");
     expect(report).toContain("FAIL handoff worker: status unavailable");
     expect(report).toContain("INFO handoff mailbox: NAS root unavailable to bot process");
+    expect(report).toContain("INFO result notifier: disabled");
+    expect(report).toContain("INFO request tracking: channel unavailable");
     expect(report).not.toContain("raw failure");
     expect(report).not.toContain("secret");
     expect(report).not.toContain("private");

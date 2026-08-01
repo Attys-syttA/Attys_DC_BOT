@@ -8,6 +8,7 @@ import { isAuditCheckName } from "../../audit/check-catalog.js";
 import { createAuditRequestHandoff } from "../../nas/audit-handoff.js";
 import { readPublicHandoffStore } from "../../nas/handoff-store.js";
 import {
+  countNasHandoffRequestsByStatus,
   createNasHandoffRequest,
   getNasHandoffRequest,
   getProject,
@@ -194,13 +195,30 @@ function handoffStoreLine(repoRoot: string): string {
   return `OK handoff mailbox: ${boxes}`;
 }
 
+function resultNotifierLine(): string {
+  const config = getConfig();
+  if (config.DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS === true) {
+    const intervalMs = typeof config.DISCORD_NAS_RESULT_POLL_INTERVAL_MS === "number"
+      ? config.DISCORD_NAS_RESULT_POLL_INTERVAL_MS
+      : 60_000;
+    return `OK result notifier: enabled, poll ${Math.round(intervalMs / 1000)}s`;
+  }
+  return "INFO result notifier: disabled";
+}
+
+function requestTrackingLine(channelId: string | undefined): string {
+  if (!channelId) return "INFO request tracking: channel unavailable";
+  const counts = countNasHandoffRequestsByStatus(channelId);
+  return `OK request tracking: queued:${counts.queued} completed:${counts.completed} failed:${counts.failed}`;
+}
+
 function resultStatus(value: string | undefined, fallback: HandoffEnvelope["status"]): "completed" | "failed" {
   if (value === "passed") return "completed";
   if (value === "failed") return "failed";
   return fallback === "completed" ? "completed" : "failed";
 }
 
-export async function buildNasStatusReport(repoRoot: string): Promise<string> {
+export async function buildNasStatusReport(repoRoot: string, channelId?: string): Promise<string> {
   const [workerHttp, handoffWorker] = await Promise.all([
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:http:status"], repoRoot, 15_000),
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:handoff:status"], repoRoot, 15_000),
@@ -220,6 +238,8 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
     workerHttpLine(workerHttpStatus),
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),
+    resultNotifierLine(),
+    requestTrackingLine(channelId),
     "```",
   ].join("\n");
 }
@@ -398,6 +418,6 @@ export async function execute(
   }
 
   await interaction.editReply({
-    content: await buildNasStatusReport(process.cwd()),
+    content: await buildNasStatusReport(process.cwd(), interaction.channelId),
   });
 }

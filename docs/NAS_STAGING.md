@@ -175,6 +175,8 @@ DISCORD_NAS_RESULT_POLL_INTERVAL_MS=60000
 
 This is disabled by default. When enabled on the Windows Discord bot, the bot periodically checks the configured NAS handoff outbox, reconciles only locally tracked `queued` requests, and sends a short public-safe result message back to the original Discord channel. Already completed/failed requests are skipped, so the notifier does not repeatedly announce the same outbox result.
 
+The `/nas status` Discord response also shows whether this notifier is enabled and the current channel's tracked NAS request counts by status (`queued`, `completed`, `failed`). These are local SQLite counters only; they do not expose request payloads, channel IDs, NAS paths, or raw result logs.
+
 Read-only worker repo status:
 
 ```powershell

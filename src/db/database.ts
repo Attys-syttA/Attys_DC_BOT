@@ -12,6 +12,7 @@ import type {
   NasHandoffRequestCreateInput,
   NasHandoffRequestRecord,
   NasHandoffRequestStatus,
+  NasHandoffRequestStatusCounts,
   Project,
   Session,
   SessionStatus,
@@ -371,4 +372,23 @@ export function listNasHandoffRequests(channelId: string, limit = 5): NasHandoff
   return db
     .prepare("SELECT * FROM nas_handoff_requests WHERE channel_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?")
     .all(channelId, safeLimit) as NasHandoffRequestRecord[];
+}
+
+export function countNasHandoffRequestsByStatus(channelId: string): NasHandoffRequestStatusCounts {
+  const rows = db
+    .prepare("SELECT status, COUNT(*) AS count FROM nas_handoff_requests WHERE channel_id = ? GROUP BY status")
+    .all(channelId) as { status: NasHandoffRequestStatus; count: number }[];
+  const counts: NasHandoffRequestStatusCounts = {
+    queued: 0,
+    completed: 0,
+    failed: 0,
+  };
+
+  for (const row of rows) {
+    if (row.status === "queued" || row.status === "completed" || row.status === "failed") {
+      counts[row.status] = Number(row.count) || 0;
+    }
+  }
+
+  return counts;
 }
