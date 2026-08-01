@@ -14,6 +14,7 @@ import { handleButtonInteraction, handleSelectMenuInteraction } from "./handlers
 import { isAllowedPrincipal } from "../security/guard.js";
 import { L } from "../utils/i18n.js";
 import { sendStartupNotification } from "./notifications.js";
+import { startNasResultNotifier } from "./nas-result-notifier.js";
 import * as registerCmd from "./commands/register.js";
 import * as unregisterCmd from "./commands/unregister.js";
 import * as statusCmd from "./commands/status.js";
@@ -109,6 +110,7 @@ export async function startBot(): Promise<Client> {
   const client = new Client({
     intents,
   });
+  let nasResultNotifierStarted = false;
 
   client.on("clientReady", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
@@ -137,6 +139,9 @@ export async function startBot(): Promise<Client> {
       await sendStartupNotification(client, config, { commandCount: commands.length });
     } catch (error) {
       console.error("Failed to send startup notification:", error);
+    }
+    if (!nasResultNotifierStarted) {
+      nasResultNotifierStarted = startNasResultNotifier(client) !== null;
     }
   });
 

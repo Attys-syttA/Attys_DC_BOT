@@ -50,6 +50,11 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  DISCORD_NAS_RESULT_POLL_INTERVAL_MS: z.coerce.number().int().min(10_000).max(3_600_000).default(60_000),
   DISCORD_ENABLE_AUTO_APPROVE: z
     .enum(["true", "false"])
     .default("false")

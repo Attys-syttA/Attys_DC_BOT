@@ -158,6 +158,15 @@ npm run nas:bridge:smoke
 
 This requires `.env.worker.local` with a reachable `ATTYS_NAS_HANDOFF_ROOT` and an already ready bridge. It writes one synthetic fixed-check request to the NAS handoff inbox, waits for the persistent handoff worker to create the matching outbox result, and prints only the public request id, check, result, and summary. It does not expose the NAS path or any worker secret.
 
+Automatic Discord result notifications:
+
+```text
+DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS=false
+DISCORD_NAS_RESULT_POLL_INTERVAL_MS=60000
+```
+
+This is disabled by default. When enabled on the Windows Discord bot, the bot periodically checks the configured NAS handoff outbox, reconciles only locally tracked `queued` requests, and sends a short public-safe result message back to the original Discord channel. Already completed/failed requests are skipped, so the notifier does not repeatedly announce the same outbox result.
+
 Read-only worker repo status:
 
 ```powershell
