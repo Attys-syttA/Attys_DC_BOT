@@ -172,7 +172,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
@@ -181,6 +181,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas requests` a helyileg tracked NAS requesteket listazza statusz szerint, csak public-safe mezokkel.",
       "`/nas request-status` egy konkret helyileg tracked NAS request public-safe reszleteit es handoff mailbox allapotat mutatja rovid ID vagy prefix alapjan.",
       "`/nas mailbox` a NAS handoff inbox/outbox/archive olvashato uzeneteit listazza public-safe rovid sorokban.",
+      "`/nas mailbox-status` a handoff mailbox es a helyi request tracking osszhangjat foglalja ossze public-safe szamokkal.",
       "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
       "`/nas bridge` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` mellett inditja vagy allitja le a helyi PC bridge folyamatokat.",
       "`/nas smoke` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true` mellett futtat egy synthetic fixed-check bridge probat.",

@@ -154,6 +154,9 @@ export const data = new SlashCommandBuilder()
       .setMinValue(1)
       .setMaxValue(10)))
   .addSubcommand((subcommand) => subcommand
+    .setName("mailbox-status")
+    .setDescription("Show public-safe NAS handoff mailbox consistency status"))
+  .addSubcommand((subcommand) => subcommand
     .setName("bridge")
     .setDescription("Control the local PC NAS bridge lifecycle")
     .addStringOption((option) => option
@@ -709,6 +712,65 @@ export function buildNasMailboxReport(repoRoot: string, box: HandoffBox, limit =
   ].join("\n");
 }
 
+export function buildNasMailboxStatusReport(repoRoot: string, channelId: string): string {
+  expireStaleNasHandoffRequestsForChannel(channelId, new Date(), repoRoot);
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) {
+    return [
+      "**NAS Handoff Mailbox Status**",
+      "```text",
+      "INFO handoff mailbox unavailable to bot process",
+      `tracked=${requestTrackingLine(channelId).replace(/^[A-Z]+ request tracking: /, "")}`,
+      "```",
+    ].join("\n");
+  }
+
+  const store = readPublicHandoffStore(handoffRoot);
+  const boxCounts = store.boxes
+    .map((box) => `${box.box}:${box.validMessages}`)
+    .join(" ");
+  const invalidCounts = store.boxes
+    .map((box) => `${box.box}:${box.invalidMessages}`)
+    .join(" ");
+
+  let pendingResults = 0;
+  let orphanResults = 0;
+  for (const filePath of listHandoffEnvelopeFiles(handoffRoot, "outbox")) {
+    try {
+      const envelope = readHandoffEnvelope(filePath);
+      if (envelope.type !== "audit.result") continue;
+      const requestId = envelope.publicFields.request;
+      if (!requestId) continue;
+      const tracked = getNasHandoffRequest(requestId);
+      if (!tracked) {
+        orphanResults += 1;
+      } else if (tracked.status === "queued") {
+        pendingResults += 1;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const queuedRequests = listNasHandoffRequestsByStatus(channelId, "queued", 10);
+  const queuedMissing = queuedRequests
+    .filter((request) => requestMailboxLocation(repoRoot, request.id) === "missing")
+    .length;
+
+  return [
+    "**NAS Handoff Mailbox Status**",
+    "```text",
+    `root=${store.rootStatus}`,
+    `boxes=${boxCounts}`,
+    `invalid=${invalidCounts}`,
+    `tracked=${requestTrackingLine(channelId).replace(/^[A-Z]+ request tracking: /, "")}`,
+    `pending-results=${pendingResults}`,
+    `orphan-results=${orphanResults}`,
+    `queued-missing=${queuedMissing}`,
+    "```",
+  ].join("\n");
+}
+
 export function buildNasRequestStatusReport(channelId: string, requestPrefix: string, repoRoot?: string): string {
   expireStaleNasHandoffRequestsForChannel(channelId);
   const prefix = sanitizePublicText(requestPrefix, 80).replace(/[^a-zA-Z0-9._:-]/g, "");
@@ -942,6 +1004,19 @@ export async function execute(
         normalizeHandoffBox(interaction.options.getString("box", true)),
         interaction.options.getInteger("limit") ?? 5,
       ),
+    });
+    return;
+  }
+
+  if (subcommand === "mailbox-status") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas mailbox-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas mailbox-status` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: buildNasMailboxStatusReport(process.cwd(), interaction.channelId),
     });
     return;
   }

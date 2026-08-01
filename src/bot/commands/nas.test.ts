@@ -70,6 +70,7 @@ import {
   buildNasBridgeSmokeReport,
   buildNasDeployStatusReport,
   buildNasMailboxReport,
+  buildNasMailboxStatusReport,
   buildNasRequestStatusReport,
   buildNasRequestsReport,
   buildNasResultsReport,
@@ -1008,6 +1009,106 @@ describe("/nas", () => {
     expect(content).toContain("box=archive");
     expect(content).toContain("request-one type=audit.request status=queued");
     expect(content).not.toContain("K:\\");
+  });
+
+  it("builds a public-safe NAS handoff mailbox consistency status", () => {
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.readPublicHandoffStore.mockReturnValue({
+      rootStatus: "ready",
+      boxes: [
+        { box: "inbox", validMessages: 1, invalidMessages: 0 },
+        { box: "outbox", validMessages: 2, invalidMessages: 1 },
+        { box: "archive", validMessages: 1, invalidMessages: 0 },
+      ],
+    });
+    mocks.listHandoffEnvelopeFiles.mockImplementation((_root: string, box: string) => {
+      if (box === "outbox") {
+        return [
+          "K:\\private\\handoff\\outbox\\result-tracked.json",
+          "K:\\private\\handoff\\outbox\\result-orphan.json",
+        ];
+      }
+      if (box === "inbox") return ["K:\\private\\handoff\\inbox\\request-queued-one.json"];
+      return [];
+    });
+    mocks.readHandoffEnvelope.mockImplementation((filePath: string) => {
+      if (filePath.includes("result-tracked")) {
+        return {
+          id: "result-request-queued-one",
+          type: "audit.result",
+          status: "completed",
+          createdAt: new Date().toISOString(),
+          publicSummary: "Audit result",
+          publicFields: { request: "request-queued-one", check: "plans" },
+        };
+      }
+      if (filePath.includes("result-orphan")) {
+        return {
+          id: "result-orphan",
+          type: "audit.result",
+          status: "failed",
+          createdAt: new Date().toISOString(),
+          publicSummary: "raw K:\\private token=secret",
+          publicFields: { request: "orphan-request", check: "tests" },
+        };
+      }
+      return {
+        id: "request-queued-one",
+        type: "audit.request",
+        status: "queued",
+        createdAt: new Date().toISOString(),
+        publicSummary: "Audit request",
+        publicFields: { check: "plans" },
+      };
+    });
+    mocks.getNasHandoffRequest.mockImplementation((requestId: string) => {
+      if (requestId === "request-queued-one") {
+        return {
+          id: "request-queued-one",
+          channel_id: "channel-1",
+          project_label: "Attys_DC_BOT",
+          check_name: "plans",
+          status: "queued",
+          result_summary: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return undefined;
+    });
+
+    const report = buildNasMailboxStatusReport("E:\\private\\repo", "channel-1");
+
+    expect(report).toContain("NAS Handoff Mailbox Status");
+    expect(report).toContain("root=ready");
+    expect(report).toContain("boxes=inbox:1 outbox:2 archive:1");
+    expect(report).toContain("invalid=inbox:0 outbox:1 archive:0");
+    expect(report).toContain("tracked=queued:1 completed:2 failed:3");
+    expect(report).toContain("pending-results=1");
+    expect(report).toContain("orphan-results=1");
+    expect(report).toContain("queued-missing=0");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+  });
+
+  it("executes NAS mailbox status report when enabled", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "mailbox-status"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Handoff Mailbox Status");
+    expect(content).toContain("pending-results=0");
   });
 
   it("shows the matching NAS handoff mailbox box for a tracked request", () => {
