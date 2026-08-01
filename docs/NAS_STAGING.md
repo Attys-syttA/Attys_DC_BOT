@@ -30,9 +30,20 @@ deploy\nas\Discord_Codex_BOT\
 Current slice status:
 
 - the staging folder is a NAS control-plane deploy skeleton;
+- `npm run nas:status` can print a public-safe dry-run control-plane status from a local worker store;
 - NAS-side Codex execution is explicitly disabled;
 - Windows remains the future Codex worker host;
 - no NAS endpoint or runtime bridge is implemented yet.
+
+Dry-run local status:
+
+```powershell
+npm run nas:status
+```
+
+By default, this reads `data\workers.json` from the current working directory. On NAS, set `ATTYS_NAS_WORKER_STORE_PATH=./data/workers.json` in `.env.nas`. The command never prints the raw store path.
+
+The staged Dockerfile also uses `npm run nas:status` as its default command. This is deliberate: the current NAS slice is a dry-run control-plane/status baseline only.
 
 When source packaging is needed later, use:
 

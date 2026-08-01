@@ -51,7 +51,10 @@ export function isWorkerMessageType(value: string): value is WorkerMessageType {
 }
 
 function safeToken(value: string, fallback: string): string {
-  const sanitized = sanitizePublicText(value, 80)
+  const publicText = sanitizePublicText(value, 80);
+  if (publicText.includes("<redacted>")) return fallback;
+
+  const sanitized = publicText
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")

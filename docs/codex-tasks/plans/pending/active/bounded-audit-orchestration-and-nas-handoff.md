@@ -476,10 +476,12 @@ Ez az új első szelet. Célja nem audit futtatása, hanem annak bizonyítása, 
 - létrejött a minimális `src/nas/worker-registry.ts` contract modul;
 - létrejött a fókuszált `src/nas/worker-registry.test.ts` teszt;
 - létrejött a `src/nas/control-plane-config.ts` NAS config parser és a hozzá tartozó fókuszált teszt;
+- létrejött a `src/nas/worker-store.ts` file-backed public-safe worker store olvasó és a `src/cli/nas-status.ts` dry-run status CLI;
 - a modul kizárólag message type, worker state, heartbeat timestamp, timeout és public-safe status modell;
 - a config parser csak public-safe control-plane nevet, opcionális HTTP(S) public URL-t és korlátozott heartbeat timeoutot fogad;
 - a NAS oldali Codex execution flag `true` értéke fail-closed hibával megáll;
 - nincs hálózati endpoint, NAS runtime, Codex prompt, named check, repair vagy VS Code shim.
+- a NAS Dockerfile alapértelmezett parancsa csak `npm run nas:status`, vagyis nem indítja el a fő Discord botot.
 
 2026-08-01 staging checkpoint:
 
