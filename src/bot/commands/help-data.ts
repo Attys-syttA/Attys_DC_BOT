@@ -185,6 +185,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas sync-status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_SYNC_STATUS=true` mellett futtat NAS share dry-run osszehasonlitast.",
       "`DISCORD_ENABLE_NAS_RESULT_NOTIFICATIONS=true` mellett a bot automatikusan visszairja a sajat queued requestek eredmenyet.",
       "`DISCORD_NAS_REQUEST_STALE_AFTER_MS` allitja, mennyi ido utan zaruljon le egy valasz nelkuli queued request failed allapotba.",
+      "A queue/result/timeout atmenetek public-safe status tokenkent bekerulnek az `/events` timeline-ba.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
       "Ha elerheto, a NAS control-plane latest snapshotbol rovid build/handoff/status sort is mutat.",

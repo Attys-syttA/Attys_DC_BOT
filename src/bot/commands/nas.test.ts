@@ -110,7 +110,16 @@ describe("/nas", () => {
       },
     }));
     mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "E:\\codex_works\\Attys_DC_BOT" });
-    mocks.getNasHandoffRequest.mockReturnValue({ id: "request-one" });
+    mocks.getNasHandoffRequest.mockReturnValue({
+      id: "request-one",
+      channel_id: "channel-1",
+      project_label: "Attys_DC_BOT",
+      check_name: "plans",
+      status: "queued",
+      result_summary: null,
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
     mocks.listNasHandoffRequests.mockReturnValue([
       {
         id: "request-one",
@@ -268,6 +277,11 @@ describe("/nas", () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("Queued NAS audit request"),
     });
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "nas-request-queued",
+      channelId: "channel-1",
+    }, expect.any(String));
   });
 
   it("derives project labels from Windows and POSIX paths", () => {
@@ -739,6 +753,16 @@ describe("/nas", () => {
       "0/1 passed",
       "2026-08-01T12:01:00.000Z",
     );
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "nas-result-completed",
+      channelId: "channel-1",
+    }, "E:\\private\\repo");
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "nas-result-failed",
+      channelId: "channel-1",
+    }, "E:\\private\\repo");
     expect(mocks.expireStaleNasHandoffRequests).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
@@ -746,6 +770,27 @@ describe("/nas", () => {
     );
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
+  });
+
+  it("does not re-record NAS results for already closed tracked requests", () => {
+    mocks.getNasHandoffRequest.mockReturnValue({
+      id: "request-one",
+      channel_id: "channel-1",
+      project_label: "Attys_DC_BOT",
+      check_name: "plans",
+      status: "completed",
+      result_summary: "already done",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:02:00.000Z",
+    });
+
+    buildNasResultsReport("E:\\private\\repo", "channel-1", 2);
+
+    expect(mocks.updateNasHandoffRequestResult).not.toHaveBeenCalled();
+    expect(mocks.recordOperatorEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: "nas-result-completed" }),
+      expect.any(String),
+    );
   });
 
   it("builds a public-safe tracked NAS request report", () => {

@@ -44,6 +44,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - NAS deploy-status Discord vezérlés: a read-only `/nas deploy-status` ugyanennek a verifiernek a részletes check-listáját mutatja Discordon, NAS írás, raw JSON, path, worker URL vagy process ID nélkül.
 - NAS request lifecycle: a locally tracked `queued` NAS request `DISCORD_NAS_REQUEST_STALE_AFTER_MS` után public-safe `failed` timeout summaryval záródik, így nem marad végtelenül várakozó állapotban.
 - NAS request ledger: a read-only `/nas requests status:<all|queued|completed|failed>` nézet a helyi SQLite trackingből listázza a requesteket rövid ID-val, checkkel, státusszal, kor/frissítés perccel és public-safe summaryval.
+- NAS request event trail: a queue/result/timeout átmenetek public-safe `/events` státusztokenként is megjelennek, és a lezárt requesteket a manual results reconciliation nem írja újra régi outbox fájlokból.
 - Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
 - Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.

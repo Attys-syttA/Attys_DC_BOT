@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS request event trail: a `/nas request` most `nas-request-queued` public-safe operator eventet ir, a `/nas results` csak queued requestbol csinal result atmenetet es `nas-result-completed` / `nas-result-failed` eventet rogzit, a stale timeout pedig `nas-request-timeout` eventkent jelenik meg. Lezart requestet a manual results reconciliation nem ir ujra.
 - NAS request ledger view: uj read-only `/nas requests status:<all|queued|completed|failed> limit:<1-10>` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A helyileg tracked NAS handoff requesteket listazza public-safe rovid ID, check, status, age/updated es summary mezokkel, NAS iras, raw path, token, process ID vagy raw payload nelkul.
 - NAS build identity: a NAS staging most `app/NAS_BUILD_INFO.json` fajlt general public-safe source commit, package version, generatedAt es includeSource mezokkel. A staged Docker image bemasolja, a `nas:status` es a `nas-control-plane-status` log pedig `buildInfo` blokkban mutatja, melyik staging/build fut.
 - NAS latest status file: a long-running NAS control-plane loop most atomikusan frissiti a `logs/nas-control-plane-status.json` snapshotot, igy a Windows oldal a megosztott mappabol is lathatja a legutobbi NAS control-plane allapotot Synology log scraping nelkul.

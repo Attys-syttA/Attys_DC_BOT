@@ -376,12 +376,16 @@ export function nasRequestStaleCutoff(now = new Date()): string {
   return new Date(now.getTime() - safeStaleAfterMs).toISOString();
 }
 
-export function expireStaleNasHandoffRequestsForChannel(channelId: string, now = new Date()): number {
-  return expireStaleNasHandoffRequests(
+export function expireStaleNasHandoffRequestsForChannel(channelId: string, now = new Date(), repoRoot = process.cwd()): number {
+  const expired = expireStaleNasHandoffRequests(
     nasRequestStaleCutoff(now),
     now.toISOString(),
     channelId,
-  ).length;
+  );
+  for (const request of expired) {
+    recordOperatorEvent({ kind: "task", status: "nas-request-timeout", channelId: request.channel_id }, repoRoot);
+  }
+  return expired.length;
 }
 
 function resultStatus(value: string | undefined, fallback: HandoffEnvelope["status"]): "completed" | "failed" {
@@ -504,7 +508,7 @@ export async function buildNasSyncStatusReport(repoRoot: string): Promise<string
 }
 
 export function buildNasResultsReport(repoRoot: string, channelId: string, limit = 5): string {
-  expireStaleNasHandoffRequestsForChannel(channelId);
+  expireStaleNasHandoffRequestsForChannel(channelId, new Date(), repoRoot);
   const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
   if (!handoffRoot || !fs.existsSync(handoffRoot)) {
     return "**NAS Handoff Results**\n```text\nINFO handoff mailbox unavailable to bot process\n```";
@@ -522,13 +526,17 @@ export function buildNasResultsReport(repoRoot: string, channelId: string, limit
 
   for (const envelope of outboxResults) {
     const requestId = envelope.publicFields.request;
-    if (!requestId || !getNasHandoffRequest(requestId)) continue;
+    if (!requestId) continue;
+    const request = getNasHandoffRequest(requestId);
+    if (!request || request.status !== "queued") continue;
+    const status = resultStatus(envelope.publicFields.result, envelope.status);
     updateNasHandoffRequestResult(
       requestId,
-      resultStatus(envelope.publicFields.result, envelope.status),
+      status,
       envelope.publicFields.summary ?? envelope.publicSummary,
       envelope.createdAt,
     );
+    recordOperatorEvent({ kind: "task", status: `nas-result-${status}`, channelId: request.channel_id }, repoRoot);
   }
 
   const rows = listNasHandoffRequests(channelId, limit)
@@ -624,6 +632,7 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
       createdAt: now,
       updatedAt: now,
     });
+    recordOperatorEvent({ kind: "task", status: "nas-request-queued", channelId: interaction.channelId }, repoRoot);
     await interaction.editReply({
       content: `Queued NAS audit request \`${envelope.id.slice(0, 8)}...\` for check \`${requestedCheck}\`.`,
     });

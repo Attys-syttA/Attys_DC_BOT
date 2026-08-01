@@ -210,6 +210,8 @@ Read-only Discord request ledger:
 
 This uses the same `DISCORD_ENABLE_NAS_STATUS=true` gate as the other NAS status views. It lists locally tracked NAS handoff requests from SQLite with short request IDs, fixed check names, status, age/update minutes, and public-safe summaries. It does not write to the NAS share, read raw request payloads, expose paths or tokens, or execute Codex.
 
+The Windows bot also records public-safe NAS request lifecycle events into `/events`: `nas-request-queued`, `nas-result-completed`, `nas-result-failed`, and `nas-request-timeout`. These are status tokens only; old NAS outbox files do not re-record already closed local requests.
+
 Read-only worker repo status:
 
 ```powershell
