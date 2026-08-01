@@ -234,6 +234,7 @@ describe("/nas", () => {
     const report = await buildNasStatusReport("E:\\private\\repo");
 
     expect(report).toContain("NAS Bridge Status");
+    expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
     expect(report).toContain("OK worker http: listening on configured port, processes 3");
     expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
     expect(report).toContain("OK handoff mailbox: inbox:0 outbox:2 archive:2");
@@ -253,6 +254,7 @@ describe("/nas", () => {
     const report = await buildNasStatusReport("E:\\private\\repo");
 
     expect(report).toContain("FAIL worker http: status unavailable");
+    expect(report).toContain("INFO bridge ready: not fully ready");
     expect(report).toContain("FAIL handoff worker: status unavailable");
     expect(report).toContain("INFO handoff mailbox: NAS root unavailable to bot process");
     expect(report).not.toContain("raw failure");

@@ -125,6 +125,20 @@ function handoffWorkerLine(status: WorkerHandoffStatus | null): string {
   return "FAIL handoff worker: stopped or NAS root missing";
 }
 
+function bridgeReadyLine(http: WorkerHttpStatus | null, handoff: WorkerHandoffStatus | null): string {
+  if (
+    http &&
+    handoff &&
+    ok(http.running) &&
+    ok(http.listening) &&
+    ok(handoff.running) &&
+    ok(handoff.handoffRootReachable)
+  ) {
+    return "OK bridge ready: PC worker and NAS handoff are connected";
+  }
+  return "INFO bridge ready: not fully ready";
+}
+
 function handoffStoreLine(repoRoot: string): string {
   const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
   if (!handoffRoot || !fs.existsSync(handoffRoot)) {
@@ -164,6 +178,7 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
   return [
     "**NAS Bridge Status**",
     "```text",
+    bridgeReadyLine(workerHttpStatus, handoffWorkerStatus),
     workerHttpLine(workerHttpStatus),
     handoffWorkerLine(handoffWorkerStatus),
     handoffStoreLine(repoRoot),

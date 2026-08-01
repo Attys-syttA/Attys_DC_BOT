@@ -4,6 +4,7 @@
 
 - NAS bridge lifecycle: uj `scripts/nas-bridge-lifecycle.ps1` es `nas:bridge:status/start/restart/stop` parancsok keszultek. Ezek a PC worker HTTP es a persistent handoff worker lifecycle helperjeit fogjak ossze egy public-safe statuszba, a live Discord bot erintese nelkul.
 - NAS bridge smoke: uj `scripts/nas-bridge-smoke.ps1` es `npm run nas:bridge:smoke` parancs keszult. Ez egy synthetic fixed-check requestet ir a NAS inboxba, megvarja a persistent handoff worker outbox eredmenyet, es csak public-safe osszegzest ir ki.
+- NAS Discord status polish: a `/nas status` most elso sorban kulon `bridge ready` osszegzest mutat, hogy mobilrol gyorsan latszodjon, a PC worker es a handoff poller egyutt kesz allapotban van-e.
 - NAS handoff request tracking: uj additive SQLite `nas_handoff_requests` tabla es helper fuggvenyek keszultek. A `/nas request` rogziti a public-safe request allapotot, a `/nas results` pedig a NAS outbox `audit.result` uzeneteibol frissiti a helyi queued/completed/failed summaryt.
 - NAS Discord status command: uj default-off `/nas status` parancs keszult `DISCORD_ENABLE_NAS_STATUS=true` flag mogott. Csak public-safe PC worker HTTP, handoff poller es mailbox darabszam allapotot mutat; nem ir ki IP-t, meghajtot, raw pathot, tokent vagy process ID-t.
 - NAS Discord request command: a `/nas request check:<...>` default-off `DISCORD_ENABLE_NAS_HANDOFF=true` flag moge kerult. Csak fix named-check `audit.request` uzenetet ir a NAS handoff inboxba a regisztralt project mappanevevel; nem futtat kozvetlen parancsot es nem indit repairt.
