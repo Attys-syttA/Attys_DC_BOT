@@ -172,7 +172,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
@@ -180,6 +180,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas requests` a helyileg tracked NAS requesteket listazza statusz szerint, csak public-safe mezokkel.",
       "`/nas request-status` egy konkret helyileg tracked NAS request public-safe reszleteit es handoff mailbox allapotat mutatja rovid ID vagy prefix alapjan.",
+      "`/nas mailbox` a NAS handoff inbox/outbox/archive olvashato uzeneteit listazza public-safe rovid sorokban.",
       "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
       "`/nas bridge` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` mellett inditja vagy allitja le a helyi PC bridge folyamatokat.",
       "`/nas smoke` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true` mellett futtat egy synthetic fixed-check bridge probat.",
@@ -188,7 +189,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`DISCORD_NAS_REQUEST_STALE_AFTER_MS` allitja, mennyi ido utan zaruljon le egy valasz nelkuli queued request failed allapotba.",
       "A queue/result/timeout atmenetek public-safe status tokenkent bekerulnek az `/events` timeline-ba.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
-      "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
+      "A status a NAS mailboxot darabszam szinten mutatja, a mailbox nezet pedig rovid public-safe uzenetsorokat ad.",
       "Ha elerheto, a NAS control-plane latest snapshotbol rovid build/handoff/status sort is mutat.",
       "A status mutatja a result notifier allapotat, a stale timeoutot es az aktualis channel tracked request darabszamait is.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",

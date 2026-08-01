@@ -69,6 +69,7 @@ import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
   buildNasDeployStatusReport,
+  buildNasMailboxReport,
   buildNasRequestStatusReport,
   buildNasRequestsReport,
   buildNasResultsReport,
@@ -921,6 +922,92 @@ describe("/nas", () => {
     expect(mocks.findNasHandoffRequestsByIdPrefix).toHaveBeenCalledWith("channel-1", "request-status", 6);
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("secret");
+  });
+
+  it("builds a public-safe NAS handoff mailbox report", () => {
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([
+      "K:\\private\\handoff\\outbox\\result-one.json",
+      "K:\\private\\handoff\\outbox\\result-two.json",
+    ]);
+    mocks.readHandoffEnvelope
+      .mockReturnValueOnce({
+        id: "result-two",
+        type: "audit.result",
+        status: "failed",
+        createdAt: new Date(Date.now() - 4 * 60_000).toISOString(),
+        publicSummary: "Audit result failed at K:\\private token=secret",
+        publicFields: {
+          request: "request-two",
+          check: "tests",
+          summary: "failed at K:\\private token=secret",
+        },
+      })
+      .mockReturnValueOnce({
+        id: "result-one",
+        type: "audit.result",
+        status: "completed",
+        createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+        publicSummary: "Audit result",
+        publicFields: {
+          request: "request-one",
+          check: "plans",
+          summary: "1/1 passed",
+        },
+      });
+
+    const report = buildNasMailboxReport("E:\\private\\repo", "outbox", 2);
+
+    expect(report).toContain("NAS Handoff Mailbox");
+    expect(report).toContain("box=outbox");
+    expect(report).toContain("invalid=0");
+    expect(report).toContain("result-two type=audit.result status=failed check=tests request=request-two");
+    expect(report).toContain("summary=failed at <local-path> token=<redacted>");
+    expect(report).toContain("result-one type=audit.result status=completed check=plans request=request-one");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+  });
+
+  it("reports unavailable NAS handoff mailbox safely", () => {
+    mocks.existsSync.mockReturnValue(false);
+
+    const report = buildNasMailboxReport("E:\\private\\repo", "inbox", 5);
+
+    expect(report).toContain("box=inbox");
+    expect(report).toContain("INFO handoff mailbox unavailable to bot process");
+    expect(report).not.toContain("private");
+  });
+
+  it("executes NAS mailbox report with box and limit", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockReturnValue(["K:\\private\\handoff\\archive\\request-one.json"]);
+    mocks.readHandoffEnvelope.mockReturnValue({
+      id: "request-one",
+      type: "audit.request",
+      status: "queued",
+      createdAt: new Date(Date.now() - 2 * 60_000).toISOString(),
+      publicSummary: "Audit request",
+      publicFields: { check: "plans" },
+    });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "mailbox"),
+        getString: vi.fn(() => "archive"),
+        getInteger: vi.fn(() => 1),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Handoff Mailbox");
+    expect(content).toContain("box=archive");
+    expect(content).toContain("request-one type=audit.request status=queued");
+    expect(content).not.toContain("K:\\");
   });
 
   it("shows the matching NAS handoff mailbox box for a tracked request", () => {

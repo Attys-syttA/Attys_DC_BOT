@@ -23,6 +23,7 @@ import {
   listHandoffEnvelopeFiles,
   readHandoffEnvelope,
   writeHandoffEnvelope,
+  type HandoffBox,
   type HandoffEnvelope,
 } from "../../nas/handoff-store.js";
 import { verifyNasDeploy } from "../../nas/deploy-verification.js";
@@ -135,6 +136,23 @@ export const data = new SlashCommandBuilder()
       .setName("request")
       .setDescription("Request id or id prefix")
       .setRequired(true)))
+  .addSubcommand((subcommand) => subcommand
+    .setName("mailbox")
+    .setDescription("Show public-safe NAS handoff mailbox messages")
+    .addStringOption((option) => option
+      .setName("box")
+      .setDescription("Mailbox box to inspect")
+      .setRequired(true)
+      .addChoices(
+        { name: "inbox", value: "inbox" },
+        { name: "outbox", value: "outbox" },
+        { name: "archive", value: "archive" },
+      ))
+    .addIntegerOption((option) => option
+      .setName("limit")
+      .setDescription("Maximum messages to show")
+      .setMinValue(1)
+      .setMaxValue(10)))
   .addSubcommand((subcommand) => subcommand
     .setName("bridge")
     .setDescription("Control the local PC NAS bridge lifecycle")
@@ -632,6 +650,65 @@ function requestMailboxLocation(repoRoot: string, requestId: string): RequestMai
   return sawInvalid ? "invalid" : "missing";
 }
 
+function normalizeHandoffBox(value: string | null): HandoffBox {
+  if (value === "inbox" || value === "outbox" || value === "archive") return value;
+  return "outbox";
+}
+
+function envelopeAgeLine(createdAt: string, now = new Date()): string {
+  const createdTime = Date.parse(createdAt);
+  if (!Number.isFinite(createdTime)) return "age=unknown";
+  return `age=${Math.max(0, Math.floor((now.getTime() - createdTime) / 60_000))}m`;
+}
+
+function mailboxEnvelopeRow(envelope: HandoffEnvelope): string {
+  const check = sanitizePublicText(envelope.publicFields.check ?? "unknown", 40) || "unknown";
+  const request = sanitizePublicText(envelope.publicFields.request ?? envelope.id, 80) || envelope.id;
+  const summary = sanitizePublicText(envelope.publicFields.summary ?? envelope.publicSummary, 100) || "none";
+  return [
+    `- ${envelope.id.slice(0, 24)}`,
+    `type=${envelope.type}`,
+    `status=${envelope.status}`,
+    `check=${check}`,
+    `request=${request.slice(0, 24)}`,
+    envelopeAgeLine(envelope.createdAt),
+    `summary=${summary}`,
+  ].join(" ");
+}
+
+export function buildNasMailboxReport(repoRoot: string, box: HandoffBox, limit = 5): string {
+  const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) {
+    return [
+      "**NAS Handoff Mailbox**",
+      "```text",
+      `box=${box}`,
+      "INFO handoff mailbox unavailable to bot process",
+      "```",
+    ].join("\n");
+  }
+
+  const rows: string[] = [];
+  let invalidMessages = 0;
+  for (const filePath of listHandoffEnvelopeFiles(handoffRoot, box).slice(-safeLimit).reverse()) {
+    try {
+      rows.push(mailboxEnvelopeRow(readHandoffEnvelope(filePath)));
+    } catch {
+      invalidMessages += 1;
+    }
+  }
+
+  return [
+    "**NAS Handoff Mailbox**",
+    "```text",
+    `box=${box}`,
+    `invalid=${invalidMessages}`,
+    rows.length > 0 ? rows.join("\n") : "INFO no readable handoff messages",
+    "```",
+  ].join("\n");
+}
+
 export function buildNasRequestStatusReport(channelId: string, requestPrefix: string, repoRoot?: string): string {
   expireStaleNasHandoffRequestsForChannel(channelId);
   const prefix = sanitizePublicText(requestPrefix, 80).replace(/[^a-zA-Z0-9._:-]/g, "");
@@ -847,6 +924,23 @@ export async function execute(
         interaction.channelId,
         interaction.options.getString("request", true),
         process.cwd(),
+      ),
+    });
+    return;
+  }
+
+  if (subcommand === "mailbox") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas mailbox` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas mailbox` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: buildNasMailboxReport(
+        process.cwd(),
+        normalizeHandoffBox(interaction.options.getString("box", true)),
+        interaction.options.getInteger("limit") ?? 5,
       ),
     });
     return;
