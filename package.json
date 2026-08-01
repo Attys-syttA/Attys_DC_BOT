@@ -20,6 +20,7 @@
     "nas:workers:check": "tsx src/cli/nas-workers-check.ts",
     "nas:worker:heartbeat": "tsx src/cli/nas-worker-heartbeat.ts",
     "worker:http": "tsx src/cli/worker-http.ts",
+    "worker:http:start": "pwsh -NoProfile -File scripts/start-worker-http.ps1",
     "worker:smoke": "pwsh -NoProfile -File scripts/worker-http-smoke.ps1",
     "audit:check": "tsx src/cli/audit-check.ts",
     "plans:check": "tsx src/cli/plans-check.ts",

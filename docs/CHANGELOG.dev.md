@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- PC worker start helper: uj `scripts/start-worker-http.ps1` es `npm run worker:http:start` parancs keszult a default-off Windows worker HTTP szerver operatorbarat inditasahoz. A helper ignored env fajlt tud betolteni, `0.0.0.0:8787` alap bindot hasznal, es nem inditja ujra a live Discord botot. A meglevo `win-start.bat` / desktop shortcut tovabbra is csak a live bot launcher, nem indit LAN worker portot automatikusan.
 - NAS compose startup: a staging `docker-compose.yml` mar nem hasznal kulon `manual` profile-t, igy Synology Container Managerben es sima `docker compose up -d` paranccsal is kozvetlenul indithato. A kontener tovabbra is csak a public-safe `npm run nas:control-plane` loopot futtatja, nem indit Discord botot, Codexet vagy repair/audit vegrehajtast.
 - Read-only Discord audit command: új default-off `/audit start|status|stop` parancs készült `DISCORD_ENABLE_AUDIT=true` flag mögött. A `start` csak regisztrált csatornán, fix named-check catalogból futtat; az eredményeket SQLite audit job/step store-ba menti; siker esetén `completed`, hiba esetén `waiting_manual_review`, runner kivételnél `failed` állapotot ad.
 - Audit observability/recovery: a `/dashboard` és `/status` most rövid public-safe audit állapotot is mutat a legutóbbi jobról és legutóbbi step-ről. Startupkor az aktív processzhez kötött, félbeszakadt audit állapotok (`queued`, `planning`, `running_checks`, `preparing_isolated_worktree`, `repairing`, `rechecking`) `failed` állapotba normalizálódnak, hogy ne ragadjanak aktívként restart után.

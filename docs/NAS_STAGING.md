@@ -101,6 +101,16 @@ npm run worker:http
 
 The worker server is disabled by default. When enabled, it binds to `ATTYS_WORKER_HTTP_HOST` and `ATTYS_WORKER_HTTP_PORT`, serves only `GET /health`, and requires the archive-compatible `x-telecodex-shared-secret` header when the configured `ATTYS_WORKER_SHARED_SECRET_ENV` variable has a value. It does not expose prompt, filesystem, Git, repair, session, or Codex execution endpoints in this slice.
 
+Operator-friendly PC worker start:
+
+```powershell
+npm run worker:http:start -- -EnvFile .env.worker.local
+```
+
+This helper loads an ignored local env file when present, enables only the default-off worker HTTP server, binds to `0.0.0.0:8787`, and sets the workspace root to the parent `<CODEX_WORKS>` folder. The NAS `ATTYS_NAS_WORKERS_JSON` `baseUrl` must point to the Windows PC LAN address, for example `http://<WINDOWS_LAN_IP>:8787`. If Windows Firewall blocks that port, allow inbound TCP `8787` only on the trusted local network.
+
+The existing `win-start.bat` and desktop shortcut remain the live Discord bot launcher. They do not start the PC worker automatically in this slice, because the worker opens a LAN-reachable HTTP port and should stay an explicit operator action.
+
 Read-only worker repo status:
 
 ```powershell
