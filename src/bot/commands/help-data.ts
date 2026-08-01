@@ -179,7 +179,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas requests` a helyileg tracked NAS requesteket listazza statusz szerint, csak public-safe mezokkel.",
-      "`/nas request-status` egy konkret helyileg tracked NAS request public-safe reszleteit mutatja rovid ID vagy prefix alapjan.",
+      "`/nas request-status` egy konkret helyileg tracked NAS request public-safe reszleteit es handoff mailbox allapotat mutatja rovid ID vagy prefix alapjan.",
       "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
       "`/nas bridge` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true` mellett inditja vagy allitja le a helyi PC bridge folyamatokat.",
       "`/nas smoke` alapbol tiltott; csak `DISCORD_ENABLE_NAS_BRIDGE_SMOKE=true` mellett futtat egy synthetic fixed-check bridge probat.",

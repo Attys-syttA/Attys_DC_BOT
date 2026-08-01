@@ -209,9 +209,9 @@ Read-only Discord request ledger:
 /nas request-status request:<id-prefix>
 ```
 
-This uses the same `DISCORD_ENABLE_NAS_STATUS=true` gate as the other NAS status views. It lists locally tracked NAS handoff requests from SQLite with short request IDs, fixed check names, status, age/update minutes, and public-safe summaries. It does not write to the NAS share, read raw request payloads, expose paths or tokens, or execute Codex.
+This uses the same `DISCORD_ENABLE_NAS_STATUS=true` gate as the other NAS status views. It lists locally tracked NAS handoff requests from SQLite with short request IDs, fixed check names, status, age/update minutes, public-safe summaries, and a public-safe mailbox state when the Windows bot can reach the handoff mailbox. It does not write to the NAS share, read raw request payloads, expose paths or tokens, or execute Codex.
 
-Use `/nas request-status` when one request from the ledger needs a closer look. The request value can be a safe ID prefix. Too-short prefixes are rejected, and ambiguous prefixes list matching public-safe IDs instead of guessing.
+Use `/nas request-status` when one request from the ledger needs a closer look. The request value can be a safe ID prefix. Too-short prefixes are rejected, and ambiguous prefixes list matching public-safe IDs instead of guessing. When the Windows bot can reach the handoff mailbox, the report also shows only a public-safe `mailbox=<inbox|outbox|archive|missing|unavailable|invalid>` state. It never prints the NAS path, file name, raw JSON payload, token, or worker URL.
 
 The Windows bot also records public-safe NAS request lifecycle events into `/events`: `nas-request-queued`, `nas-result-completed`, `nas-result-failed`, and `nas-request-timeout`. These are status tokens only; old NAS outbox files do not re-record already closed local requests.
 

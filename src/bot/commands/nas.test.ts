@@ -868,6 +868,16 @@ describe("/nas", () => {
 
   it("executes NAS requests with a status filter and limit", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockImplementation((_root: string, box: string) => {
+      if (box === "inbox") return ["K:\\private\\handoff\\inbox\\request-queued-one.json"];
+      return [];
+    });
+    mocks.readHandoffEnvelope.mockReturnValue({
+      id: "request-queued-one",
+      type: "audit.request",
+      publicFields: { check: "plans" },
+    });
     const interaction = {
       channelId: "channel-1",
       options: {
@@ -884,6 +894,8 @@ describe("/nas", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS Handoff Requests");
     expect(content).toContain("filter=queued");
+    expect(content).toContain("mailbox=inbox");
+    expect(content).not.toContain("K:\\");
   });
 
   it("builds a public-safe tracked NAS request status report", () => {
@@ -909,6 +921,64 @@ describe("/nas", () => {
     expect(mocks.findNasHandoffRequestsByIdPrefix).toHaveBeenCalledWith("channel-1", "request-status", 6);
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("secret");
+  });
+
+  it("shows the matching NAS handoff mailbox box for a tracked request", () => {
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockImplementation((_root: string, box: string) => {
+      if (box === "inbox") return ["K:\\private\\handoff\\inbox\\request-status-one.json"];
+      return [];
+    });
+    mocks.readHandoffEnvelope.mockReturnValue({
+      id: "request-status-one",
+      type: "audit.request",
+      publicFields: { check: "plans" },
+    });
+
+    const report = buildNasRequestStatusReport("channel-1", "request-status-one", "E:\\private\\repo");
+
+    expect(report).toContain("mailbox=inbox");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("private");
+  });
+
+  it("finds a tracked request result in the NAS handoff outbox", () => {
+    mocks.readHandoffEnvelope.mockReset();
+    mocks.listHandoffEnvelopeFiles.mockImplementation((_root: string, box: string) => {
+      if (box === "outbox") return ["K:\\private\\handoff\\outbox\\result-request-status-one.json"];
+      return [];
+    });
+    mocks.readHandoffEnvelope.mockReturnValue({
+      id: "result-request-status-one",
+      type: "audit.result",
+      publicFields: { request: "request-status-one", result: "passed" },
+    });
+
+    const report = buildNasRequestStatusReport("channel-1", "request-status-one", "E:\\private\\repo");
+
+    expect(report).toContain("mailbox=outbox");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("private");
+  });
+
+  it("reports unavailable or invalid NAS handoff mailbox lookup safely", () => {
+    mocks.existsSync.mockReturnValueOnce(false);
+    mocks.readHandoffEnvelope.mockReset();
+    expect(buildNasRequestStatusReport("channel-1", "request-status-one", "E:\\private\\repo"))
+      .toContain("mailbox=unavailable");
+
+    mocks.existsSync.mockReturnValue(true);
+    mocks.listHandoffEnvelopeFiles.mockReturnValue(["K:\\private\\handoff\\inbox\\broken.json"]);
+    mocks.readHandoffEnvelope.mockImplementation(() => {
+      throw new Error("raw parse failure token=secret");
+    });
+
+    const report = buildNasRequestStatusReport("channel-1", "request-status-one", "E:\\private\\repo");
+
+    expect(report).toContain("mailbox=invalid");
+    expect(report).not.toContain("raw parse failure");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
   });
 
   it("handles ambiguous NAS request status prefixes without guessing", () => {
@@ -959,6 +1029,7 @@ describe("/nas", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS Handoff Request");
     expect(content).toContain("request=request-status-one");
+    expect(content).toContain("mailbox=");
   });
 
   it("keeps NAS result summaries compact and public-safe", () => {

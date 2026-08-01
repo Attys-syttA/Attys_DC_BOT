@@ -568,17 +568,23 @@ function normalizeRequestStatusFilter(value: string | null): NasHandoffRequestSt
   return "all";
 }
 
-export function buildNasRequestsReport(channelId: string, status: NasHandoffRequestStatusFilter = "all", limit = 5): string {
+export function buildNasRequestsReport(
+  channelId: string,
+  status: NasHandoffRequestStatusFilter = "all",
+  limit = 5,
+  repoRoot?: string,
+): string {
   expireStaleNasHandoffRequestsForChannel(channelId);
   const rows = listNasHandoffRequestsByStatus(channelId, status, limit)
     .map((request) => {
       const summary = sanitizePublicText(request.result_summary ?? "waiting", 100) || "waiting";
+      const mailbox = repoRoot ? ` mailbox=${requestMailboxLocation(repoRoot, request.id)}` : "";
       return [
         `- request ${request.id.slice(0, 12)}`,
         `check=${sanitizePublicText(request.check_name, 40) || "unknown"}`,
         `status=${request.status}`,
         requestAgeLine(request.created_at, request.updated_at),
-        `summary=${summary}`,
+        `summary=${summary}${mailbox}`,
       ].join(" ");
     });
 
@@ -603,7 +609,30 @@ function requestStatusRow(request: ReturnType<typeof findNasHandoffRequestsByIdP
   ];
 }
 
-export function buildNasRequestStatusReport(channelId: string, requestPrefix: string): string {
+type RequestMailboxLocation = "inbox" | "outbox" | "archive" | "missing" | "unavailable" | "invalid";
+
+function requestMailboxLocation(repoRoot: string, requestId: string): RequestMailboxLocation {
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) return "unavailable";
+
+  let sawInvalid = false;
+  for (const box of ["inbox", "outbox", "archive"] as const) {
+    for (const filePath of listHandoffEnvelopeFiles(handoffRoot, box)) {
+      try {
+        const envelope = readHandoffEnvelope(filePath);
+        if (envelope.id === requestId || envelope.publicFields.request === requestId) {
+          return box;
+        }
+      } catch {
+        sawInvalid = true;
+      }
+    }
+  }
+
+  return sawInvalid ? "invalid" : "missing";
+}
+
+export function buildNasRequestStatusReport(channelId: string, requestPrefix: string, repoRoot?: string): string {
   expireStaleNasHandoffRequestsForChannel(channelId);
   const prefix = sanitizePublicText(requestPrefix, 80).replace(/[^a-zA-Z0-9._:-]/g, "");
   if (prefix.length < 4) {
@@ -629,6 +658,7 @@ export function buildNasRequestStatusReport(channelId: string, requestPrefix: st
     "**NAS Handoff Request**",
     "```text",
     ...requestStatusRow(matches[0]),
+    ...(repoRoot ? [`mailbox=${requestMailboxLocation(repoRoot, matches[0].id)}`] : []),
     "```",
   ].join("\n");
 }
@@ -799,6 +829,7 @@ export async function execute(
         interaction.channelId,
         normalizeRequestStatusFilter(interaction.options.getString("status")),
         interaction.options.getInteger("limit") ?? 5,
+        process.cwd(),
       ),
     });
     return;
@@ -815,6 +846,7 @@ export async function execute(
       content: buildNasRequestStatusReport(
         interaction.channelId,
         interaction.options.getString("request", true),
+        process.cwd(),
       ),
     });
     return;

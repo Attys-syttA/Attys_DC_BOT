@@ -2,6 +2,7 @@
 
 ## 2026-08-01
 
+- NAS request mailbox locator: a `/nas requests` lista es a `/nas request-status request:<id-prefix>` reszletes nezet public-safe `mailbox=<inbox|outbox|archive|missing|unavailable|invalid>` sort is mutat, hogy egy tracked request operatori hibakeresésnél útvonal, fájlnév, raw payload vagy token nélkül követhető legyen a NAS handoff mailboxban.
 - NAS request detail view: uj read-only `/nas request-status request:<id-prefix>` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. Egy helyileg tracked NAS request public-safe reszleteit mutatja, tul rovid prefixet elutasit, tobb talalatnal nem talalgat, es nem olvas raw payloadot vagy NAS pathot.
 - NAS request event trail: a `/nas request` most `nas-request-queued` public-safe operator eventet ir, a `/nas results` csak queued requestbol csinal result atmenetet es `nas-result-completed` / `nas-result-failed` eventet rogzit, a stale timeout pedig `nas-request-timeout` eventkent jelenik meg. Lezart requestet a manual results reconciliation nem ir ujra.
 - NAS request ledger view: uj read-only `/nas requests status:<all|queued|completed|failed> limit:<1-10>` subcommand keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A helyileg tracked NAS handoff requesteket listazza public-safe rovid ID, check, status, age/updated es summary mezokkel, NAS iras, raw path, token, process ID vagy raw payload nelkul.
