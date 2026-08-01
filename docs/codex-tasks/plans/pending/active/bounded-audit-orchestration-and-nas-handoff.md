@@ -55,15 +55,11 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.
 - Első read-only Discord integráció: default-off `/audit start|status|stop` `DISCORD_ENABLE_AUDIT=true` flag mögött, regisztrált csatornához kötve, repair nélkül.
 - Observability/recovery integráció: `/dashboard` és `/status` audit összefoglaló, startup interrupted-normalization, és pipeline-lépések közötti stop-request ellenőrzés.
+- Audit stop/events/dashboard finomítás: `/audit stop` már az aktuális bot processzben futó child-processnek is abort signalt küld, a `/dashboard` és `/status` közös public-safe audit-summaryt használ, és a lefutott named-check lépések `audit-check-*` operator eventként is megjelennek.
 
 ## Nyitott reszek
 
 - NAS control-plane és Windows worker transport/auth kapcsolatának külön megtervezése és tesztelése, a mostani file-backed dry-run worker store és handoff mailbox után.
-- Audit job és audit step tartós store Discord-integrációja és interrupted recovery normalizálása.
-- Fix, server-side named-check catalog bevezetése tetszőleges shell parancs nélkül.
-- Read-only `/audit start|status|stop` első vertikális szelet alapja elkészült; hátralévő a háttérben futó process stop/abort és mélyebb events/dashboard komponensfrissítés.
-- Tartós, újraindítás után is olvasható audit-job állapot.
-- `/dashboard` és `/events` audit progress integráció.
 - Explicit operátori repair-jóváhagyás.
 - Izolált worktree-alapú repair végrehajtás; a normál user worktree automatikus módosítása tilos.
 - Korlátozott retry, issue fingerprint és stagnation stop.
@@ -638,7 +634,7 @@ Elfogadási feltételek:
 
 - `/audit start` csak engedélyezett principalnak és regisztrált projectben működik; **kész, bot-global auth + registered channel + feature flag mellett**
 - kizárólag catalog check fut; **kész**
-- timeout és stop működik; **timeout kész, stop request store szinten és pipeline-lépések között kész; futó process abort még hátralévő**
+- timeout és stop működik; **timeout kész, stop request store szinten, pipeline-lépések között és az aktuális bot processzben futó child-process abortjával kész**
 - output public-safe és korlátozott; **kész**
 - nincs repair, install vagy Git write; **kész**
 - `/run-tests` továbbra is kompatibilis.
@@ -655,12 +651,13 @@ Elfogadási feltételek:
 
 Elfogadási feltételek:
 
-- restart után a befejezett/megakadt job diagnosztizálható; **kész a `/audit status`, `/dashboard`, `/status` alapnézetben**
+- restart után a befejezett/megakadt job diagnosztizálható; **kész a `/audit status`, `/dashboard`, `/status` audit-summary nézetben**
 - aktív processz nélküli korábbi `running` job `interrupted`-szerű kezelt állapotra normalizálódik; **kész `failed` állapotba**
 - raw log és privát path nem kerül DB summaryba vagy Discordra; **store helper szinten kész**
 - egy projectre nincs két aktív audit job; **kész exact project path + guild alapú lockkal a `/audit start` és `/nas request` útvonalon**
+- `/events` mutatja a fontos audit progress állapotokat; **kész `audit-started`, `audit-check-*`, `audit-completed`, `audit-manual-review`, `audit-stop-requested` tokenekkel**
 
-Megjegyzés: az additive SQLite táblák és helper függvények elkészültek, de a Discord observability, interrupted normalization és per-project active-job enforcement még hátralévő vertikális integráció.
+Megjegyzés: az additive SQLite táblák, helper függvények, Discord observability, interrupted normalization és per-project active-job enforcement elkészültek. A következő audit-orchestrációs munka már a repair approval gate / izolált worktree előkészítés felé vihető.
 
 ### Szelet 3 — Repair approval gate és izolált worktree előkészítés
 

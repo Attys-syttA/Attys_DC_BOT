@@ -32,7 +32,9 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "Ugyanarra a regisztralt project pathra egyszerre csak egy aktiv audit job indulhat, akkor is, ha masik Discord csatornabol probalod.",
       "A `full` kulon lathato `plans`, `lint`, `typecheck`, `tests`, `build` lepesekre bomlik.",
       "Nem futtat tetszoleges shell parancsot, nem telepit dependencyt, nem javit kodot, es nem ir Gitbe.",
+      "`/audit stop` stop requestet rogzit, es ha a check ugyanebben a bot processzben fut, abort signalt is kuld a futtatott processznek.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
+      "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
     ],
   },
   {

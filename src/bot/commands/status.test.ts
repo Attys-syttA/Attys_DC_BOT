@@ -110,6 +110,6 @@ describe("/status", () => {
 
     const payload = interaction.editReply.mock.calls[0][0];
     const fieldValue = payload.embeds[0].data.fields[0].value;
-    expect(fieldValue).toContain("Audit: **waiting_manual_review tests:failed**");
+    expect(fieldValue).toContain("Audit: **waiting_manual_review tests:failed failed:1**");
   });
 });

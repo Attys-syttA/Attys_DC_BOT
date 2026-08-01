@@ -7,11 +7,11 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { getLatestAuditJob, getProject, getSession, listAuditSteps } from "../../db/database.js";
-import type { AuditJobRecord, AuditStepRecord } from "../../db/types.js";
 import { sessionManager } from "../../codex/session-manager.js";
 import { resolveCodexCommand } from "../../codex/command-resolver.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
+import { describeAuditDashboard } from "../audit-summary.js";
 import { readOperatorStartupLog } from "./tools.js";
 import { describeOperatorEventLine, readOperatorEvents } from "../operator-events.js";
 
@@ -95,7 +95,7 @@ export async function execute(
       },
       {
         name: "Audit",
-        value: describeAuditJob(latestAuditJob, latestAuditSteps),
+        value: describeAuditDashboard(latestAuditJob, latestAuditSteps),
         inline: false,
       },
     );
@@ -124,17 +124,6 @@ export async function execute(
       ? [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
       : [],
   });
-}
-
-function describeAuditJob(job: AuditJobRecord | undefined, steps: AuditStepRecord[]): string {
-  if (!job) return "none";
-  const latestStep = steps.at(-1);
-  return [
-    `Job: \`${job.id.slice(0, 8)}...\``,
-    `Status: **${job.status}**`,
-    `Current step: **${job.current_step ?? "none"}**`,
-    latestStep ? `Latest step: **${latestStep.step_name} ${latestStep.status}**` : "Latest step: none",
-  ].join("\n");
 }
 
 function describePendingOperatorAction(runtime: {

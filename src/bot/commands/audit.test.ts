@@ -46,6 +46,8 @@ vi.mock("../operator-events.js", () => ({
 }));
 
 import { execute } from "./audit.js";
+import type { AuditCheckName } from "../../audit/check-catalog.js";
+import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
 function makeInteraction(subcommand: "start" | "status" | "stop", check = "tests") {
   return {
@@ -156,12 +158,18 @@ describe("/audit", () => {
       currentStep: "tests",
     }));
     expect(mocks.runAuditCheckPipeline).toHaveBeenCalledWith("/projects/app", "tests", {
+      signal: expect.any(AbortSignal),
       shouldStop: expect.any(Function),
     });
     expect(mocks.insertAuditStepResult).toHaveBeenCalledWith("audit-job-1", expect.objectContaining({
       name: "tests",
       status: "passed",
     }));
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-check-passed",
+      channelId: "channel-1",
+    });
     expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
       "audit-job-1",
       "completed",
@@ -218,6 +226,11 @@ describe("/audit", () => {
       0,
       expect.any(String),
     );
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-check-failed",
+      channelId: "channel-1",
+    });
     expect(interaction.followUp).toHaveBeenCalledWith({
       content: expect.stringContaining("**Audit waiting_manual_review**"),
     });
@@ -295,5 +308,48 @@ describe("/audit", () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "Stop requested for audit job `audit-jo...`.",
     });
+  });
+
+  it("aborts the in-process audit runner when stop is requested while it is still running", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    let resolvePipeline!: (value: unknown) => void;
+    mocks.runAuditCheckPipeline.mockImplementation(((
+      _projectPath: string,
+      _check: AuditCheckName,
+      options: AuditCheckRunnerOptions,
+    ) => {
+      capturedSignal = options.signal;
+      return new Promise((resolve) => {
+        resolvePipeline = resolve;
+      });
+    }) as never);
+    const startInteraction = makeInteraction("start", "tests");
+    const startPromise = execute(startInteraction as never);
+    await vi.waitFor(() => expect(capturedSignal).toBeDefined());
+
+    mocks.getActiveAuditJob.mockReturnValue(makeJob({ status: "running_checks", current_step: "tests" }));
+    const stopInteraction = makeInteraction("stop");
+
+    await execute(stopInteraction as never);
+
+    expect(capturedSignal!.aborted).toBe(true);
+    expect(stopInteraction.editReply).toHaveBeenCalledWith({
+      content: "Stop requested for audit job `audit-jo...`; running process abort requested.",
+    });
+
+    mocks.listAuditSteps.mockReturnValue([makeStep({ status: "stopped", stopped: 1, exit_code: null })]);
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "stopped" }));
+    resolvePipeline([{
+      name: "tests",
+      status: "stopped",
+      exitCode: null,
+      timedOut: false,
+      stopped: true,
+      publicOutput: "stopped",
+      startedAt: "2026-08-01T12:00:00.000Z",
+      finishedAt: "2026-08-01T12:00:01.000Z",
+      durationMs: 1_000,
+    }]);
+    await startPromise;
   });
 });

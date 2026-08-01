@@ -4,7 +4,7 @@ import {
 } from "discord.js";
 import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
-import { runAuditCheckPipeline } from "../../audit/check-runner.js";
+import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
 import {
   assertAuditModeAllowsCapabilities,
   defaultAuditCapabilities,
@@ -52,6 +52,8 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("stop")
     .setDescription("Request stop for the active audit job"));
+
+const activeAuditControllers = new Map<string, AbortController>();
 
 function renderStep(step: AuditStepRecord): string {
   const exit = step.exit_code === null ? "n/a" : String(step.exit_code);
@@ -136,9 +138,12 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
     content: `Starting read-only audit check \`${requestedCheck}\` for \`${sanitizePublicFileLabel(project.project_path)}\`...`,
   });
 
+  const controller = new AbortController();
+  activeAuditControllers.set(jobId, controller);
   let results;
   try {
     results = await runAuditCheckPipeline(project.project_path, requestedCheck as AuditCheckName, {
+      signal: controller.signal,
       shouldStop: () => getAuditJob(jobId)?.stop_requested === 1,
     });
   } catch {
@@ -148,10 +153,13 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
       content: `**Audit failed**\n\`\`\`text\njob: ${jobId.slice(0, 8)}...\nstatus: failed\nreason: check runner error\n\`\`\``,
     });
     return;
+  } finally {
+    activeAuditControllers.delete(jobId);
   }
-  for (const result of results) {
-    insertAuditStepResult(jobId, result);
-  }
+    for (const result of results) {
+      insertAuditStepResult(jobId, result);
+      recordAuditStepEvent(result, interaction.channelId);
+    }
 
   const storedSteps = listAuditSteps(jobId);
   const finalStatus = finalStatusFromSteps(storedSteps);
@@ -166,6 +174,11 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
   await interaction.followUp({
     content: `**Audit ${finalStatus}**\n\`\`\`text\n${renderAuditJob(job!, storedSteps)}\n\`\`\``,
   });
+}
+
+function recordAuditStepEvent(result: AuditCheckRunResult, channelId: string): void {
+  const normalizedStatus = result.status.replace(/_/g, "-");
+  recordOperatorEvent({ kind: "task", status: `audit-check-${normalizedStatus}`, channelId });
 }
 
 async function executeStatus(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -193,9 +206,13 @@ async function executeStop(interaction: ChatInputCommandInteraction): Promise<vo
   }
 
   requestAuditJobStop(job.id, new Date().toISOString());
+  const controller = activeAuditControllers.get(job.id);
+  controller?.abort();
   recordOperatorEvent({ kind: "task", status: "audit-stop-requested", channelId: interaction.channelId });
   await interaction.editReply({
-    content: `Stop requested for audit job \`${job.id.slice(0, 8)}...\`.`,
+    content: controller
+      ? `Stop requested for audit job \`${job.id.slice(0, 8)}...\`; running process abort requested.`
+      : `Stop requested for audit job \`${job.id.slice(0, 8)}...\`.`,
   });
 }
 

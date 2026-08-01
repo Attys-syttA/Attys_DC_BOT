@@ -4,8 +4,8 @@ import {
   EmbedBuilder,
 } from "discord.js";
 import { getAllProjects, getLatestAuditJob, getSession, listAuditSteps } from "../../db/database.js";
-import type { AuditJobRecord, AuditStepRecord } from "../../db/types.js";
 import { sessionManager } from "../../codex/session-manager.js";
+import { describeAuditInline } from "../audit-summary.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
 
@@ -56,7 +56,7 @@ export async function execute(
         `${L("Runtime", "Runtime")}: **${sessionManager.isActive(project.channel_id) ? "active" : "idle"}**`,
         `${L("Queue", "Queue")}: **${queueSize}**`,
         `${L("Pending", "Függőben")}: **${describePendingOperatorAction(runtime)}**`,
-        `${L("Audit", "Audit")}: **${describeAuditStatus(latestAuditJob, latestAuditSteps)}**`,
+        `${L("Audit", "Audit")}: **${describeAuditInline(latestAuditJob, latestAuditSteps)}**`,
         `${L("Auto-approve", "Auto-jóváhagyás")}: ${project.auto_approve ? L("On", "Be") : L("Off", "Ki")}`,
         `${L("Last activity", "Utolsó aktivitás")}: ${lastActivity}`,
       ].join("\n"),
@@ -65,13 +65,6 @@ export async function execute(
   }
 
   await interaction.editReply({ embeds: [embed] });
-}
-
-function describeAuditStatus(job: AuditJobRecord | undefined, steps: AuditStepRecord[]): string {
-  if (!job) return "none";
-  const latestStep = steps.at(-1);
-  const step = latestStep ? ` ${latestStep.step_name}:${latestStep.status}` : "";
-  return `${job.status}${step}`;
 }
 
 function describePendingOperatorAction(runtime: {

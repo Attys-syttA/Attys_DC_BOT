@@ -153,6 +153,8 @@ describe("/dashboard", () => {
     expect(auditField.value).toContain("Job: `audit-jo...`");
     expect(auditField.value).toContain("Status: **waiting_manual_review**");
     expect(auditField.value).toContain("Latest step: **tests failed**");
+    expect(auditField.value).toContain("Stop requested: **no**");
+    expect(auditField.value).toContain("Progress: **failed:1**");
   });
 
   it("shows pending Codex user-input state", async () => {
