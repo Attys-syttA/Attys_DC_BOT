@@ -8,7 +8,12 @@ import { isAuditCheckName } from "../../audit/check-catalog.js";
 import { createAuditRequestHandoff } from "../../nas/audit-handoff.js";
 import { readPublicHandoffStore } from "../../nas/handoff-store.js";
 import { getProject } from "../../db/database.js";
-import { writeHandoffEnvelope } from "../../nas/handoff-store.js";
+import {
+  listHandoffEnvelopeFiles,
+  readHandoffEnvelope,
+  writeHandoffEnvelope,
+  type HandoffEnvelope,
+} from "../../nas/handoff-store.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { npmCommand, runLocalCommand } from "./local-command.js";
@@ -47,7 +52,15 @@ export const data = new SlashCommandBuilder()
         { name: "tests", value: "tests" },
         { name: "build", value: "build" },
         { name: "full", value: "full" },
-      )));
+      )))
+  .addSubcommand((subcommand) => subcommand
+    .setName("results")
+    .setDescription("Show latest public-safe NAS handoff results")
+    .addIntegerOption((option) => option
+      .setName("limit")
+      .setDescription("Maximum results to show")
+      .setMinValue(1)
+      .setMaxValue(10)));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -146,6 +159,40 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
   ].join("\n");
 }
 
+export function buildNasResultsReport(repoRoot: string, limit = 5): string {
+  const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
+  if (!handoffRoot || !fs.existsSync(handoffRoot)) {
+    return "**NAS Handoff Results**\n```text\nINFO handoff mailbox unavailable to bot process\n```";
+  }
+
+  const files = listHandoffEnvelopeFiles(handoffRoot, "outbox")
+    .slice(-Math.max(1, Math.min(10, limit)))
+    .reverse();
+  const rows = files
+    .map((filePath) => {
+      try {
+        return readHandoffEnvelope(filePath);
+      } catch {
+        return null;
+      }
+    })
+    .filter((envelope): envelope is HandoffEnvelope => envelope?.type === "audit.result")
+    .map((envelope) => {
+      const request = envelope.publicFields.request?.slice(0, 12) ?? "unknown";
+      const check = envelope.publicFields.check ?? "unknown";
+      const result = envelope.publicFields.result ?? envelope.status;
+      const summary = envelope.publicFields.summary ?? envelope.publicSummary;
+      return `- request ${request} check=${check} result=${result} summary=${summary}`;
+    });
+
+  return [
+    "**NAS Handoff Results**",
+    "```text",
+    rows.length > 0 ? rows.join("\n") : "INFO no audit result messages in outbox",
+    "```",
+  ].join("\n");
+}
+
 async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot: string): Promise<void> {
   const config = getConfig();
   if (!config.DISCORD_ENABLE_NAS_HANDOFF) {
@@ -199,6 +246,19 @@ export async function execute(
   const subcommand = interaction.options.getSubcommand();
   if (subcommand === "request") {
     await executeRequest(interaction, process.cwd());
+    return;
+  }
+
+  if (subcommand === "results") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas results` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas results` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: buildNasResultsReport(process.cwd(), interaction.options.getInteger("limit") ?? 5),
+    });
     return;
   }
 

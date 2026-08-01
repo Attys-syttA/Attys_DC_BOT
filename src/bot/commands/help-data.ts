@@ -172,11 +172,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas request check:<plans|lint|typecheck|tests|build|full>",
+    usage: "/nas status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas results limit:<1-10>",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
+      "`/nas results` a NAS outbox legutobbi public-safe audit eredmenyeit listazza.",
       "Megmutatja, hogy a PC worker HTTP es a handoff poller fut-e.",
       "A NAS mailboxot csak darabszam szinten mutatja: inbox, outbox, archive.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",

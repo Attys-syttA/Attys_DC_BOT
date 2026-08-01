@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   readFileSync: vi.fn(),
   getConfig: vi.fn(),
   readPublicHandoffStore: vi.fn(),
+  listHandoffEnvelopeFiles: vi.fn(),
+  readHandoffEnvelope: vi.fn(),
   createAuditRequestHandoff: vi.fn(),
   getProject: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
@@ -24,6 +26,8 @@ vi.mock("../../utils/config.js", () => ({
 
 vi.mock("../../nas/handoff-store.js", () => ({
   readPublicHandoffStore: mocks.readPublicHandoffStore,
+  listHandoffEnvelopeFiles: mocks.listHandoffEnvelopeFiles,
+  readHandoffEnvelope: mocks.readHandoffEnvelope,
   writeHandoffEnvelope: mocks.writeHandoffEnvelope,
 }));
 
@@ -40,7 +44,7 @@ vi.mock("./local-command.js", () => ({
   runLocalCommand: mocks.runLocalCommand,
 }));
 
-import { buildNasStatusReport, execute } from "./nas.js";
+import { buildNasResultsReport, buildNasStatusReport, execute } from "./nas.js";
 
 function makeInteraction() {
   return {
@@ -74,6 +78,33 @@ describe("/nas", () => {
         { box: "archive", validMessages: 2 },
       ],
     });
+    mocks.listHandoffEnvelopeFiles.mockReturnValue([
+      "K:\\data\\handoff\\outbox\\result-1.json",
+      "K:\\data\\handoff\\outbox\\result-2.json",
+    ]);
+    mocks.readHandoffEnvelope
+      .mockReturnValueOnce({
+        type: "audit.result",
+        status: "completed",
+        publicSummary: "Audit result",
+        publicFields: {
+          request: "request-one",
+          check: "plans",
+          result: "passed",
+          summary: "1/1 passed",
+        },
+      })
+      .mockReturnValueOnce({
+        type: "audit.result",
+        status: "failed",
+        publicSummary: "Audit result",
+        publicFields: {
+          request: "request-two",
+          check: "tests",
+          result: "failed",
+          summary: "0/1 passed",
+        },
+      });
     mocks.runLocalCommand
       .mockResolvedValueOnce({
         exitCode: 0,
@@ -194,6 +225,18 @@ describe("/nas", () => {
     expect(report).toContain("INFO handoff mailbox: NAS root unavailable to bot process");
     expect(report).not.toContain("raw failure");
     expect(report).not.toContain("secret");
+    expect(report).not.toContain("private");
+  });
+
+  it("builds a public-safe NAS result report", () => {
+    const report = buildNasResultsReport("E:\\private\\repo", 2);
+
+    expect(report).toContain("NAS Handoff Results");
+    expect(report).toContain("request-one");
+    expect(report).toContain("check=plans result=passed summary=1/1 passed");
+    expect(report).toContain("request-two");
+    expect(report).toContain("check=tests result=failed summary=0/1 passed");
+    expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
   });
 });
