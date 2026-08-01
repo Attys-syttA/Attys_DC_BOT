@@ -7,7 +7,13 @@ import path from "node:path";
 import { isAuditCheckName } from "../../audit/check-catalog.js";
 import { createAuditRequestHandoff } from "../../nas/audit-handoff.js";
 import { readPublicHandoffStore } from "../../nas/handoff-store.js";
-import { getProject } from "../../db/database.js";
+import {
+  createNasHandoffRequest,
+  getNasHandoffRequest,
+  getProject,
+  listNasHandoffRequests,
+  updateNasHandoffRequestResult,
+} from "../../db/database.js";
 import {
   listHandoffEnvelopeFiles,
   readHandoffEnvelope,
@@ -136,6 +142,12 @@ function handoffStoreLine(repoRoot: string): string {
   return `OK handoff mailbox: ${boxes}`;
 }
 
+function resultStatus(value: string | undefined, fallback: HandoffEnvelope["status"]): "completed" | "failed" {
+  if (value === "passed") return "completed";
+  if (value === "failed") return "failed";
+  return fallback === "completed" ? "completed" : "failed";
+}
+
 export async function buildNasStatusReport(repoRoot: string): Promise<string> {
   const [workerHttp, handoffWorker] = await Promise.all([
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:http:status"], repoRoot, 15_000),
@@ -159,16 +171,13 @@ export async function buildNasStatusReport(repoRoot: string): Promise<string> {
   ].join("\n");
 }
 
-export function buildNasResultsReport(repoRoot: string, limit = 5): string {
+export function buildNasResultsReport(repoRoot: string, channelId: string, limit = 5): string {
   const handoffRoot = readHandoffRootFromWorkerEnv(repoRoot);
   if (!handoffRoot || !fs.existsSync(handoffRoot)) {
     return "**NAS Handoff Results**\n```text\nINFO handoff mailbox unavailable to bot process\n```";
   }
 
-  const files = listHandoffEnvelopeFiles(handoffRoot, "outbox")
-    .slice(-Math.max(1, Math.min(10, limit)))
-    .reverse();
-  const rows = files
+  const outboxResults = listHandoffEnvelopeFiles(handoffRoot, "outbox")
     .map((filePath) => {
       try {
         return readHandoffEnvelope(filePath);
@@ -176,13 +185,23 @@ export function buildNasResultsReport(repoRoot: string, limit = 5): string {
         return null;
       }
     })
-    .filter((envelope): envelope is HandoffEnvelope => envelope?.type === "audit.result")
-    .map((envelope) => {
-      const request = envelope.publicFields.request?.slice(0, 12) ?? "unknown";
-      const check = envelope.publicFields.check ?? "unknown";
-      const result = envelope.publicFields.result ?? envelope.status;
-      const summary = envelope.publicFields.summary ?? envelope.publicSummary;
-      return `- request ${request} check=${check} result=${result} summary=${summary}`;
+    .filter((envelope): envelope is HandoffEnvelope => envelope?.type === "audit.result");
+
+  for (const envelope of outboxResults) {
+    const requestId = envelope.publicFields.request;
+    if (!requestId || !getNasHandoffRequest(requestId)) continue;
+    updateNasHandoffRequestResult(
+      requestId,
+      resultStatus(envelope.publicFields.result, envelope.status),
+      envelope.publicFields.summary ?? envelope.publicSummary,
+      envelope.createdAt,
+    );
+  }
+
+  const rows = listNasHandoffRequests(channelId, limit)
+    .map((request) => {
+      const summary = request.result_summary ?? "waiting";
+      return `- request ${request.id.slice(0, 12)} check=${request.check_name} status=${request.status} summary=${summary}`;
     });
 
   return [
@@ -230,6 +249,17 @@ async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot
       checkName: requestedCheck,
     });
     writeHandoffEnvelope(handoffRoot, "inbox", envelope);
+    const now = envelope.createdAt;
+    createNasHandoffRequest({
+      id: envelope.id,
+      channelId: interaction.channelId,
+      projectLabel: path.basename(project.project_path),
+      checkName: requestedCheck,
+      status: "queued",
+      resultSummary: null,
+      createdAt: now,
+      updatedAt: now,
+    });
     await interaction.editReply({
       content: `Queued NAS audit request \`${envelope.id.slice(0, 8)}...\` for check \`${requestedCheck}\`.`,
     });
@@ -257,7 +287,7 @@ export async function execute(
       return;
     }
     await interaction.editReply({
-      content: buildNasResultsReport(process.cwd(), interaction.options.getInteger("limit") ?? 5),
+      content: buildNasResultsReport(process.cwd(), interaction.channelId, interaction.options.getInteger("limit") ?? 5),
     });
     return;
   }

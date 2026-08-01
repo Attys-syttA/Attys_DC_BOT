@@ -64,3 +64,27 @@ export interface AuditStepRecord {
   duration_ms: number;
   created_at: string;
 }
+
+export type NasHandoffRequestStatus = "queued" | "completed" | "failed";
+
+export interface NasHandoffRequestRecord {
+  id: string;
+  channel_id: string;
+  project_label: string;
+  check_name: string;
+  status: NasHandoffRequestStatus;
+  result_summary: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NasHandoffRequestCreateInput {
+  id: string;
+  channelId: string;
+  projectLabel: string;
+  checkName: string;
+  status: NasHandoffRequestStatus;
+  resultSummary: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

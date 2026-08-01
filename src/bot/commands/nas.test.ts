@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   readHandoffEnvelope: vi.fn(),
   createAuditRequestHandoff: vi.fn(),
   getProject: vi.fn(),
+  createNasHandoffRequest: vi.fn(),
+  getNasHandoffRequest: vi.fn(),
+  listNasHandoffRequests: vi.fn(),
+  updateNasHandoffRequestResult: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
   runLocalCommand: vi.fn(),
 }));
@@ -37,6 +41,10 @@ vi.mock("../../nas/audit-handoff.js", () => ({
 
 vi.mock("../../db/database.js", () => ({
   getProject: mocks.getProject,
+  createNasHandoffRequest: mocks.createNasHandoffRequest,
+  getNasHandoffRequest: mocks.getNasHandoffRequest,
+  listNasHandoffRequests: mocks.listNasHandoffRequests,
+  updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
 }));
 
 vi.mock("./local-command.js", () => ({
@@ -68,6 +76,21 @@ describe("/nas", () => {
       },
     }));
     mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "E:\\codex_works\\Attys_DC_BOT" });
+    mocks.getNasHandoffRequest.mockReturnValue({ id: "request-one" });
+    mocks.listNasHandoffRequests.mockReturnValue([
+      {
+        id: "request-one",
+        check_name: "plans",
+        status: "completed",
+        result_summary: "1/1 passed",
+      },
+      {
+        id: "request-two",
+        check_name: "tests",
+        status: "failed",
+        result_summary: "0/1 passed",
+      },
+    ]);
     mocks.existsSync.mockReturnValue(true);
     mocks.readFileSync.mockReturnValue("ATTYS_NAS_HANDOFF_ROOT=K:\\data\\handoff\nATTYS_WORKER_SHARED_SECRET_HOME=hidden\n");
     mocks.readPublicHandoffStore.mockReturnValue({
@@ -85,6 +108,7 @@ describe("/nas", () => {
     mocks.readHandoffEnvelope
       .mockReturnValueOnce({
         type: "audit.result",
+        createdAt: "2026-08-01T12:00:00.000Z",
         status: "completed",
         publicSummary: "Audit result",
         publicFields: {
@@ -96,6 +120,7 @@ describe("/nas", () => {
       })
       .mockReturnValueOnce({
         type: "audit.result",
+        createdAt: "2026-08-01T12:01:00.000Z",
         status: "failed",
         publicSummary: "Audit result",
         publicFields: {
@@ -154,6 +179,13 @@ describe("/nas", () => {
         }),
       }),
     );
+    expect(mocks.createNasHandoffRequest).toHaveBeenCalledWith(expect.objectContaining({
+      id: "request-1",
+      channelId: "channel-1",
+      projectLabel: "Attys_DC_BOT",
+      checkName: "plans",
+      status: "queued",
+    }));
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: expect.stringContaining("Queued NAS audit request"),
     });
@@ -229,13 +261,25 @@ describe("/nas", () => {
   });
 
   it("builds a public-safe NAS result report", () => {
-    const report = buildNasResultsReport("E:\\private\\repo", 2);
+    const report = buildNasResultsReport("E:\\private\\repo", "channel-1", 2);
 
     expect(report).toContain("NAS Handoff Results");
     expect(report).toContain("request-one");
-    expect(report).toContain("check=plans result=passed summary=1/1 passed");
+    expect(report).toContain("check=plans status=completed summary=1/1 passed");
     expect(report).toContain("request-two");
-    expect(report).toContain("check=tests result=failed summary=0/1 passed");
+    expect(report).toContain("check=tests status=failed summary=0/1 passed");
+    expect(mocks.updateNasHandoffRequestResult).toHaveBeenCalledWith(
+      "request-one",
+      "completed",
+      "1/1 passed",
+      "2026-08-01T12:00:00.000Z",
+    );
+    expect(mocks.updateNasHandoffRequestResult).toHaveBeenCalledWith(
+      "request-two",
+      "failed",
+      "0/1 passed",
+      "2026-08-01T12:01:00.000Z",
+    );
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
   });

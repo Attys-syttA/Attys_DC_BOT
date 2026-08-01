@@ -9,6 +9,9 @@ import type {
   AuditJobCreateInput,
   AuditJobRecord,
   AuditStepRecord,
+  NasHandoffRequestCreateInput,
+  NasHandoffRequestRecord,
+  NasHandoffRequestStatus,
   Project,
   Session,
   SessionStatus,
@@ -72,6 +75,17 @@ export function initDatabase(): void {
       finished_at TEXT NOT NULL,
       duration_ms INTEGER NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS nas_handoff_requests (
+      id TEXT PRIMARY KEY,
+      channel_id TEXT REFERENCES projects(channel_id) ON DELETE CASCADE,
+      project_label TEXT NOT NULL,
+      check_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      result_summary TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
   `);
   normalizeInterruptedAuditJobs();
@@ -299,4 +313,62 @@ export function listAuditSteps(jobId: string): AuditStepRecord[] {
   return db
     .prepare("SELECT * FROM audit_steps WHERE job_id = ? ORDER BY started_at ASC, created_at ASC")
     .all(jobId) as AuditStepRecord[];
+}
+
+export function createNasHandoffRequest(input: NasHandoffRequestCreateInput): void {
+  db.prepare(`
+    INSERT INTO nas_handoff_requests (
+      id,
+      channel_id,
+      project_label,
+      check_name,
+      status,
+      result_summary,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    sanitizePublicText(input.id, 120),
+    input.channelId,
+    sanitizePublicFileLabel(input.projectLabel),
+    sanitizePublicText(input.checkName, 40),
+    input.status,
+    input.resultSummary ? sanitizePublicText(input.resultSummary, 240) : null,
+    input.createdAt,
+    input.updatedAt,
+  );
+}
+
+export function updateNasHandoffRequestResult(
+  id: string,
+  status: NasHandoffRequestStatus,
+  resultSummary: string,
+  updatedAt: string,
+): void {
+  db.prepare(`
+    UPDATE nas_handoff_requests
+    SET status = ?,
+        result_summary = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(
+    status,
+    sanitizePublicText(resultSummary, 240),
+    updatedAt,
+    sanitizePublicText(id, 120),
+  );
+}
+
+export function getNasHandoffRequest(id: string): NasHandoffRequestRecord | undefined {
+  return db
+    .prepare("SELECT * FROM nas_handoff_requests WHERE id = ?")
+    .get(sanitizePublicText(id, 120)) as NasHandoffRequestRecord | undefined;
+}
+
+export function listNasHandoffRequests(channelId: string, limit = 5): NasHandoffRequestRecord[] {
+  const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
+  return db
+    .prepare("SELECT * FROM nas_handoff_requests WHERE channel_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?")
+    .all(channelId, safeLimit) as NasHandoffRequestRecord[];
 }

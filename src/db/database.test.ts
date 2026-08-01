@@ -32,6 +32,10 @@ import {
   requestAuditJobStop,
   insertAuditStepResult,
   listAuditSteps,
+  createNasHandoffRequest,
+  getNasHandoffRequest,
+  listNasHandoffRequests,
+  updateNasHandoffRequestResult,
 } from "./database.js";
 import { defaultAuditCapabilities } from "../audit/types.js";
 
@@ -338,6 +342,62 @@ describe("database", () => {
       expect(steps[0].public_output).toContain("DISCORD_BOT_TOKEN=<redacted>");
       expect(steps[0].public_output).toContain("<local-path>");
       expect(steps[0].public_output).not.toContain("someone");
+    });
+  });
+
+  describe("NAS handoff request store", () => {
+    beforeEach(() => {
+      registerProject("ch1", "/p1", "guild1");
+    });
+
+    it("creates and lists public-safe NAS handoff requests", () => {
+      createNasHandoffRequest({
+        id: "request-1",
+        channelId: "ch1",
+        projectLabel: "E:\\codex_works\\private-project",
+        checkName: "plans",
+        status: "queued",
+        resultSummary: null,
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      const request = getNasHandoffRequest("request-1");
+      expect(request).toMatchObject({
+        id: "request-1",
+        channel_id: "ch1",
+        project_label: "<local-path>/private-project",
+        check_name: "plans",
+        status: "queued",
+        result_summary: null,
+      });
+      expect(listNasHandoffRequests("ch1", 5).map((entry) => entry.id)).toEqual(["request-1"]);
+    });
+
+    it("updates NAS handoff requests from public-safe result summaries", () => {
+      createNasHandoffRequest({
+        id: "request-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        checkName: "plans",
+        status: "queued",
+        resultSummary: null,
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      updateNasHandoffRequestResult(
+        "request-1",
+        "completed",
+        "1/1 passed C:\\Users\\someone\\repo",
+        "2026-08-01T12:01:00.000Z",
+      );
+
+      expect(getNasHandoffRequest("request-1")).toMatchObject({
+        status: "completed",
+        result_summary: "1/1 passed <local-path>",
+        updated_at: "2026-08-01T12:01:00.000Z",
+      });
     });
   });
 });
