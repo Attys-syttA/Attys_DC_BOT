@@ -49,7 +49,7 @@ import { execute } from "./audit.js";
 import type { AuditCheckName } from "../../audit/check-catalog.js";
 import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
-function makeInteraction(subcommand: "start" | "status" | "stop", check = "tests") {
+function makeInteraction(subcommand: "start" | "status" | "stop" | "repair", check = "tests") {
   return {
     channelId: "channel-1",
     options: {
@@ -100,7 +100,7 @@ function makeStep(overrides = {}) {
 describe("/audit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_AUDIT: true });
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_AUDIT: true, DISCORD_ENABLE_AUDIT_REPAIR: true });
     mocks.getProject.mockReturnValue({ channel_id: "channel-1", project_path: "/projects/app", guild_id: "guild-1" });
     mocks.getActiveAuditJob.mockReturnValue(undefined);
     mocks.getActiveAuditJobByProjectPath.mockReturnValue(undefined);
@@ -351,5 +351,40 @@ describe("/audit", () => {
       durationMs: 1_000,
     }]);
     await startPromise;
+  });
+
+  it("does not request repair approval unless repair is explicitly enabled", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_AUDIT: true, DISCORD_ENABLE_AUDIT_REPAIR: false });
+    const interaction = makeInteraction("repair");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/audit repair` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` in `.env` to enable it.",
+    });
+    expect(mocks.updateAuditJobProgress).not.toHaveBeenCalled();
+  });
+
+  it("requests explicit approval before any repair worktree is prepared", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "waiting_manual_review" }));
+    const interaction = makeInteraction("repair");
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "waiting_repair_approval",
+      null,
+      0,
+      expect.any(String),
+    );
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-repair-waiting",
+      channelId: "channel-1",
+    });
+    const payload = interaction.editReply.mock.calls[0][0];
+    expect(payload.content).toContain("No repair, worktree, Codex turn");
+    expect(payload.components[0].components[0].data.custom_id).toBe("audit-repair-approve:audit-job-1");
   });
 });

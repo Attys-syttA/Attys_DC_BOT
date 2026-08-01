@@ -56,12 +56,12 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Első read-only Discord integráció: default-off `/audit start|status|stop` `DISCORD_ENABLE_AUDIT=true` flag mögött, regisztrált csatornához kötve, repair nélkül.
 - Observability/recovery integráció: `/dashboard` és `/status` audit összefoglaló, startup interrupted-normalization, és pipeline-lépések közötti stop-request ellenőrzés.
 - Audit stop/events/dashboard finomítás: `/audit stop` már az aktuális bot processzben futó child-processnek is abort signalt küld, a `/dashboard` és `/status` közös public-safe audit-summaryt használ, és a lefutott named-check lépések `audit-check-*` operator eventként is megjelennek.
+- Audit repair approval/worktree preflight: külön `DISCORD_ENABLE_AUDIT_REPAIR` flag, `/audit repair` approval kérés, approve/deny button handler, és isolated worktree előkészítő Git preflight elkészült. Ez még nem indít Codex repair turnt, merge-et, commitot vagy pusht.
 
 ## Nyitott reszek
 
 - NAS control-plane és Windows worker transport/auth kapcsolatának külön megtervezése és tesztelése, a mostani file-backed dry-run worker store és handoff mailbox után.
-- Explicit operátori repair-jóváhagyás.
-- Izolált worktree-alapú repair végrehajtás; a normál user worktree automatikus módosítása tilos.
+- Egyetlen approved repair + recheck végrehajtása izolált worktree-ben; a normál user worktree automatikus módosítása továbbra is tilos.
 - Korlátozott retry, issue fingerprint és stagnation stop.
 - Repair eredményének kézi review/átvételi folyamata.
 - Semleges planner/executor/validator szerepek opcionális bevezetése, kezdetben egy Codex threaden belül.
@@ -671,11 +671,13 @@ Megjegyzés: az additive SQLite táblák, helper függvények, Discord observabi
 
 Elfogadási feltételek:
 
-- approval nélkül nincs worktree és Codex repair turn;
-- dirty source esetén repair elutasítva;
-- worktree root escape és symlink/reparse kockázat kezelve;
-- nincs source branch write;
-- cleanup hiba nem törli a user worktree-jét.
+- approval nélkül nincs worktree és Codex repair turn; **kész**
+- dirty source esetén repair elutasítva; **kész preflight szinten**
+- worktree root escape és symlink/reparse kockázat kezelve; **kész preflight szinten**
+- nincs source branch write; **kész, csak isolated worktree add lehetséges approval után**
+- cleanup hiba nem törli a user worktree-jét; **részben kész: ebben a szeletben nincs cleanup workflow, így source/user worktree törlés sincs**
+
+Megjegyzés: Szelet 3 csak az approval gate-et és az isolated worktree preflightet készíti elő. A tényleges Codex repair turn, recheck, retention és cleanup Szelet 4 feladat.
 
 ### Szelet 4 — Egyetlen approved repair + recheck
 
@@ -835,7 +837,7 @@ Repair/worktree szeletnél ezen felül:
 
 - Ez a tervfájl docs-only előkészítés; most nincs version bump.
 - Read-only `/audit` command megjelenése user-visible feature, ezért majd prerelease version bumpot és README/SETUP/help frissítést igényel.
-- Repair capability külön, későbbi version bump és SECURITY/release-checklist frissítés nélkül nem publikálható.
+- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3`; a tényleges repair execution továbbra is külön későbbi version/doksi/security döntést igényel.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

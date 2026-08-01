@@ -24,8 +24,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop",
-    short: "Fix, read-only audit checkeket futtat a regisztralt projecten, ha az env engedi.",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop | /audit repair",
+    short: "Fix, read-only audit checkeket futtat, es kulon engedelyezve repair approvalt ker.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
@@ -35,6 +35,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit stop` stop requestet rogzit, es ha a check ugyanebben a bot processzben fut, abort signalt is kuld a futtatott processznek.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
+      "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, es ebben a szeletben nem indit Codex repairt, merge-et, commitot vagy pusht.",
     ],
   },
   {

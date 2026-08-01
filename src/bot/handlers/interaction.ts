@@ -7,7 +7,8 @@ import {
 } from "discord.js";
 import { isAllowedPrincipal } from "../../security/guard.js";
 import { sessionManager } from "../../codex/session-manager.js";
-import { upsertSession, getSession, getProject, getAllProjects, unregisterProject } from "../../db/database.js";
+import { prepareRepairWorktree } from "../../audit/worktree-manager.js";
+import { upsertSession, getSession, getProject, getAllProjects, unregisterProject, getAuditJob, updateAuditJobProgress } from "../../db/database.js";
 import { deleteStoredThread } from "../../codex/storage.js";
 import { renderMappingsPayload } from "../commands/mappings.js";
 import { readLastResponseWithFallback } from "../commands/last.js";
@@ -256,6 +257,70 @@ export async function handleButtonInteraction(
       content: L(`Removed mapping for <#${channelId}>.`, `<#${channelId}> mapping eltávolítva.`),
       ...renderMappingsPayload(projects, interaction.channelId),
     });
+    return;
+  }
+
+  if (action === "audit-repair-approve" || action === "audit-repair-deny") {
+    if (!getConfig().DISCORD_ENABLE_AUDIT_REPAIR) {
+      await interaction.update({
+        content: "`audit repair` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` in `.env` to enable it.",
+        components: [],
+      });
+      return;
+    }
+
+    const job = getAuditJob(requestId);
+    if (!job || job.channel_id !== interaction.channelId || job.status !== "waiting_repair_approval") {
+      await interaction.update({
+        content: L("This audit repair approval request has expired.", "Ez az audit repair jóváhagyási kérés lejárt."),
+        components: [],
+      });
+      return;
+    }
+
+    if (action === "audit-repair-deny") {
+      updateAuditJobProgress(job.id, "waiting_manual_review", null, job.iteration, new Date().toISOString());
+      recordOperatorEvent({ kind: "task", status: "audit-repair-denied", channelId: interaction.channelId });
+      await interaction.update({
+        content: `Audit repair denied for job \`${job.id.slice(0, 8)}...\`; job remains waiting for manual review.`,
+        components: [],
+      });
+      return;
+    }
+
+    const project = getProject(interaction.channelId);
+    if (!project) {
+      await interaction.update({
+        content: L("This channel is not registered to any project.", "Ez a csatorna nincs projekthez regisztrálva."),
+        components: [],
+      });
+      return;
+    }
+
+    try {
+      updateAuditJobProgress(job.id, "preparing_isolated_worktree", "repair-worktree", job.iteration, new Date().toISOString());
+      const prepared = await prepareRepairWorktree({
+        sourceRoot: project.project_path,
+        jobId: job.id,
+      });
+      updateAuditJobProgress(job.id, "waiting_manual_review", null, job.iteration, new Date().toISOString());
+      recordOperatorEvent({ kind: "task", status: "audit-repair-approved", channelId: interaction.channelId });
+      await interaction.update({
+        content: [
+          `Isolated repair worktree prepared for audit job \`${job.id.slice(0, 8)}...\`.`,
+          `Branch: \`${prepared.branchName}\``,
+          "Repair execution is not enabled in this slice; no Codex repair turn, merge, commit, or push was started.",
+        ].join("\n"),
+        components: [],
+      });
+    } catch {
+      updateAuditJobProgress(job.id, "waiting_manual_review", null, job.iteration, new Date().toISOString());
+      recordOperatorEvent({ kind: "task", status: "audit-repair-preflight-failed", channelId: interaction.channelId });
+      await interaction.update({
+        content: "Audit repair preflight failed. The source worktree may be dirty, busy, unsafe, or otherwise not ready; no repair was started.",
+        components: [],
+      });
+    }
     return;
   }
 

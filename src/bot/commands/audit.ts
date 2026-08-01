@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
@@ -51,7 +54,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Show the latest audit status for this channel"))
   .addSubcommand((subcommand) => subcommand
     .setName("stop")
-    .setDescription("Request stop for the active audit job"));
+    .setDescription("Request stop for the active audit job"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("repair")
+    .setDescription("Request explicit approval for an isolated repair attempt"));
 
 const activeAuditControllers = new Map<string, AbortController>();
 
@@ -216,6 +222,51 @@ async function executeStop(interaction: ChatInputCommandInteraction): Promise<vo
   });
 }
 
+async function executeRepair(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit repair` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` in `.env` to enable it.",
+    });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+
+  if (job.status !== "waiting_manual_review" && job.status !== "waiting_repair_approval") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not waiting for repair approval.`,
+    });
+    return;
+  }
+
+  updateAuditJobProgress(job.id, "waiting_repair_approval", null, job.iteration, new Date().toISOString());
+  recordOperatorEvent({ kind: "task", status: "audit-repair-waiting", channelId: interaction.channelId });
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`audit-repair-approve:${job.id}`)
+      .setLabel("Approve isolated repair")
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`audit-repair-deny:${job.id}`)
+      .setLabel("Keep manual review")
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  await interaction.editReply({
+    content: [
+      `Repair approval requested for audit job \`${job.id.slice(0, 8)}...\`.`,
+      "No repair, worktree, Codex turn, merge, commit, or push starts until the approval button is pressed.",
+    ].join("\n"),
+    components: [row],
+  });
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -230,5 +281,9 @@ export async function execute(
   }
   if (subcommand === "stop") {
     await executeStop(interaction);
+    return;
+  }
+  if (subcommand === "repair") {
+    await executeRepair(interaction);
   }
 }

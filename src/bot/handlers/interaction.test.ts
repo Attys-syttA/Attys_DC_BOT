@@ -17,9 +17,12 @@ const mocks = vi.hoisted(() => ({
   getProject: vi.fn(),
   getAllProjects: vi.fn(),
   unregisterProject: vi.fn(),
+  getAuditJob: vi.fn(),
+  updateAuditJobProgress: vi.fn(),
   readThread: vi.fn(),
   readLastResponseWithFallback: vi.fn(),
   deleteStoredThread: vi.fn(),
+  prepareRepairWorktree: vi.fn(),
   recordOperatorEvent: vi.fn(),
 }));
 
@@ -37,6 +40,12 @@ vi.mock("../../db/database.js", () => ({
   getProject: mocks.getProject,
   getAllProjects: mocks.getAllProjects,
   unregisterProject: mocks.unregisterProject,
+  getAuditJob: mocks.getAuditJob,
+  updateAuditJobProgress: mocks.updateAuditJobProgress,
+}));
+
+vi.mock("../../audit/worktree-manager.js", () => ({
+  prepareRepairWorktree: mocks.prepareRepairWorktree,
 }));
 
 vi.mock("../../codex/app-server-client.js", () => ({
@@ -99,6 +108,7 @@ describe("interaction handlers", () => {
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: true,
       DISCORD_ENABLE_SESSION_DELETE: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
     });
     mocks.sessionManager.stopSession.mockResolvedValue(true);
     mocks.sessionManager.confirmQueue.mockReturnValue(true);
@@ -121,6 +131,26 @@ describe("interaction handlers", () => {
         created_at: "now",
       },
     ]);
+    mocks.getAuditJob.mockReturnValue({
+      id: "audit-job-1",
+      channel_id: "channel-1",
+      project_label: "<local-path>/app",
+      mode: "check-only",
+      status: "waiting_repair_approval",
+      current_step: null,
+      iteration: 0,
+      max_iterations: 2,
+      stop_requested: 0,
+      capabilities_json: "[]",
+      created_at: "now",
+      updated_at: "now",
+    });
+    mocks.prepareRepairWorktree.mockResolvedValue({
+      sourceRoot: "/projects/app",
+      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branchName: "audit-repair/audit-job-1",
+      headCommit: "0123456789abcdef",
+    });
     mocks.readThread.mockResolvedValue({
       turns: [
         {
@@ -187,6 +217,7 @@ describe("interaction handlers", () => {
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: false,
       DISCORD_ENABLE_SESSION_DELETE: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
     });
     const interaction = makeButton("approve-all:req-1");
 
@@ -220,6 +251,7 @@ describe("interaction handlers", () => {
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: true,
       DISCORD_ENABLE_SESSION_DELETE: false,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
     });
     const interaction = makeSelect("session-select", ["thread-1"]);
 
@@ -248,6 +280,7 @@ describe("interaction handlers", () => {
       DISCORD_QUEUE_MAX_ITEMS: 10,
       DISCORD_ENABLE_AUTO_APPROVE: true,
       DISCORD_ENABLE_SESSION_DELETE: false,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
     });
     const interaction = makeButton("session-delete:thread-1");
 
@@ -276,6 +309,77 @@ describe("interaction handlers", () => {
     expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
       components: [],
     }));
+  });
+
+  it("rejects audit repair approval when repair is disabled", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_QUEUE_MAX_ITEMS: 10,
+      DISCORD_ENABLE_AUTO_APPROVE: true,
+      DISCORD_ENABLE_SESSION_DELETE: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: false,
+    });
+    const interaction = makeButton("audit-repair-approve:audit-job-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.prepareRepairWorktree).not.toHaveBeenCalled();
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "`audit repair` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` in `.env` to enable it.",
+      components: [],
+    });
+  });
+
+  it("prepares an isolated repair worktree only after approval", async () => {
+    const interaction = makeButton("audit-repair-approve:audit-job-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.prepareRepairWorktree).toHaveBeenCalledWith({
+      sourceRoot: "/projects/app",
+      jobId: "audit-job-1",
+    });
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "preparing_isolated_worktree",
+      "repair-worktree",
+      0,
+      expect.any(String),
+    );
+    expect(mocks.updateAuditJobProgress).toHaveBeenLastCalledWith(
+      "audit-job-1",
+      "waiting_manual_review",
+      null,
+      0,
+      expect.any(String),
+    );
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: expect.stringContaining("Repair execution is not enabled"),
+      components: [],
+    });
+  });
+
+  it("returns to manual review when repair worktree preflight fails", async () => {
+    mocks.prepareRepairWorktree.mockRejectedValue(new Error("dirty"));
+    const interaction = makeButton("audit-repair-approve:audit-job-1");
+
+    await handleButtonInteraction(interaction as never);
+
+    expect(mocks.updateAuditJobProgress).toHaveBeenLastCalledWith(
+      "audit-job-1",
+      "waiting_manual_review",
+      null,
+      0,
+      expect.any(String),
+    );
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-repair-preflight-failed",
+      channelId: "channel-1",
+    });
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: expect.stringContaining("preflight failed"),
+      components: [],
+    });
   });
 
   it("resolves ask select menu choices by label", async () => {
