@@ -11,6 +11,7 @@ import {
   countNasHandoffRequestsByStatus,
   createNasHandoffRequest,
   expireStaleNasHandoffRequests,
+  findNasHandoffRequestsByIdPrefix,
   getNasHandoffRequest,
   getProject,
   listNasHandoffRequests,
@@ -127,6 +128,13 @@ export const data = new SlashCommandBuilder()
       .setDescription("Maximum requests to show")
       .setMinValue(1)
       .setMaxValue(10)))
+  .addSubcommand((subcommand) => subcommand
+    .setName("request-status")
+    .setDescription("Show one tracked public-safe NAS handoff request")
+    .addStringOption((option) => option
+      .setName("request")
+      .setDescription("Request id or id prefix")
+      .setRequired(true)))
   .addSubcommand((subcommand) => subcommand
     .setName("bridge")
     .setDescription("Control the local PC NAS bridge lifecycle")
@@ -583,6 +591,48 @@ export function buildNasRequestsReport(channelId: string, status: NasHandoffRequ
   ].join("\n");
 }
 
+function requestStatusRow(request: ReturnType<typeof findNasHandoffRequestsByIdPrefix>[number]): string[] {
+  const summary = sanitizePublicText(request.result_summary ?? "waiting", 180) || "waiting";
+  return [
+    `request=${request.id.slice(0, 24)}`,
+    `project=${sanitizePublicText(request.project_label, 80) || "unknown"}`,
+    `check=${sanitizePublicText(request.check_name, 40) || "unknown"}`,
+    `status=${request.status}`,
+    requestAgeLine(request.created_at, request.updated_at),
+    `summary=${summary}`,
+  ];
+}
+
+export function buildNasRequestStatusReport(channelId: string, requestPrefix: string): string {
+  expireStaleNasHandoffRequestsForChannel(channelId);
+  const prefix = sanitizePublicText(requestPrefix, 80).replace(/[^a-zA-Z0-9._:-]/g, "");
+  if (prefix.length < 4) {
+    return "**NAS Handoff Request**\n```text\nFAIL request prefix too short\n```";
+  }
+
+  const matches = findNasHandoffRequestsByIdPrefix(channelId, prefix, 6);
+  if (matches.length === 0) {
+    return "**NAS Handoff Request**\n```text\nINFO no tracked request matched\n```";
+  }
+  if (matches.length > 1) {
+    const rows = matches.slice(0, 5).map((request) => `- ${request.id.slice(0, 24)} status=${request.status}`);
+    return [
+      "**NAS Handoff Request**",
+      "```text",
+      "INFO request prefix is ambiguous",
+      ...rows,
+      "```",
+    ].join("\n");
+  }
+
+  return [
+    "**NAS Handoff Request**",
+    "```text",
+    ...requestStatusRow(matches[0]),
+    "```",
+  ].join("\n");
+}
+
 async function executeRequest(interaction: ChatInputCommandInteraction, repoRoot: string): Promise<void> {
   const config = getConfig();
   if (!config.DISCORD_ENABLE_NAS_HANDOFF) {
@@ -749,6 +799,22 @@ export async function execute(
         interaction.channelId,
         normalizeRequestStatusFilter(interaction.options.getString("status")),
         interaction.options.getInteger("limit") ?? 5,
+      ),
+    });
+    return;
+  }
+
+  if (subcommand === "request-status") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas request-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas request-status` ki van kapcsolva."),
+      });
+      return;
+    }
+    await interaction.editReply({
+      content: buildNasRequestStatusReport(
+        interaction.channelId,
+        interaction.options.getString("request", true),
       ),
     });
     return;

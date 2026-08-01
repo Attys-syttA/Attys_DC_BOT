@@ -396,6 +396,28 @@ export function listNasHandoffRequestsByStatus(
     .all(channelId, status, safeLimit) as NasHandoffRequestRecord[];
 }
 
+export function findNasHandoffRequestsByIdPrefix(
+  channelId: string,
+  idPrefix: string,
+  limit = 5,
+): NasHandoffRequestRecord[] {
+  const safePrefix = sanitizePublicText(idPrefix, 120)
+    .replace(/[^a-zA-Z0-9._:-]/g, "")
+    .slice(0, 80);
+  if (safePrefix.length < 4) return [];
+
+  const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
+  return db
+    .prepare(`
+      SELECT * FROM nas_handoff_requests
+      WHERE channel_id = ?
+        AND id LIKE ?
+      ORDER BY updated_at DESC, created_at DESC
+      LIMIT ?
+    `)
+    .all(channelId, `${safePrefix}%`, safeLimit) as NasHandoffRequestRecord[];
+}
+
 export function countNasHandoffRequestsByStatus(channelId: string): NasHandoffRequestStatusCounts {
   const rows = db
     .prepare("SELECT status, COUNT(*) AS count FROM nas_handoff_requests WHERE channel_id = ? GROUP BY status")

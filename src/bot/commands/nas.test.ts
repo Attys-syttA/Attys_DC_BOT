@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   listHandoffEnvelopeFiles: vi.fn(),
   readHandoffEnvelope: vi.fn(),
   createAuditRequestHandoff: vi.fn(),
+  findNasHandoffRequestsByIdPrefix: vi.fn(),
   getProject: vi.fn(),
   createNasHandoffRequest: vi.fn(),
   expireStaleNasHandoffRequests: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("../../db/database.js", () => ({
   getProject: mocks.getProject,
   createNasHandoffRequest: mocks.createNasHandoffRequest,
   expireStaleNasHandoffRequests: mocks.expireStaleNasHandoffRequests,
+  findNasHandoffRequestsByIdPrefix: mocks.findNasHandoffRequestsByIdPrefix,
   getNasHandoffRequest: mocks.getNasHandoffRequest,
   listNasHandoffRequests: mocks.listNasHandoffRequests,
   listNasHandoffRequestsByStatus: mocks.listNasHandoffRequestsByStatus,
@@ -67,6 +69,7 @@ import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
   buildNasDeployStatusReport,
+  buildNasRequestStatusReport,
   buildNasRequestsReport,
   buildNasResultsReport,
   buildNasStatusReport,
@@ -142,6 +145,18 @@ describe("/nas", () => {
         result_summary: null,
         created_at: new Date(Date.now() - 8 * 60_000).toISOString(),
         updated_at: new Date(Date.now() - 3 * 60_000).toISOString(),
+      },
+    ]);
+    mocks.findNasHandoffRequestsByIdPrefix.mockReturnValue([
+      {
+        id: "request-status-one",
+        channel_id: "channel-1",
+        project_label: "Attys_DC_BOT",
+        check_name: "plans",
+        status: "queued",
+        result_summary: null,
+        created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+        updated_at: new Date(Date.now() - 2 * 60_000).toISOString(),
       },
     ]);
     mocks.existsSync.mockReturnValue(true);
@@ -477,6 +492,25 @@ describe("/nas", () => {
       content: "`/nas requests` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
     });
     expect(mocks.listNasHandoffRequestsByStatus).not.toHaveBeenCalled();
+  });
+
+  it("keeps NAS request status disabled with the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "request-status"),
+        getString: vi.fn(() => "request-status-one"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas request-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+    expect(mocks.findNasHandoffRequestsByIdPrefix).not.toHaveBeenCalled();
   });
 
   it("shows public-safe NAS deploy verification details when enabled", async () => {
@@ -850,6 +884,81 @@ describe("/nas", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS Handoff Requests");
     expect(content).toContain("filter=queued");
+  });
+
+  it("builds a public-safe tracked NAS request status report", () => {
+    mocks.findNasHandoffRequestsByIdPrefix.mockReturnValue([{
+      id: "request-status-one",
+      channel_id: "channel-1",
+      project_label: "E:\\private\\Attys_DC_BOT",
+      check_name: "plans",
+      status: "failed",
+      result_summary: "failed at K:\\data token=secret",
+      created_at: "2026-08-01T18:00:00.000Z",
+      updated_at: "2026-08-01T18:01:00.000Z",
+    }]);
+
+    const report = buildNasRequestStatusReport("channel-1", "request-status");
+
+    expect(report).toContain("NAS Handoff Request");
+    expect(report).toContain("request=request-status-one");
+    expect(report).toContain("project=<local-path>");
+    expect(report).toContain("check=plans");
+    expect(report).toContain("status=failed");
+    expect(report).toContain("summary=failed at <local-path> token=<redacted>");
+    expect(mocks.findNasHandoffRequestsByIdPrefix).toHaveBeenCalledWith("channel-1", "request-status", 6);
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+  });
+
+  it("handles ambiguous NAS request status prefixes without guessing", () => {
+    mocks.findNasHandoffRequestsByIdPrefix.mockReturnValue([
+      {
+        id: "request-status-one",
+        channel_id: "channel-1",
+        project_label: "Attys_DC_BOT",
+        check_name: "plans",
+        status: "queued",
+        result_summary: null,
+        created_at: "2026-08-01T18:00:00.000Z",
+        updated_at: "2026-08-01T18:00:00.000Z",
+      },
+      {
+        id: "request-status-two",
+        channel_id: "channel-1",
+        project_label: "Attys_DC_BOT",
+        check_name: "tests",
+        status: "completed",
+        result_summary: "1/1 passed",
+        created_at: "2026-08-01T18:00:00.000Z",
+        updated_at: "2026-08-01T18:02:00.000Z",
+      },
+    ]);
+
+    const report = buildNasRequestStatusReport("channel-1", "request-status");
+
+    expect(report).toContain("INFO request prefix is ambiguous");
+    expect(report).toContain("request-status-one status=queued");
+    expect(report).toContain("request-status-two status=completed");
+  });
+
+  it("executes NAS request status with a request id prefix", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "request-status"),
+        getString: vi.fn(() => "request-status-one"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.findNasHandoffRequestsByIdPrefix).toHaveBeenCalledWith("channel-1", "request-status-one", 6);
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Handoff Request");
+    expect(content).toContain("request=request-status-one");
   });
 
   it("keeps NAS result summaries compact and public-safe", () => {

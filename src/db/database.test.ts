@@ -35,6 +35,7 @@ import {
   createNasHandoffRequest,
   countNasHandoffRequestsByStatus,
   expireStaleNasHandoffRequests,
+  findNasHandoffRequestsByIdPrefix,
   getNasHandoffRequest,
   listNasHandoffRequests,
   listNasHandoffRequestsByStatus,
@@ -463,6 +464,36 @@ describe("database", () => {
         "queued-2",
         "failed-1",
         "queued-1",
+      ]);
+    });
+
+    it("finds NAS handoff requests by public id prefix for one channel", () => {
+      const base = {
+        projectLabel: "proj",
+        checkName: "plans",
+        resultSummary: null,
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+        status: "queued" as const,
+      };
+      createNasHandoffRequest({ ...base, id: "request-alpha-one", channelId: "ch1" });
+      createNasHandoffRequest({
+        ...base,
+        id: "request-alpha-two",
+        channelId: "ch1",
+        updatedAt: "2026-08-01T12:01:00.000Z",
+      });
+
+      registerProject("ch2", "/p2", "guild1");
+      createNasHandoffRequest({ ...base, id: "request-alpha-other-channel", channelId: "ch2" });
+
+      expect(findNasHandoffRequestsByIdPrefix("ch1", "req").map((entry) => entry.id)).toEqual([]);
+      expect(findNasHandoffRequestsByIdPrefix("ch1", "request-alpha", 10).map((entry) => entry.id)).toEqual([
+        "request-alpha-two",
+        "request-alpha-one",
+      ]);
+      expect(findNasHandoffRequestsByIdPrefix("ch2", "request-alpha", 10).map((entry) => entry.id)).toEqual([
+        "request-alpha-other-channel",
       ]);
     });
 
