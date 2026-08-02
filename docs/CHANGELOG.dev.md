@@ -2,7 +2,7 @@
 
 ## 2026-08-02
 
-- Audit repair contract preview: uj read-only `/audit repair-plan` alparancs keszult. A kesobbi izolalt Codex repair public-safe szerzodeset mutatja: cel-check, legutobbi bizonyitek osszegzes, repair workspace allapot, engedelyezett scope es tiltott muveletek. Nem indit Codex repair turnt, nem futtat checket, es nem vegez Git write-ot.
+- Audit repair contract preview: uj read-only `/audit repair-plan` alparancs keszult. A kesobbi izolalt Codex repair public-safe szerzodeset strukturalt `audit-repair-contract/v1` contractbol mutatja: cel-check, legutobbi bizonyitek osszegzes, repair workspace allapot, engedelyezett scope es tiltott muveletek. Nem indit Codex repair turnt, nem futtat checket, es nem vegez Git write-ot.
 - Version bump: a package verzio `0.1.1-prerelease.45`, mert uj user-visible `/audit repair-plan` alparancs jelent meg.
 - Audit review command: uj read-only `/audit review` alparancs keszult. A legutobbi audit job public-safe dontesi osszegzeset mutatja, beleertve a legutobbi steppet, repair workspace statuszt, change summaryt es az engedelyezett/tiltott kovetkezo lepeseket, automatikus repair/merge/commit/push nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.44`, mert uj user-visible `/audit review` alparancs jelent meg.
