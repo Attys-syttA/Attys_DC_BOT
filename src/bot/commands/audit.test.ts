@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   insertAuditStepResult: vi.fn(),
   listAuditRepairExecutions: vi.fn(),
   listAuditSteps: vi.fn(),
+  createAuditRepairCodexStarter: vi.fn(),
+  startTrackedAuditRepairExecution: vi.fn(),
   runAuditCheckPipeline: vi.fn(),
   recordOperatorEvent: vi.fn(),
 }));
@@ -47,6 +49,14 @@ vi.mock("../../db/database.js", () => ({
   listAuditSteps: mocks.listAuditSteps,
 }));
 
+vi.mock("../../audit/repair-codex-starter.js", () => ({
+  createAuditRepairCodexStarter: mocks.createAuditRepairCodexStarter,
+}));
+
+vi.mock("../../audit/repair-execution-tracker.js", () => ({
+  startTrackedAuditRepairExecution: mocks.startTrackedAuditRepairExecution,
+}));
+
 vi.mock("../../audit/check-runner.js", () => ({
   runAuditCheckPipeline: mocks.runAuditCheckPipeline,
 }));
@@ -60,7 +70,7 @@ import type { AuditCheckName } from "../../audit/check-catalog.js";
 import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
 function makeInteraction(
-  subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "recheck",
+  subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "repair-run" | "recheck",
   check = "tests",
 ) {
   return {
@@ -123,6 +133,14 @@ describe("/audit", () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob());
     mocks.listAuditRepairExecutions.mockReturnValue([]);
     mocks.listAuditSteps.mockReturnValue([makeStep()]);
+    mocks.createAuditRepairCodexStarter.mockReturnValue(vi.fn());
+    mocks.startTrackedAuditRepairExecution.mockResolvedValue({
+      status: "started",
+      summary: "repair Codex turn started in isolated worktree",
+      threadId: "thread-1",
+      turnId: "turn-1",
+      issues: [],
+    });
     mocks.runAuditCheckPipeline.mockResolvedValue([{
       name: "tests",
       status: "passed",
@@ -509,6 +527,76 @@ describe("/audit", () => {
     const payload = interaction.editReply.mock.calls[0][0];
     expect(payload.content).toContain("No repair, worktree, Codex turn");
     expect(payload.components[0].components[0].data.custom_id).toBe("audit-repair-approve:audit-job-1");
+  });
+
+  it("keeps audit repair execution disabled behind a separate flag", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: false,
+    });
+    const interaction = makeInteraction("repair-run");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/audit repair-run` is disabled.\nSet `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` only after reviewing `/audit repair-plan`.",
+    });
+    expect(mocks.startTrackedAuditRepairExecution).not.toHaveBeenCalled();
+  });
+
+  it("starts one tracked isolated repair execution only when explicitly enabled", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      mode: "approved-repair",
+      status: "waiting_manual_review",
+      requested_check: "tests",
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    const startCodexRepair = vi.fn();
+    mocks.createAuditRepairCodexStarter.mockReturnValue(startCodexRepair);
+    const interaction = makeInteraction("repair-run");
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "repairing",
+      "repair",
+      0,
+      expect.any(String),
+    );
+    expect(mocks.startTrackedAuditRepairExecution).toHaveBeenCalledWith(expect.objectContaining({
+      jobId: "audit-job-1",
+      executionId: "audit-job-1",
+      enabled: true,
+      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      startCodexRepair,
+    }));
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "waiting_manual_review",
+      null,
+      0,
+      expect.any(String),
+    );
+    const content = interaction.followUp.mock.calls[0][0].content;
+    expect(content).toContain("**Audit repair execution started**");
+    expect(content).toContain("thread: thread-1");
+    expect(content).not.toContain("/projects/app");
+    expect(content).not.toContain(".discord-bot-state");
   });
 
   it("rechecks the requested check in the isolated repair worktree", async () => {

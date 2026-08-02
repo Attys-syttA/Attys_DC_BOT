@@ -24,8 +24,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit recheck",
-    short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, es izolalt workspace-ben recheckel.",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit recheck",
+    short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, izolalt repair turnt indithat, es recheckel.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
@@ -38,10 +38,11 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit repair-plan` read-only previewt ad a kesobbi izolalt Codex repair contractrol: cel-check, bizonyitek, workspace allapot, scope, tiltott muveletek.",
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
       "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk.",
+      "`/audit repair-run` kulon `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` flaget is ker; egy izolalt Codex repair turnt indit es public-safe execution ledgerbe rogzit.",
       "`/audit recheck` ugyanennek a flagnek a hatasa alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
-      "Ebben a szeletben nem indul Codex repair, merge, commit vagy push.",
+      "A repair-run sem merge-el, commitol, pushol, deployol, es nem ir a normal source worktree-be.",
     ],
   },
   {

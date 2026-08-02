@@ -38,6 +38,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     DISCORD_ENABLE_RUN_TESTS: false,
     DISCORD_ENABLE_AUDIT: false,
     DISCORD_ENABLE_AUDIT_REPAIR: false,
+    DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: false,
     DISCORD_ENABLE_NAS_STATUS: false,
     DISCORD_ENABLE_NAS_HANDOFF: false,
     DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE: false,

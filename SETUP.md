@@ -371,7 +371,8 @@ Optional local commands:
 - `/health` shows the bot runtime health: process uptime, error log, operator tools, usage cache, and bot repo sync state.
 - `/run-tests` is disabled unless `DISCORD_ENABLE_RUN_TESTS=true` is set in `.env`.
 - `/audit start check:<plans|lint|typecheck|tests|build|full>` is disabled unless `DISCORD_ENABLE_AUDIT=true` is set in `.env`; it is read-only and does not repair code.
-- `/audit repair` and `/audit recheck` are disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true` is set in `.env`; repair only requests explicit approval, prepares and records an isolated repair worktree after approval, and recheck reruns the original named check in that isolated workspace while respecting the job iteration budget. Repeated matching public-safe failures stop as `stagnated`. Neither starts a Codex repair turn, merge, commit, or push in this slice.
+- `/audit repair` and `/audit recheck` are disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true` is set in `.env`; repair requests explicit approval, prepares and records an isolated repair worktree after approval, and recheck reruns the original named check in that isolated workspace while respecting the job iteration budget. Repeated matching public-safe failures stop as `stagnated`.
+- `/audit repair-run` is additionally disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` is set in `.env`; when enabled it can start one tracked Codex repair turn in the isolated repair worktree. It does not merge, commit, push, deploy, or write the normal source worktree.
 
 ## 9. Troubleshooting
 

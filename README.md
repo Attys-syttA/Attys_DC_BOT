@@ -365,7 +365,8 @@ Optional source-repo parity mode:
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
 - read-only audit checks are disabled unless `DISCORD_ENABLE_AUDIT=true`
 - audit repair approval/worktree preparation is disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true`
-- audit repair approval records the isolated repair workspace for later review, and `/audit recheck` can rerun the original named check there while respecting the job iteration budget; repeated matching public-safe failures stop as `stagnated`; neither starts a Codex repair turn, merge, commit, or push in the current slice
+- audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but it still does not merge, commit, push, deploy, or write the normal source worktree
+- `/audit recheck` can rerun the original named check in the isolated repair workspace while respecting the job iteration budget; repeated matching public-safe failures stop as `stagnated`
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/logs`, `/events`, `/health`, `/doctor`, and `/dashboard` avoid tokens, raw Discord IDs, private paths, and config values
@@ -391,6 +392,7 @@ Important `.env` keys:
 | `DISCORD_ENABLE_RUN_TESTS` | Enables `/run-tests` |
 | `DISCORD_ENABLE_AUDIT` | Enables default-off read-only `/audit` named checks |
 | `DISCORD_ENABLE_AUDIT_REPAIR` | Enables default-off explicit `/audit repair` approval, isolated worktree preflight, public-safe repair workspace status, and isolated `/audit recheck` |
+| `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION` | Enables default-off `/audit repair-run` for one tracked isolated Codex repair turn |
 | `DISCORD_ENABLE_AUTO_APPROVE` | Enables approval bypass toggle |
 | `DISCORD_ENABLE_SESSION_DELETE` | Enables destructive session deletion |
 | `DISCORD_ENABLE_BOT_LIFECYCLE` | Enables Discord-triggered bot restart |
