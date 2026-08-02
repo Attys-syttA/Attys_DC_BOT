@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   updateAuditRepairWorktreeStatus: vi.fn(),
   requestAuditJobStop: vi.fn(),
   insertAuditStepResult: vi.fn(),
+  listAuditRepairExecutions: vi.fn(),
   listAuditSteps: vi.fn(),
   runAuditCheckPipeline: vi.fn(),
   recordOperatorEvent: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock("../../db/database.js", () => ({
   updateAuditRepairWorktreeStatus: mocks.updateAuditRepairWorktreeStatus,
   requestAuditJobStop: mocks.requestAuditJobStop,
   insertAuditStepResult: mocks.insertAuditStepResult,
+  listAuditRepairExecutions: mocks.listAuditRepairExecutions,
   listAuditSteps: mocks.listAuditSteps,
 }));
 
@@ -119,6 +121,7 @@ describe("/audit", () => {
     mocks.getAuditJob.mockReturnValue(makeJob());
     mocks.getAuditRepairWorktree.mockReturnValue(undefined);
     mocks.getLatestAuditJob.mockReturnValue(makeJob());
+    mocks.listAuditRepairExecutions.mockReturnValue([]);
     mocks.listAuditSteps.mockReturnValue([makeStep()]);
     mocks.runAuditCheckPipeline.mockResolvedValue([{
       name: "tests",
@@ -335,6 +338,28 @@ describe("/audit", () => {
     expect(content).not.toContain(".discord-bot-state");
   });
 
+  it("shows public-safe repair execution tracking in audit status", async () => {
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "started",
+      thread_id: "thread-1234567890abcdef",
+      turn_id: "turn-1234567890abcdef",
+      result_summary: "repair Codex turn started in <local-path>",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("status");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("repair executions:");
+    expect(content).toContain("- started: thread=thread-12345 turn=turn-1234567 summary=repair Codex turn started in <local-path>");
+    expect(content).not.toContain("repair-exec-1");
+    expect(content).not.toContain("1234567890abcdef");
+  });
+
   it("shows public-safe audit review guidance without starting repair", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "waiting_manual_review" }));
     mocks.getAuditRepairWorktree.mockReturnValue({
@@ -355,6 +380,7 @@ describe("/audit", () => {
     expect(content).toContain("decision: manual review required");
     expect(content).toContain("repair workspace: retained");
     expect(content).toContain("repair changes: unavailable");
+    expect(content).toContain("latest repair execution: none");
     expect(content).toContain("allowed next actions: /audit status, /audit repair, /audit recheck");
     expect(content).toContain("blocked actions: automatic merge, commit, push, source worktree write");
     expect(content).not.toContain("/projects/app");

@@ -89,6 +89,30 @@ export interface AuditRepairWorktreeCreateInput {
   updatedAt: string;
 }
 
+export type AuditRepairExecutionStatus = "starting" | "started" | "failed";
+
+export interface AuditRepairExecutionRecord {
+  id: string;
+  job_id: string;
+  status: AuditRepairExecutionStatus;
+  thread_id: string | null;
+  turn_id: string | null;
+  result_summary: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditRepairExecutionCreateInput {
+  id: string;
+  jobId: string;
+  status: AuditRepairExecutionStatus;
+  threadId: string | null;
+  turnId: string | null;
+  resultSummary: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type NasHandoffRequestStatus = "queued" | "completed" | "failed";
 export type NasHandoffRequestStatusFilter = NasHandoffRequestStatus | "all";
 

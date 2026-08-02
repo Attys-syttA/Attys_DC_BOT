@@ -33,8 +33,12 @@ import {
   requestAuditJobStop,
   insertAuditStepResult,
   listAuditSteps,
+  createAuditRepairExecution,
   createAuditRepairWorktree,
+  getAuditRepairExecution,
   getAuditRepairWorktree,
+  listAuditRepairExecutions,
+  updateAuditRepairExecutionResult,
   updateAuditRepairWorktreeStatus,
   createNasHandoffRequest,
   countNasHandoffRequestsByStatus,
@@ -479,6 +483,60 @@ describe("database", () => {
         status: "retained",
         updated_at: "2026-08-01T12:02:00.000Z",
       });
+    });
+
+    it("records public-safe audit repair execution attempts for later tracking", () => {
+      createAuditJob({
+        id: "audit-1",
+        channelId: "ch1",
+        projectLabel: "/p1",
+        mode: "approved-repair",
+        status: "repairing",
+        currentStep: "repair",
+        iteration: 1,
+        maxIterations: 2,
+        stopRequested: false,
+        capabilities: defaultAuditCapabilities("approved-repair"),
+        createdAt: "2026-08-01T12:00:00.000Z",
+        updatedAt: "2026-08-01T12:00:00.000Z",
+      });
+
+      createAuditRepairExecution({
+        id: "repair-exec-1",
+        jobId: "audit-1",
+        status: "starting",
+        threadId: null,
+        turnId: null,
+        resultSummary: "starting repair for C:\\Users\\someone\\repo",
+        createdAt: "2026-08-01T12:01:00.000Z",
+        updatedAt: "2026-08-01T12:01:00.000Z",
+      });
+
+      updateAuditRepairExecutionResult(
+        "repair-exec-1",
+        "started",
+        "repair Codex turn started in C:\\Users\\someone\\repo",
+        "2026-08-01T12:01:10.000Z",
+        "thread-1",
+        "turn-1",
+      );
+
+      const execution = getAuditRepairExecution("repair-exec-1");
+      expect(execution).toMatchObject({
+        id: "repair-exec-1",
+        job_id: "audit-1",
+        status: "started",
+        thread_id: "thread-1",
+        turn_id: "turn-1",
+        result_summary: "repair Codex turn started in <local-path>",
+        created_at: "2026-08-01T12:01:00.000Z",
+        updated_at: "2026-08-01T12:01:10.000Z",
+      });
+      expect(execution!.result_summary).not.toContain("someone");
+      expect(listAuditRepairExecutions("audit-1", 1).map((entry) => entry.id)).toEqual(["repair-exec-1"]);
+
+      unregisterProject("ch1");
+      expect(getAuditRepairExecution("repair-exec-1")).toBeUndefined();
     });
   });
 

@@ -8,6 +8,9 @@ import { isTerminalAuditStatus, type AuditJobStatus } from "../audit/types.js";
 import type {
   AuditJobCreateInput,
   AuditJobRecord,
+  AuditRepairExecutionCreateInput,
+  AuditRepairExecutionRecord,
+  AuditRepairExecutionStatus,
   AuditRepairWorktreeCreateInput,
   AuditRepairWorktreeRecord,
   AuditRepairWorktreeStatus,
@@ -89,6 +92,17 @@ export function initDatabase(): void {
       branch_name TEXT NOT NULL,
       head_commit TEXT NOT NULL,
       status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_repair_executions (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL REFERENCES audit_jobs(id) ON DELETE CASCADE,
+      status TEXT NOT NULL,
+      thread_id TEXT,
+      turn_id TEXT,
+      result_summary TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -395,6 +409,75 @@ export function updateAuditRepairWorktreeStatus(
     SET status = ?, updated_at = ?
     WHERE job_id = ?
   `).run(status, updatedAt, jobId);
+}
+
+export function createAuditRepairExecution(input: AuditRepairExecutionCreateInput): void {
+  db.prepare(`
+    INSERT INTO audit_repair_executions (
+      id,
+      job_id,
+      status,
+      thread_id,
+      turn_id,
+      result_summary,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    sanitizePublicText(input.id, 120),
+    input.jobId,
+    input.status,
+    input.threadId ? sanitizePublicText(input.threadId, 160) : null,
+    input.turnId ? sanitizePublicText(input.turnId, 160) : null,
+    sanitizePublicText(input.resultSummary, 240) || "(no summary)",
+    input.createdAt,
+    input.updatedAt,
+  );
+}
+
+export function getAuditRepairExecution(id: string): AuditRepairExecutionRecord | undefined {
+  return db
+    .prepare("SELECT * FROM audit_repair_executions WHERE id = ?")
+    .get(sanitizePublicText(id, 120)) as AuditRepairExecutionRecord | undefined;
+}
+
+export function listAuditRepairExecutions(jobId: string, limit = 5): AuditRepairExecutionRecord[] {
+  const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
+  return db
+    .prepare(`
+      SELECT * FROM audit_repair_executions
+      WHERE job_id = ?
+      ORDER BY updated_at DESC, created_at DESC
+      LIMIT ?
+    `)
+    .all(jobId, safeLimit) as AuditRepairExecutionRecord[];
+}
+
+export function updateAuditRepairExecutionResult(
+  id: string,
+  status: AuditRepairExecutionStatus,
+  resultSummary: string,
+  updatedAt: string,
+  threadId?: string | null,
+  turnId?: string | null,
+): void {
+  db.prepare(`
+    UPDATE audit_repair_executions
+    SET status = ?,
+        result_summary = ?,
+        updated_at = ?,
+        thread_id = COALESCE(?, thread_id),
+        turn_id = COALESCE(?, turn_id)
+    WHERE id = ?
+  `).run(
+    status,
+    sanitizePublicText(resultSummary, 240) || "(no summary)",
+    updatedAt,
+    threadId ? sanitizePublicText(threadId, 160) : null,
+    turnId ? sanitizePublicText(turnId, 160) : null,
+    sanitizePublicText(id, 120),
+  );
 }
 
 export function createNasHandoffRequest(input: NasHandoffRequestCreateInput): void {

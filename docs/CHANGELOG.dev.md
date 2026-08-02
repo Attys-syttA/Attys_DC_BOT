@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair execution tracking: additive SQLite `audit_repair_executions` ledger es belso tracked-start helper keszult a kesobbi izolalt Codex repair turnhoz. A `/audit status` es `/audit review` public-safe modon mutatja a repair execution allapotot rovid thread/turn prefixekkel es summaryval, path/log/raw prompt nelkul. Tovabbra sincs user-visible repair-run parancs.
+- Version bump: a package verzio `0.1.1-prerelease.46`, mert a user-visible `/audit status` es `/audit review` kimenet repair execution trackinggel bovult.
 - Audit repair contract preview: uj read-only `/audit repair-plan` alparancs keszult. A kesobbi izolalt Codex repair public-safe szerzodeset strukturalt `audit-repair-contract/v1` contractbol mutatja: cel-check, legutobbi bizonyitek osszegzes, repair workspace allapot, engedelyezett scope es tiltott muveletek. A contractbol validalt prompt readiness is keszul, de nem indul Codex repair turn, check futtatas vagy Git write.
 - Audit repair executor gate: belso fail-closed executor adapter keszult a kesobbi Codex repair turnhoz. Alapbol disabled, es csak valid contract, valid prompt, izolalt worktree path es explicit injektalt starter callback mellett adhat `started` eredmenyt; jelenleg nincs Discord parancshoz kotve.
 - Audit repair Codex starter adapter: belso adapter keszult, amely a Codex app-serveren izolalt repair worktree `cwd` mellett nyit threadet, majd egy repair prompt turnt indit. Csak injektalhato callbackkent hasznalhato az executor gate mogott; nincs user-visible repair-run parancs.

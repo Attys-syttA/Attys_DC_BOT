@@ -25,12 +25,13 @@ import {
   getLatestAuditJob,
   getProject,
   insertAuditStepResult,
+  listAuditRepairExecutions,
   listAuditSteps,
   requestAuditJobStop,
   updateAuditRepairWorktreeStatus,
   updateAuditJobProgress,
 } from "../../db/database.js";
-import type { AuditJobRecord, AuditStepRecord } from "../../db/types.js";
+import type { AuditJobRecord, AuditRepairExecutionRecord, AuditStepRecord } from "../../db/types.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
@@ -80,6 +81,12 @@ function renderStep(step: AuditStepRecord): string {
   return `- ${step.step_name}: ${step.status} exit=${exit} duration=${step.duration_ms}ms`;
 }
 
+function renderRepairExecution(execution: AuditRepairExecutionRecord): string {
+  const thread = execution.thread_id ? execution.thread_id.slice(0, 12) : "none";
+  const turn = execution.turn_id ? execution.turn_id.slice(0, 12) : "none";
+  return `- ${execution.status}: thread=${thread} turn=${turn} summary=${execution.result_summary}`;
+}
+
 function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
   const lines = [
     `job: \`${job.id.slice(0, 8)}...\``,
@@ -106,6 +113,11 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
       `- head: ${repairWorktree.head_commit.slice(0, 12)}`,
       `- changes: ${inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary}`,
     );
+  }
+
+  const repairExecutions = listAuditRepairExecutions(job.id, 3);
+  if (repairExecutions.length > 0) {
+    lines.push("", "repair executions:", ...repairExecutions.map(renderRepairExecution));
   }
 
   return lines.join("\n");
@@ -142,6 +154,13 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
     );
   } else {
     lines.push("repair workspace: none");
+  }
+
+  const repairExecutions = listAuditRepairExecutions(job.id, 1);
+  if (repairExecutions.length > 0) {
+    lines.push(`latest repair execution: ${renderRepairExecution(repairExecutions[0]).slice(2)}`);
+  } else {
+    lines.push("latest repair execution: none");
   }
 
   lines.push(
