@@ -53,6 +53,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - NAS mailbox consistency status: a read-only `/nas mailbox-status` nézet a mailbox valid/invalid darabszámokat, current-channel request trackinget, pending tracked outbox resultokat, orphan outbox resultokat és missing queued requesteket foglalja össze public-safe számokkal.
 - NAS doctor summary: a read-only `/nas doctor` nézet egyetlen public-safe riportban fogja össze a bridge readiness, worker/handoff status, deploy verification, NAS share sync dry-run, mailbox consistency, result notifier és stale timeout állapotot. Nem ad át `-Apply` kapcsolót és nem végez NAS írást.
 - Worker bridge lifecycle detach fix: a PC worker HTTP és handoff worker lifecycle helper WMI/CIM útvonalon indít háttérfolyamatot, ezért a `nas:bridge:*` parancsok Codex/PowerShell futtatásból sem ragadnak be a long-running child process tree miatt.
+- NAS worker URL hardening: az `ATTYS_NAS_WORKERS_JSON` alapból elutasítja a `localhost`, `127.*`, `0.0.0.0` és `::1` worker URL-eket, mert ezek NAS konténerből nem a Windows PC workerre mutatnak. A lokális loopback smoke csak explicit smoke-only override-dal engedélyezett.
 - Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
 - Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.
@@ -849,7 +850,7 @@ Repair/worktree szeletnél ezen felül:
 
 - Ez a tervfájl docs-only előkészítés; most nincs version bump.
 - Read-only `/audit` command megjelenése user-visible feature, ezért majd prerelease version bumpot és README/SETUP/help frissítést igényel.
-- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt `0.1.1-prerelease.4`; az isolated `/audit recheck` miatt `0.1.1-prerelease.5`; a recheck stagnation stop miatt `0.1.1-prerelease.6`; a többüzenetes részletes `/help` és `/sugo` súgó miatt `0.1.1-prerelease.7`; a restricted SSH NAS container lifecycle helper miatt `0.1.1-prerelease.8`; a bridge lifecycle detach fix miatt `0.1.1-prerelease.9`; a NAS deploy orchestration helper miatt `0.1.1-prerelease.10`.
+- Repair approval/worktree preflight megjelenése miatt a package verzió `0.1.1-prerelease.3` lett; a deploy verifier output és repair workspace tracking miatt `0.1.1-prerelease.4`; az isolated `/audit recheck` miatt `0.1.1-prerelease.5`; a recheck stagnation stop miatt `0.1.1-prerelease.6`; a többüzenetes részletes `/help` és `/sugo` súgó miatt `0.1.1-prerelease.7`; a restricted SSH NAS container lifecycle helper miatt `0.1.1-prerelease.8`; a bridge lifecycle detach fix miatt `0.1.1-prerelease.9`; a NAS deploy orchestration helper miatt `0.1.1-prerelease.10`; a NAS worker URL hardening miatt `0.1.1-prerelease.11`.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

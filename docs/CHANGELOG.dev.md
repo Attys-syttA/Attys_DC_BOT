@@ -9,6 +9,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.9`, mert az operator-facing bridge lifecycle helper megbizhatosagi hibaja javult.
 - NAS deploy orchestration helper: uj `scripts/deploy-nas-control-plane.ps1` es `npm run nas:deploy` parancs keszult. Alapbol dry-run modban futtatja a `prepare -> check -> sync dry-run` lepeseit; csak explicit `-Apply` mellett synceli a NAS share-t, epiti ujra a korlatozott SSH container helperrel a NAS control-plane kontenert, majd varakozas utan `nas:deploy:verify` ellenorzest futtat.
 - Version bump: a package verzio `0.1.1-prerelease.10`, mert uj operator-facing NAS deploy orchestration parancs jelent meg.
+- NAS worker URL hardening: az `ATTYS_NAS_WORKERS_JSON` NAS control-plane config most alapbol elutasitja a `localhost`, `127.*`, `0.0.0.0` es `::1` worker `baseUrl` ertekeket, mert NAS kontenerbol ezek nem a Windows PC workert jelentik. A lokalis `worker:smoke` explicit `ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE=true` ideiglenes kapcsolot hasznal, igy a smoke teszt tovabbra is loopbacken fut.
+- Version bump: a package verzio `0.1.1-prerelease.11`, mert a NAS worker target config fail-closed biztonsagi validacioja bovult.
 
 ## 2026-08-01
 

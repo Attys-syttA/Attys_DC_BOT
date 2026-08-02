@@ -33,6 +33,7 @@ const configSchema = z.object({
   ATTYS_NAS_WORKERS_JSON: z.string().default("[]"),
   ATTYS_NAS_STATUS_PROJECT: z.string().default("Attys_DC_BOT"),
   ATTYS_NAS_STATUS_CHECK: z.string().default(""),
+  ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE: z.enum(["true", "false"]).default("false"),
   ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -72,10 +73,20 @@ function normalizePublicBaseUrl(value: string): string {
   return parsed.toString().replace(/\/$/, "");
 }
 
-function normalizeWorkerBaseUrl(value: string): string {
+function normalizeWorkerBaseUrl(value: string, options: { allowLoopbackForSmoke?: boolean } = {}): string {
   const parsed = new URL(value.trim());
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error("ATTYS_NAS_WORKERS_JSON worker baseUrl must be an http(s) URL");
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  if (!options.allowLoopbackForSmoke && (
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname === "[::1]" ||
+    /^127\./.test(hostname)
+  )) {
+    throw new Error("ATTYS_NAS_WORKERS_JSON worker baseUrl must point to a reachable PC worker host, not loopback");
   }
   parsed.username = "";
   parsed.password = "";
@@ -121,7 +132,7 @@ function parseStatusCheck(value: string): AuditCheckName | null {
   return trimmed;
 }
 
-function parseNasWorkers(raw: string): NasWorkerTarget[] {
+function parseNasWorkers(raw: string, options: { allowLoopbackForSmoke?: boolean } = {}): NasWorkerTarget[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -163,7 +174,7 @@ function parseNasWorkers(raw: string): NasWorkerTarget[] {
     return {
       id,
       label: typeof record.label === "string" ? safeWorkerLabel(record.label) : "Worker",
-      baseUrl: normalizeWorkerBaseUrl(record.baseUrl),
+      baseUrl: normalizeWorkerBaseUrl(record.baseUrl, options),
       ...(sharedSecretEnv ? { sharedSecretEnv } : {}),
       workspaceRootLabel: typeof record.workspaceRootLabel === "string"
         ? safeWorkerLabel(record.workspaceRootLabel)
@@ -196,7 +207,9 @@ export function parseNasControlPlaneConfig(env: NodeJS.ProcessEnv): NasControlPl
     controlPlaneName: safeControlPlaneName(result.data.ATTYS_NAS_CONTROL_PLANE_NAME),
     publicBaseUrl: normalizePublicBaseUrl(result.data.ATTYS_NAS_PUBLIC_BASE_URL),
     workerHeartbeatTimeoutMs: result.data.ATTYS_WORKER_HEARTBEAT_TIMEOUT_MS,
-    workers: parseNasWorkers(result.data.ATTYS_NAS_WORKERS_JSON),
+    workers: parseNasWorkers(result.data.ATTYS_NAS_WORKERS_JSON, {
+      allowLoopbackForSmoke: result.data.ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE === "true",
+    }),
     statusProject: safeProjectName(result.data.ATTYS_NAS_STATUS_PROJECT),
     statusCheck: parseStatusCheck(result.data.ATTYS_NAS_STATUS_CHECK),
     codexExecutionEnabled: false,

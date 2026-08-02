@@ -53,6 +53,7 @@ try {
   $env:ATTYS_NAS_WORKERS_JSON = @"
 [{"id":"loopback-worker","label":"Loopback Worker","baseUrl":"http://127.0.0.1:$Port","sharedSecretEnv":"ATTYS_WORKER_SHARED_SECRET_HOME","workspaceRootLabel":"codex_works-home"}]
 "@
+  $env:ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE = "true"
   $env:ATTYS_WORKER_SHARED_SECRET_HOME = $token
 
   npm run nas:workers:health
@@ -67,6 +68,7 @@ try {
   Write-Host "Worker HTTP smoke passed."
 } finally {
   Remove-Item Env:\ATTYS_NAS_WORKERS_JSON -ErrorAction SilentlyContinue
+  Remove-Item Env:\ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE -ErrorAction SilentlyContinue
   Remove-Item Env:\ATTYS_WORKER_SHARED_SECRET_HOME -ErrorAction SilentlyContinue
   if ($job) {
     Stop-Job $job -ErrorAction SilentlyContinue

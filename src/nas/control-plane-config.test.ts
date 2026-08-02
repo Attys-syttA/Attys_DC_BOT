@@ -86,6 +86,31 @@ describe("NAS control-plane config", () => {
     })).toThrow("worker baseUrl must be an http(s) URL");
   });
 
+  it("rejects loopback worker targets for the NAS control-plane", () => {
+    for (const baseUrl of [
+      "http://localhost:8787",
+      "http://127.0.0.1:8787",
+      "http://127.10.20.30:8787",
+      "http://0.0.0.0:8787",
+      "http://[::1]:8787",
+    ]) {
+      expect(() => parseNasControlPlaneConfig({
+        ATTYS_NAS_WORKERS_JSON: JSON.stringify([{ id: "home", label: "Home", baseUrl }]),
+      }), baseUrl).toThrow("worker baseUrl must point to a reachable PC worker host");
+    }
+  });
+
+  it("allows loopback worker targets only for explicit local smoke tests", () => {
+    expect(parseNasControlPlaneConfig({
+      ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE: "true",
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([{
+        id: "loopback",
+        label: "Loopback",
+        baseUrl: "http://127.0.0.1:8787",
+      }]),
+    }).workers[0]?.baseUrl).toBe("http://127.0.0.1:8787");
+  });
+
   it("rejects unsupported NAS-side Codex execution", () => {
     expect(() => parseNasControlPlaneConfig({
       ATTYS_NAS_CODEX_EXECUTION_ENABLED: "true",
