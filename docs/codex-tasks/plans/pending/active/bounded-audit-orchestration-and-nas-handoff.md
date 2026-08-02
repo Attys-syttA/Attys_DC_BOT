@@ -99,7 +99,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Audit recheck stagnation/budget: public-safe issue fingerprint készült a sanitizált step output alapján; a `/audit recheck` nem lépi túl a job iteration budgetjét, és ha ugyanazt a named checket ugyanazzal a failed fingerprinttel bukja újra, a job `stagnated` állapotban megáll és a repair workspace retained marad.
 - Audit repair workspace diff visibility: `/audit status` public-safe `changes:` összegzést mutat az izolált worktree-ről (`clean`, `unavailable`, vagy darabszámok), fájlnevek, lokális path és diff tartalom nélkül.
 - Audit review command: `/audit review` read-only döntési összefoglalót ad a legutóbbi jobról, legutóbbi stepről, repair workspace-ről, és az engedélyezett/tiltott következő lépésekről, automatikus repair/merge/commit/push nélkül.
-- Audit repair contract preview: `/audit repair-plan` read-only szerződés-előnézetet ad a későbbi izolált Codex repairhez, strukturált `audit-repair-contract/v1` contractból. A nézet public-safe módon mutatja a cél checket, legutóbbi bizonyítékot, repair workspace állapotot, scope-ot, kötelező validációt és tiltott műveleteket; tényleges Codex repair turnt továbbra sem indít.
+- Audit repair contract preview: `/audit repair-plan` read-only szerződés-előnézetet ad a későbbi izolált Codex repairhez, strukturált `audit-repair-contract/v1` contractból. A nézet public-safe módon mutatja a cél checket, legutóbbi bizonyítékot, repair workspace állapotot, scope-ot, kötelező validációt, prompt readiness állapotot és tiltott műveleteket; tényleges Codex repair turnt továbbra sem indít.
 
 ## Nyitott reszek
 
@@ -756,7 +756,7 @@ Elfogadási feltételek:
 - executor nem bővítheti a jóváhagyott fájl/scope-határt;
 - validator csak bizonyítékból állapít meg sikert;
 - reviewer nem ír és nem indít új kört.
-- **részben kész:** determinisztikus, read-only `/audit repair-plan` contract renderer és strukturált `audit-repair-contract/v1` validátor elkészült. Ez még nem planner/executor/validator futtatás, de a későbbi repair prompt biztonsági szerződésének public-safe alapja.
+- **részben kész:** determinisztikus, read-only `/audit repair-plan` contract renderer, strukturált `audit-repair-contract/v1` validátor és prompt readiness check elkészült. Ez még nem planner/executor/validator futtatás, de a későbbi repair prompt biztonsági szerződésének public-safe alapja.
 
 ### Szelet 7 — NAS handoff gate
 

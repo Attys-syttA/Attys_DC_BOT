@@ -66,6 +66,7 @@ describe("renderAuditRepairPlan", () => {
     expect(content).toContain("repair workspace: retained");
     expect(content).toContain("repair branch: audit-repair/audit-job-1");
     expect(content).toContain("required validation: rerun the original named check through /audit recheck");
+    expect(content).toContain("repair prompt: ready");
     expect(content).toContain("blocked actions: source worktree write, automatic merge, commit, push");
     expect(content).not.toContain("C:\\secret");
     expect(content).not.toContain("C:\\Users\\secret");

@@ -1,5 +1,6 @@
 import type { AuditRepairWorktreeRecord, AuditJobRecord, AuditStepRecord } from "../db/types.js";
 import { buildAuditRepairContract } from "./repair-contract.js";
+import { buildAuditRepairPrompt, validateAuditRepairPrompt } from "./repair-prompt.js";
 
 export interface AuditRepairPlanInput {
   job: AuditJobRecord;
@@ -10,6 +11,8 @@ export interface AuditRepairPlanInput {
 
 export function renderAuditRepairPlan(input: AuditRepairPlanInput): string {
   const contract = buildAuditRepairContract(input);
+  const prompt = buildAuditRepairPrompt(contract);
+  const promptIssues = validateAuditRepairPrompt(prompt, contract);
 
   const lines = [
     "repair contract: preview only",
@@ -26,6 +29,7 @@ export function renderAuditRepairPlan(input: AuditRepairPlanInput): string {
     `allowed repair scope: ${contract.allowedScope}`,
     `allowed capabilities: ${contract.allowedCapabilities.join(", ")}`,
     `required validation: ${contract.requiredValidation}`,
+    `repair prompt: ${promptIssues.length === 0 ? "ready" : `blocked (${promptIssues.length} issue(s))`}`,
     `blocked actions: ${contract.blockedActions.join(", ")}`,
     `operator decision: ${contract.operatorDecision}`,
   ];
