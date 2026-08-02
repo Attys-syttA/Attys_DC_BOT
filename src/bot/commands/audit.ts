@@ -545,6 +545,13 @@ async function executeRepairRun(interaction: ChatInputCommandInteraction): Promi
   }
 
   const steps = listAuditSteps(job.id);
+  if (!steps.some((step) => step.status !== "passed")) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no failed or unsupported audit evidence to repair.`,
+    });
+    return;
+  }
+
   const latestRepairExecution = listAuditRepairExecutions(job.id, 1).at(0);
   if (latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration) {
     await interaction.editReply({

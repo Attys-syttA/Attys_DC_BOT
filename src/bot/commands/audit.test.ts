@@ -566,6 +566,7 @@ describe("/audit", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:00.000Z",
     });
+    mocks.listAuditSteps.mockReturnValue([makeStep({ status: "failed", exit_code: 1 })]);
     const startCodexRepair = vi.fn();
     mocks.createAuditRepairCodexStarter.mockReturnValue(startCodexRepair);
     const interaction = makeInteraction("repair-run");
@@ -600,6 +601,37 @@ describe("/audit", () => {
     expect(content).not.toContain(".discord-bot-state");
   });
 
+  it("rejects repair-run when there is no failed audit evidence", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      mode: "approved-repair",
+      status: "waiting_manual_review",
+      requested_check: "tests",
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.listAuditSteps.mockReturnValue([makeStep({ status: "passed" })]);
+    const interaction = makeInteraction("repair-run");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` has no failed or unsupported audit evidence to repair.",
+    });
+    expect(mocks.startTrackedAuditRepairExecution).not.toHaveBeenCalled();
+  });
+
   it("rejects a second repair-run in the same audit iteration", async () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_ENABLE_AUDIT: true,
@@ -621,6 +653,7 @@ describe("/audit", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:00.000Z",
     });
+    mocks.listAuditSteps.mockReturnValue([makeStep({ status: "failed", exit_code: 1 })]);
     mocks.listAuditRepairExecutions.mockReturnValue([{
       id: "repair-exec-1",
       job_id: "audit-job-1",
