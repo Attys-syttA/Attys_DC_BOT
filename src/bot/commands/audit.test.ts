@@ -480,6 +480,31 @@ describe("/audit", () => {
     expect(content).toContain("allowed next actions: /audit status, /audit review, /audit recheck");
   });
 
+  it("shows repair-cleanup as the next review action for terminal jobs with a retained repair workspace", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "stagnated",
+      requested_check: "tests",
+      iteration: 2,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "retained",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("decision: stagnated; manual review required");
+    expect(content).toContain("repair workspace: retained");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-cleanup");
+  });
+
   it("shows a public-safe repair plan contract without starting repair", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "waiting_manual_review" }));
     mocks.getAuditRepairWorktree.mockReturnValue({

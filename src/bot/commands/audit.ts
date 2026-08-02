@@ -183,11 +183,16 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
     lines.push("latest repair execution: none");
   }
 
-  const allowedNextActions = latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration
-    ? "/audit status, /audit review, /audit repair-reviewed"
-    : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
-      ? "/audit status, /audit review, /audit recheck"
-      : "/audit status, /audit repair, /audit recheck";
+  const hasCleanupReadyWorktree = repairWorktree && repairWorktree.status !== "removed";
+  const allowedNextActions = isTerminalAuditStatus(job.status)
+    ? hasCleanupReadyWorktree
+      ? "/audit status, /audit review, /audit repair-cleanup"
+      : "/audit status, /audit review"
+    : latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration
+      ? "/audit status, /audit review, /audit repair-reviewed"
+      : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
+        ? "/audit status, /audit review, /audit recheck"
+        : "/audit status, /audit repair, /audit recheck";
   lines.push(
     `allowed next actions: ${allowedNextActions}`,
     "blocked actions: automatic merge, commit, push, source worktree write",
