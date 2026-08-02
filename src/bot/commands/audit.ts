@@ -8,6 +8,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
+import { renderAuditRepairPlan } from "../../audit/repair-plan.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
 import { inspectRepairWorktreeChanges } from "../../audit/worktree-manager.js";
 import {
@@ -59,6 +60,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("review")
     .setDescription("Show public-safe manual review guidance for the latest audit job"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("repair-plan")
+    .setDescription("Preview the public-safe contract for a future isolated repair"))
   .addSubcommand((subcommand) => subcommand
     .setName("stop")
     .setDescription("Request stop for the active audit job"))
@@ -284,6 +288,28 @@ async function executeReview(interaction: ChatInputCommandInteraction): Promise<
   });
 }
 
+async function executeRepairPlan(interaction: ChatInputCommandInteraction): Promise<void> {
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  const repairChangeSummary = repairWorktree
+    ? inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary
+    : "unavailable";
+
+  await interaction.editReply({
+    content: `**Audit repair plan**\n\`\`\`text\n${renderAuditRepairPlan({
+      job,
+      steps: listAuditSteps(job.id),
+      repairWorktree,
+      repairChangeSummary,
+    })}\n\`\`\``,
+  });
+}
+
 async function executeStop(interaction: ChatInputCommandInteraction): Promise<void> {
   const job = getActiveAuditJob(interaction.channelId);
   if (!job) {
@@ -462,6 +488,10 @@ export async function execute(
   }
   if (subcommand === "review") {
     await executeReview(interaction);
+    return;
+  }
+  if (subcommand === "repair-plan") {
+    await executeRepairPlan(interaction);
     return;
   }
   if (subcommand === "stop") {

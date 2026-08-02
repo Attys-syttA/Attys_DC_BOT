@@ -54,7 +54,7 @@ describe("/help and /sugo", () => {
     expect(content).toContain("**Codex work**");
     expect(content).toContain("**Operator diagnostics**");
     expect(content).toContain("`/ask` - Promptot es opcionális fajlt kuld");
-    expect(content).toContain("`/audit` - Fix audit checkeket futtat, review osszegzest");
+    expect(content).toContain("`/audit` - Fix audit checkeket futtat, review/repair-pla");
     expect(content).toContain("`/nas` - Public-safe NAS bridge");
     expect(content).toContain("`/doctor` - Ellenorzi");
     expect(content).toContain("Elso lepesek: `/help parancs: kezdetek`");
