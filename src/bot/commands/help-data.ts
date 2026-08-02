@@ -24,8 +24,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit stop | /audit repair | /audit recheck",
-    short: "Fix audit checkeket futtat, repair approvalt ker, es izolalt workspace-ben recheckel.",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit stop | /audit repair | /audit recheck",
+    short: "Fix audit checkeket futtat, review osszegzest ad, repair approvalt ker, es izolalt workspace-ben recheckel.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
@@ -34,6 +34,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "Nem futtat tetszoleges shell parancsot, nem telepit dependencyt, nem javit kodot, es nem ir Gitbe.",
       "`/audit stop` stop requestet rogzit, es ha a check ugyanebben a bot processzben fut, abort signalt is kuld a futtatott processznek.",
       "A statusz es step eredmenyek public-safe formaban kerulnek a helyi SQLite audit store-ba.",
+      "`/audit review` read-only dontesi osszegzest ad: statusz, legutobbi step, repair workspace es kovetkezo engedelyezett/tiltott lepesek.",
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
       "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk.",
       "`/audit recheck` ugyanennek a flagnek a hatasa alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",

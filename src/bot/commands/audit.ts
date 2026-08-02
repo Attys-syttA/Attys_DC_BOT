@@ -57,6 +57,9 @@ export const data = new SlashCommandBuilder()
     .setName("status")
     .setDescription("Show the latest audit status for this channel"))
   .addSubcommand((subcommand) => subcommand
+    .setName("review")
+    .setDescription("Show public-safe manual review guidance for the latest audit job"))
+  .addSubcommand((subcommand) => subcommand
     .setName("stop")
     .setDescription("Request stop for the active audit job"))
   .addSubcommand((subcommand) => subcommand
@@ -101,6 +104,46 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
     );
   }
 
+  return lines.join("\n");
+}
+
+function reviewDecisionLine(job: AuditJobRecord): string {
+  if (job.status === "completed") return "decision: completed; no repair needed";
+  if (job.status === "stagnated") return "decision: stagnated; manual review required";
+  if (job.status === "waiting_manual_review") return "decision: manual review required";
+  if (job.status === "waiting_repair_approval") return "decision: repair approval pending";
+  if (job.status === "waiting_nas_result") return "decision: waiting for NAS result";
+  if (isTerminalAuditStatus(job.status)) return `decision: terminal ${job.status}`;
+  return `decision: active ${job.status}`;
+}
+
+function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): string {
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  const latestStep = steps.at(-1);
+  const lines = [
+    `job: \`${job.id.slice(0, 8)}...\``,
+    `project: \`${job.project_label}\``,
+    `status: ${job.status}`,
+    `requested check: ${job.requested_check ?? "unknown"}`,
+    `latest step: ${latestStep ? `${latestStep.step_name}:${latestStep.status}` : "none"}`,
+    reviewDecisionLine(job),
+  ];
+
+  if (repairWorktree) {
+    lines.push(
+      `repair workspace: ${repairWorktree.status}`,
+      `repair branch: ${repairWorktree.branch_name}`,
+      `repair head: ${repairWorktree.head_commit.slice(0, 12)}`,
+      `repair changes: ${inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary}`,
+    );
+  } else {
+    lines.push("repair workspace: none");
+  }
+
+  lines.push(
+    "allowed next actions: /audit status, /audit repair, /audit recheck",
+    "blocked actions: automatic merge, commit, push, source worktree write",
+  );
   return lines.join("\n");
 }
 
@@ -226,6 +269,18 @@ async function executeStatus(interaction: ChatInputCommandInteraction): Promise<
 
   await interaction.editReply({
     content: `**Latest audit job**\n\`\`\`text\n${renderAuditJob(job, listAuditSteps(job.id))}\n\`\`\``,
+  });
+}
+
+async function executeReview(interaction: ChatInputCommandInteraction): Promise<void> {
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+
+  await interaction.editReply({
+    content: `**Audit review**\n\`\`\`text\n${renderAuditReview(job, listAuditSteps(job.id))}\n\`\`\``,
   });
 }
 
@@ -403,6 +458,10 @@ export async function execute(
   }
   if (subcommand === "status") {
     await executeStatus(interaction);
+    return;
+  }
+  if (subcommand === "review") {
+    await executeReview(interaction);
     return;
   }
   if (subcommand === "stop") {

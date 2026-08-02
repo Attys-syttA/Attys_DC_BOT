@@ -57,7 +57,7 @@ import { execute } from "./audit.js";
 import type { AuditCheckName } from "../../audit/check-catalog.js";
 import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
-function makeInteraction(subcommand: "start" | "status" | "stop" | "repair" | "recheck", check = "tests") {
+function makeInteraction(subcommand: "start" | "status" | "review" | "stop" | "repair" | "recheck", check = "tests") {
   return {
     channelId: "channel-1",
     options: {
@@ -330,6 +330,34 @@ describe("/audit", () => {
     expect(content).toContain("- changes: unavailable");
     expect(content).not.toContain("/projects/app");
     expect(content).not.toContain(".discord-bot-state");
+  });
+
+  it("shows public-safe audit review guidance without starting repair", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "waiting_manual_review" }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "retained",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("**Audit review**");
+    expect(content).toContain("decision: manual review required");
+    expect(content).toContain("repair workspace: retained");
+    expect(content).toContain("repair changes: unavailable");
+    expect(content).toContain("allowed next actions: /audit status, /audit repair, /audit recheck");
+    expect(content).toContain("blocked actions: automatic merge, commit, push, source worktree write");
+    expect(content).not.toContain("/projects/app");
+    expect(content).not.toContain(".discord-bot-state");
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
+    expect(mocks.updateAuditJobProgress).not.toHaveBeenCalled();
   });
 
   it("requests stop for an active job", async () => {
