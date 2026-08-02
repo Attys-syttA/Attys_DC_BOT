@@ -638,6 +638,19 @@ describe("/nas", () => {
           "raw preface K:\\private token=secret",
           "{\"mode\":\"dry-run\",\"stagingSource\":{\"status\":\"fresh\"},\"copiedOrReplaced\":0,\"skipped\":160,\"protectedSkipped\":6,\"removeBeforeCopy\":true}",
         ].join("\n"),
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: JSON.stringify({
+          ok: true,
+          action: "status",
+          durationSec: 0.2,
+          output: [
+            "NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS",
+            "attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 2 minutes",
+          ],
+        }),
       });
     mocks.readHandoffEnvelope.mockReset();
     mocks.listHandoffEnvelopeFiles.mockReturnValue([]);
@@ -648,6 +661,7 @@ describe("/nas", () => {
     expect(report).toContain("overall=ok");
     expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
     expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=11/11");
+    expect(report).toContain("OK NAS container: control-plane service is up, duration 0.2s");
     expect(report).toContain("OK sync dry-run: staging-source=fresh pending=0 unchanged=160 protected=6");
     expect(report).toContain("root=ready");
     expect(report).toContain("tracked=queued:1 completed:2 failed:3");
@@ -663,6 +677,13 @@ describe("/nas", () => {
       ["run", "--silent", "nas:sync-share", "--", "-Json"],
       expect.any(String),
       60_000,
+    );
+    expect(mocks.runLocalCommand).toHaveBeenNthCalledWith(
+      4,
+      "npm.cmd",
+      ["run", "--silent", "nas:container:status", "--", "-Json"],
+      expect.any(String),
+      30_000,
     );
   });
 
@@ -683,6 +704,15 @@ describe("/nas", () => {
         exitCode: 0,
         timedOut: false,
         output: "{\"mode\":\"dry-run\",\"stagingSource\":{\"status\":\"fresh\"},\"copiedOrReplaced\":0,\"skipped\":160,\"protectedSkipped\":6}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: JSON.stringify({
+          ok: true,
+          durationSec: 0.3,
+          output: ["attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 3 minutes"],
+        }),
       });
     mocks.readHandoffEnvelope.mockReset();
     mocks.listHandoffEnvelopeFiles.mockReturnValue([]);

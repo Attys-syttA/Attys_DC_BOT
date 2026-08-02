@@ -32,6 +32,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.20`, mert a NAS deploy verifier biztonsagi/uzemeltetesi guardja szigorodott.
 - NAS container status Discord command: uj read-only `/nas container-status` alparancs keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A restricted SSH status wrappert hivja, de csak public-safe elerhetoseg/futas/duration sorokat mutat, raw Docker/SSH output, NAS path, token vagy write muvelet nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.21`, mert uj user-visible NAS status alparancs jelent meg.
+- NAS doctor container visibility: a `/nas doctor` read-only osszkep most a restricted SSH container status eredmenyet is tartalmazza public-safe sorban, hogy DSM UI nelkul is latszodjon, fut-e a NAS control-plane kontener.
+- Version bump: a package verzio `0.1.1-prerelease.22`, mert a user-visible NAS doctor diagnosztika bovult.
 
 ## 2026-08-01
 

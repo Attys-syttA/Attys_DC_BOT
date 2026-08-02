@@ -109,7 +109,7 @@ The `status` command keeps its short Compose status output visible by default. S
 pwsh -NoProfile -File scripts\nas-container-lifecycle.ps1 -Action rebuild -VerboseOutput
 ```
 
-Discord also has a read-only `/nas container-status` view under `DISCORD_ENABLE_NAS_STATUS=true`. It uses the same restricted status wrapper but hides raw Docker/SSH output and reports only public-safe reachability, whether the expected control-plane service is up, duration, and output-line count.
+Discord also has a read-only `/nas container-status` view under `DISCORD_ENABLE_NAS_STATUS=true`. It uses the same restricted status wrapper but hides raw Docker/SSH output and reports only public-safe reachability, whether the expected control-plane service is up, duration, and output-line count. `/nas doctor` includes the same container reachability signal in its broader read-only diagnostic summary.
 
 The current NAS-side restricted wrapper contract is:
 

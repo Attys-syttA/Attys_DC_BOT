@@ -400,6 +400,15 @@ function nasContainerOutputCount(parsed: NasContainerLifecycleResult | null): st
     : "unknown";
 }
 
+function nasContainerStatusLine(result: Awaited<ReturnType<typeof runLocalCommand>>): string {
+  const parsed = result.exitCode === 0
+    ? parseJsonObject(result.output) as NasContainerLifecycleResult | null
+    : null;
+  if (result.exitCode !== 0) return "FAIL NAS container: status unavailable";
+  if (expectedNasContainerRunning(parsed)) return `OK NAS container: control-plane service is up, duration ${nasContainerDuration(parsed)}`;
+  return `WARN NAS container: control-plane service not confirmed up, output lines ${nasContainerOutputCount(parsed)}`;
+}
+
 export async function buildNasContainerStatusReport(repoRoot: string): Promise<string> {
   const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:container:status", "--", "-Json"], repoRoot, 30_000);
   const parsed = result.exitCode === 0
@@ -673,10 +682,11 @@ function mailboxStatusLines(repoRoot: string, channelId: string): string[] {
 }
 
 export async function buildNasDoctorReport(repoRoot: string, channelId: string): Promise<string> {
-  const [workerHttp, handoffWorker, syncDryRun] = await Promise.all([
+  const [workerHttp, handoffWorker, syncDryRun, containerStatus] = await Promise.all([
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:http:status"], repoRoot, 15_000),
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:handoff:status"], repoRoot, 15_000),
     runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share", "--", "-Json"], repoRoot, 60_000),
+    runLocalCommand(npmCommand(), ["run", "--silent", "nas:container:status", "--", "-Json"], repoRoot, 30_000),
   ]);
 
   const workerHttpStatus = workerHttp.exitCode === 0
@@ -693,6 +703,7 @@ export async function buildNasDoctorReport(repoRoot: string, channelId: string):
     handoffStoreLine(repoRoot),
     nasControlPlaneSnapshotLine(repoRoot),
     nasDeployVerificationLine(repoRoot),
+    nasContainerStatusLine(containerStatus),
     syncDryRunLine(syncDryRun),
     ...mailboxStatusLines(repoRoot, channelId),
     resultNotifierLine(),
