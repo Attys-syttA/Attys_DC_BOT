@@ -1,6 +1,6 @@
 {
   "name": "attys-dc-bot",
-  "version": "0.1.1-prerelease.9",
+  "version": "0.1.1-prerelease.10",
   "description": "Local-first Windows Discord control surface for Codex CLI",
   "type": "module",
   "main": "dist/index.js",
@@ -12,6 +12,7 @@
     "nas:prepare": "pwsh -NoProfile -File scripts/prepare-nas-staging.ps1",
     "nas:check": "pwsh -NoProfile -File scripts/check-nas-staging.ps1",
     "nas:sync-share": "pwsh -NoProfile -File scripts/sync-nas-share.ps1",
+    "nas:deploy": "pwsh -NoProfile -File scripts/deploy-nas-control-plane.ps1",
     "nas:deploy:verify": "tsx src/cli/nas-deploy-verify.ts",
     "nas:status": "tsx src/cli/nas-status.ts",
     "nas:control-plane": "tsx src/cli/nas-control-plane.ts",

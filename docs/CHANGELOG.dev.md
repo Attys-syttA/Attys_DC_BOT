@@ -7,6 +7,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.8`, mert uj operator-facing NAS container lifecycle parancsok jelentek meg.
 - Worker bridge lifecycle detach fix: a `worker:http:*`, `worker:handoff:*` es `nas:bridge:*` helper scriptek a hatterfolyamatokat WMI/CIM `Win32_Process.Create` utvonalon inditjak, igy Codex/PowerShell futtatasbol nem ragadnak be a child process tree miatt. A javitott `npm run nas:bridge:restart` 8 masodperc alatt visszatert, majd `bridgeReady:true` statuszt adott.
 - Version bump: a package verzio `0.1.1-prerelease.9`, mert az operator-facing bridge lifecycle helper megbizhatosagi hibaja javult.
+- NAS deploy orchestration helper: uj `scripts/deploy-nas-control-plane.ps1` es `npm run nas:deploy` parancs keszult. Alapbol dry-run modban futtatja a `prepare -> check -> sync dry-run` lepeseit; csak explicit `-Apply` mellett synceli a NAS share-t, epiti ujra a korlatozott SSH container helperrel a NAS control-plane kontenert, majd varakozas utan `nas:deploy:verify` ellenorzest futtat.
+- Version bump: a package verzio `0.1.1-prerelease.10`, mert uj operator-facing NAS deploy orchestration parancs jelent meg.
 
 ## 2026-08-01
 

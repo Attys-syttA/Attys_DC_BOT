@@ -79,6 +79,15 @@ npm run nas:deploy:verify -- --target-root K:\ --json
 
 The verifier checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, and `logs\nas-control-plane-status.json` together. It fails if the running container snapshot does not match the staged source commit/package version, the snapshot is stale, NAS-side Codex execution is not disabled, the handoff store is not ready, or the configured worker health is not OK. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
 
+One-command NAS deploy orchestration:
+
+```powershell
+npm run nas:deploy
+npm run nas:deploy -- -Apply
+```
+
+Without `-Apply`, this is a dry-run: it prepares staging, checks the staging manifest, and reports the NAS share sync plan. With `-Apply`, it syncs the share, rebuilds the NAS control-plane container through the restricted SSH helper, waits for the status snapshot, and runs `nas:deploy:verify`. The command preserves the same protected NAS paths as `nas:sync-share`.
+
 Restricted SSH container lifecycle:
 
 ```powershell
