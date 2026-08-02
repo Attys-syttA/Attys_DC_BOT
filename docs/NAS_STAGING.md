@@ -88,7 +88,9 @@ npm run nas:deploy -- -Apply
 
 Without `-Apply`, this is a dry-run: it prepares staging, checks the staging manifest, and reports the NAS share sync plan. With `-Apply`, it syncs the share, rebuilds the NAS control-plane container through the restricted SSH helper, waits for the status snapshot, and runs `nas:deploy:verify`. The command preserves the same protected NAS paths as `nas:sync-share`.
 
-Before rebuilding, `-Apply` checks whether `nas:deploy:verify --json` already reports the NAS deploy as current. If it is already current, the rebuild is skipped. Use `-ForceRebuild` to rebuild even when the verifier is already green:
+With a clean checkout, `-Apply` first checks whether the live NAS verifier already matches the current Git commit and `package.json` version. If it already matches, the command skips both NAS share sync and container rebuild, then runs the verifier only. This avoids rewriting generated staging metadata when nothing changed.
+
+If sync was needed, the command checks again before rebuilding. If the synced NAS deploy is already current, only the rebuild is skipped. Use `-ForceRebuild` to rebuild even when the verifier is already green:
 
 ```powershell
 npm run nas:deploy -- -Apply -ForceRebuild

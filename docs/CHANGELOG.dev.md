@@ -34,6 +34,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.21`, mert uj user-visible NAS status alparancs jelent meg.
 - NAS doctor container visibility: a `/nas doctor` read-only osszkep most a restricted SSH container status eredmenyet is tartalmazza public-safe sorban, hogy DSM UI nelkul is latszodjon, fut-e a NAS control-plane kontener.
 - Version bump: a package verzio `0.1.1-prerelease.22`, mert a user-visible NAS doctor diagnosztika bovult.
+- NAS deploy no-op skip: `nas:deploy -- -Apply` tiszta checkoutnal mar sync elott ellenorzi, hogy a NAS deploy a jelenlegi Git commit + package version allapottal egyezik-e. Ha igen, kihagyja a NAS share irast es a kontener rebuildet is, majd csak verifiert futtat.
+- Version bump: a package verzio `0.1.1-prerelease.23`, mert az operator-facing NAS deploy orchestration felesleges NAS irasokat kerul el.
 
 ## 2026-08-01
 

@@ -48,8 +48,87 @@ function Test-NasDeployAlreadyCurrent {
   }
 }
 
+function Get-CurrentSourceIdentity {
+  $sourceCommit = "unknown"
+  $packageVersion = "unknown"
+
+  try {
+    $sourceCommitValue = git -C $repoRoot rev-parse --short=12 HEAD
+    if ($LASTEXITCODE -eq 0 -and $sourceCommitValue) {
+      $sourceCommit = [string]$sourceCommitValue
+    }
+  } catch {
+    $sourceCommit = "unknown"
+  }
+
+  try {
+    $packageJson = Get-Content -LiteralPath (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
+    if ($packageJson.version) {
+      $packageVersion = [string]$packageJson.version
+    }
+  } catch {
+    $packageVersion = "unknown"
+  }
+
+  [pscustomobject]@{
+    SourceCommit = $sourceCommit
+    PackageVersion = $packageVersion
+  }
+}
+
+function Test-SourceCheckoutClean {
+  $status = git -C $repoRoot status --short --untracked-files=all
+  if ($LASTEXITCODE -ne 0) {
+    return $false
+  }
+  return @($status | Where-Object { $_.Trim().Length -gt 0 }).Count -eq 0
+}
+
+function Test-NasDeployMatchesCurrentSource {
+  param(
+    [string]$TargetRootValue
+  )
+
+  $identity = Get-CurrentSourceIdentity
+  if ($identity.SourceCommit -eq "unknown" -or $identity.PackageVersion -eq "unknown") {
+    return $false
+  }
+
+  $outputLines = @(& npm run --silent nas:deploy:verify -- --target-root $TargetRootValue --json 2>&1 | ForEach-Object { $_.ToString() })
+  if ($LASTEXITCODE -ne 0) {
+    return $false
+  }
+
+  try {
+    $parsed = ($outputLines -join "`n") | ConvertFrom-Json
+    return $parsed.ok -eq $true `
+      -and $parsed.sourceCommit -eq $identity.SourceCommit `
+      -and $parsed.packageVersion -eq $identity.PackageVersion
+  } catch {
+    return $false
+  }
+}
+
 Push-Location $repoRoot
 try {
+  $canSkipBeforeSync = $Apply `
+    -and -not $NoIncludeSource `
+    -and -not $AllowDirtySource `
+    -and -not $SkipRebuild `
+    -and -not $ForceRebuild `
+    -and -not $SkipVerify
+  if ($canSkipBeforeSync) {
+    Write-Host "==> check whether NAS deploy already matches current source"
+    if ((Test-SourceCheckoutClean) -and (Test-NasDeployMatchesCurrentSource -TargetRootValue $TargetRoot)) {
+      Write-Host "NAS deploy already matches current source; skipping sync and rebuild. Use -ForceRebuild to rebuild anyway."
+      Invoke-Step "verify NAS deployment" {
+        npm run nas:deploy:verify -- --target-root $TargetRoot
+      }
+      return
+    }
+    Write-Host "NAS deploy does not match current source yet; sync required."
+  }
+
   $prepareArgs = @("run", "nas:prepare", "--", "-StagingRoot", $StagingRoot)
   if (-not $NoIncludeSource) { $prepareArgs += "-IncludeSource" }
   if ($AllowDirtySource) { $prepareArgs += "-AllowDirtySource" }
