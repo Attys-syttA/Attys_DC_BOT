@@ -49,7 +49,8 @@ function Invoke-NasDeployVerifier {
     }
   }
 
-  Write-Host "NAS deploy verifier still failed in this process; retrying once in an isolated PowerShell process..."
+  Write-Host "NAS deploy verifier still failed in this process; waiting 30s before an isolated PowerShell verifier..."
+  Start-Sleep -Seconds 30
   $encodedRepoRoot = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($repoRoot))
   $encodedTargetRoot = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($TargetRootValue))
   $env:ATTYS_DEPLOY_VERIFY_REPO_ROOT_B64 = $encodedRepoRoot
@@ -60,7 +61,7 @@ $repoRoot = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($env:
 $targetRoot = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($env:ATTYS_DEPLOY_VERIFY_TARGET_ROOT_B64))
 Set-Location -LiteralPath $repoRoot
 npm run nas:deploy:verify -- --target-root $targetRoot
-'@ -ErrorAction Stop
+'@
     if ($LASTEXITCODE -eq 0) {
       return
     }
