@@ -106,6 +106,12 @@ function renderRepairExecution(execution: AuditRepairExecutionRecord): string {
   return `- ${execution.status}: thread=${thread} turn=${turn} summary=${execution.result_summary}`;
 }
 
+function repairWorktreeChangeSummary(worktree: ReturnType<typeof getAuditRepairWorktree>): string {
+  if (!worktree) return "unavailable";
+  if (worktree.status === "removed") return "removed";
+  return inspectRepairWorktreeChanges(worktree.worktree_path).summary;
+}
+
 function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
   const lines = [
     `job: \`${job.id.slice(0, 8)}...\``,
@@ -130,7 +136,7 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
       `- status: ${repairWorktree.status}`,
       `- branch: ${repairWorktree.branch_name}`,
       `- head: ${repairWorktree.head_commit.slice(0, 12)}`,
-      `- changes: ${inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary}`,
+      `- changes: ${repairWorktreeChangeSummary(repairWorktree)}`,
     );
   }
 
@@ -171,7 +177,7 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
       `repair workspace: ${repairWorktree.status}`,
       `repair branch: ${repairWorktree.branch_name}`,
       `repair head: ${repairWorktree.head_commit.slice(0, 12)}`,
-      `repair changes: ${inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary}`,
+      `repair changes: ${repairWorktreeChangeSummary(repairWorktree)}`,
     );
   } else {
     lines.push("repair workspace: none");
@@ -345,9 +351,7 @@ async function executeRepairPlan(interaction: ChatInputCommandInteraction): Prom
   }
 
   const repairWorktree = getAuditRepairWorktree(job.id);
-  const repairChangeSummary = repairWorktree
-    ? inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary
-    : "unavailable";
+  const repairChangeSummary = repairWorktreeChangeSummary(repairWorktree);
 
   await interaction.editReply({
     content: `**Audit repair plan**\n\`\`\`text\n${renderAuditRepairPlan({

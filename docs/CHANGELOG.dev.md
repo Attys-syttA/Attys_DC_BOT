@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit removed workspace visibility: `/audit status`, `/audit review` es `/audit repair-plan` removed repair workspace eseten mar `changes: removed` jelzest hasznal, es nem probal torolt worktree pathot ujraolvasni.
+- Version bump: a package verzio `0.1.1-prerelease.60`, mert a user-visible audit workspace status kimenet pontosult.
 - Audit cleanup next-action guidance: `/audit review` terminal job es cleanup-ready repair workspace mellett mar `/audit repair-cleanup` kovetkezo lepest mutat, removed workspace eseten pedig csak status/review marad.
 - Version bump: a package verzio `0.1.1-prerelease.59`, mert a user-visible `/audit review` dontesi osszegzes pontosult.
 - Audit repair-cleanup command: uj `/audit repair-cleanup` subcommand keszult a repair flag alatt. Csak terminal audit jobhoz tartozo, matching izolalt repair worktree-t probal eltavolitani non-force `git worktree remove` utvonalon; dirty vagy unsafe cleanup eseten `cleanup_failed` marad, normal source worktree merge/commit/push/deploy/reset/delete nelkul.

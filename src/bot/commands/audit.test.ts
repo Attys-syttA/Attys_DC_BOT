@@ -378,6 +378,26 @@ describe("/audit", () => {
     expect(content).not.toContain(".discord-bot-state");
   });
 
+  it("does not inspect removed repair worktree paths in audit status", async () => {
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "removed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("status");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("- status: removed");
+    expect(content).toContain("- changes: removed");
+    expect(mocks.inspectRepairWorktreeChanges).not.toHaveBeenCalled();
+  });
+
   it("shows public-safe repair execution tracking in audit status", async () => {
     mocks.listAuditRepairExecutions.mockReturnValue([{
       id: "repair-exec-1",
