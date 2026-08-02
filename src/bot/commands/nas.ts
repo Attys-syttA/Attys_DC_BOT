@@ -418,12 +418,26 @@ function nasContainerOutputCount(parsed: NasContainerLifecycleResult | null): st
     : "unknown";
 }
 
+function nasContainerImageTag(parsed: NasContainerLifecycleResult | null): string {
+  if (!Array.isArray(parsed?.output)) return "unknown";
+
+  for (const entry of parsed.output) {
+    if (typeof entry !== "string") continue;
+    const match = /\battys-dc-bot-control-plane:([a-f0-9]{12})\b/i.exec(entry);
+    if (match) return match[1].toLowerCase();
+  }
+
+  return "unknown";
+}
+
 function nasContainerStatusLine(result: Awaited<ReturnType<typeof runLocalCommand>>): string {
   const parsed = result.exitCode === 0
     ? parseJsonObject(result.output) as NasContainerLifecycleResult | null
     : null;
   if (result.exitCode !== 0) return "FAIL NAS container: status unavailable";
-  if (expectedNasContainerRunning(parsed)) return `OK NAS container: control-plane service is up, duration ${nasContainerDuration(parsed)}`;
+  if (expectedNasContainerRunning(parsed)) {
+    return `OK NAS container: control-plane service is up, image=${nasContainerImageTag(parsed)}, duration ${nasContainerDuration(parsed)}`;
+  }
   return `WARN NAS container: control-plane service not confirmed up, output lines ${nasContainerOutputCount(parsed)}`;
 }
 
@@ -444,6 +458,7 @@ export async function buildNasContainerStatusReport(repoRoot: string): Promise<s
     "```text",
     statusLine,
     `reachable=${result.exitCode === 0 ? "yes" : "no"}`,
+    `image=${nasContainerImageTag(parsed)}`,
     `duration=${nasContainerDuration(parsed)}`,
     `remote-output-lines=${nasContainerOutputCount(parsed)}`,
     "raw-output=hidden",

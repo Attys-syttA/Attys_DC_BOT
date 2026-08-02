@@ -659,7 +659,7 @@ describe("/nas", () => {
           durationSec: 0.2,
           output: [
             "NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS",
-            "attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 2 minutes",
+            "attys-dc-bot-control-plane attys-dc-bot-control-plane:ebfa22a9abcd command attys-dc-bot-control-plane now Up 2 minutes",
           ],
         }),
       });
@@ -672,7 +672,7 @@ describe("/nas", () => {
     expect(report).toContain("overall=ok");
     expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
     expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=14/14");
-    expect(report).toContain("OK NAS container: control-plane service is up, duration 0.2s");
+    expect(report).toContain("OK NAS container: control-plane service is up, image=ebfa22a9abcd, duration 0.2s");
     expect(report).toContain("OK sync dry-run: staging-source=fresh pending=0 unchanged=160 protected=6");
     expect(report).toContain("root=ready");
     expect(report).toContain("tracked=queued:1 completed:2 failed:3");
@@ -936,7 +936,7 @@ describe("/nas", () => {
         exitCode: 0,
         output: [
           "NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS",
-          "attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 2 minutes",
+          "attys-dc-bot-control-plane attys-dc-bot-control-plane:ebfa22a9abcd command attys-dc-bot-control-plane now Up 2 minutes",
           "raw private K:\\secret token=hidden",
         ],
       }, null, 2),
@@ -947,6 +947,7 @@ describe("/nas", () => {
     expect(report).toContain("NAS Container Status");
     expect(report).toContain("OK NAS container: control-plane service is up");
     expect(report).toContain("reachable=yes");
+    expect(report).toContain("image=ebfa22a9abcd");
     expect(report).toContain("duration=0.2s");
     expect(report).toContain("remote-output-lines=3");
     expect(report).toContain("raw-output=hidden");

@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS container image visibility: a `/nas container-status` es `/nas doctor` public-safe kimenete most rovid `image=<commit>` mezot is mutat a futó NAS control-plane image tagbol, raw Docker/SSH output nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.42`, mert a user-visible NAS container status kimenet bovult.
 - NAS deploy current-image fast path: rebuild utan a deploy helper read-only `nas:container:status -Json` ellenorzessel felismeri, ha a NAS mar a jelenlegi commit image tagjet futtatja. Ilyenkor kihagyja a hosszu ugyanazon-folyamatu SMB snapshot pollingot, es rovidebb verifier retry utan a friss PowerShell fallbackre hagyatkozik.
 - Version bump: a package verzio `0.1.1-prerelease.41`, mert az operator-facing NAS deploy verifikacios utvonal gyorsabb es kevesbe stale SMB-erzekeny lett.
 - NAS deploy SMB cool-down fallback: a vegso izolalt verifier elott 30 masodperces cool-down lep be, es a fallback PowerShell hivasbol kikerult a hibasan npm argumentumkent atadott `-ErrorAction`. Ezt az eles NAS-on latott atmeneti `A parameter nem megfelelo` snapshot olvasasi hiba indokolta.
