@@ -97,6 +97,14 @@ if (Test-Path -LiteralPath $composePath) {
   $composeText = Get-Content -LiteralPath $composePath -Raw
   $safeSourceCommit = if ($sourceCommit -match "^[A-Za-z0-9._-]{1,80}$") { $sourceCommit } else { "unknown" }
   $safePackageVersion = if ($packageVersion -match "^[A-Za-z0-9._-]{1,80}$") { $packageVersion } else { "unknown" }
+  $safeImageTag = ($safeSourceCommit.ToLowerInvariant() -replace "[^a-z0-9_.-]", "-")
+  if (-not $safeImageTag -or $safeImageTag -eq "unknown") {
+    $safeImageTag = "local"
+  }
+  if ($safeImageTag.Length -gt 80) {
+    $safeImageTag = $safeImageTag.Substring(0, 80)
+  }
+  $composeText = $composeText.Replace("__ATTYS_NAS_IMAGE_TAG__", $safeImageTag)
   $composeText = $composeText.Replace("__ATTYS_NAS_SOURCE_COMMIT__", $safeSourceCommit)
   $composeText = $composeText.Replace("__ATTYS_NAS_PACKAGE_VERSION__", $safePackageVersion)
   [System.IO.File]::WriteAllText($composePath, $composeText, [System.Text.UTF8Encoding]::new($false))

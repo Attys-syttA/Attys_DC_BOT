@@ -90,7 +90,7 @@ Without `-Apply`, this is a dry-run: it prepares staging, checks the staging man
 
 With a clean checkout, `-Apply` first checks whether the live NAS verifier already matches the current Git commit and `package.json` version. If it already matches, the command skips both NAS share sync and container rebuild, then runs the verifier only. This avoids rewriting generated staging metadata when nothing changed.
 
-The staged `docker-compose.yml` includes generated source commit and package version labels. These labels deliberately change on each staged source build so Synology's existing restricted `docker compose up -d --build` wrapper sees a compose configuration change and recreates the control-plane container without requiring a broader NAS sudo command.
+The staged `docker-compose.yml` includes a generated image tag plus generated source commit and package version labels. The image tag is derived from the staged source commit and deliberately changes on each staged source build so Synology's existing restricted `docker compose up -d --build` wrapper sees a new image reference and recreates the control-plane container without requiring a broader NAS sudo command.
 
 If sync was needed, the command checks again before rebuilding. If the synced NAS deploy is already current, only the rebuild is skipped. Use `-ForceRebuild` to rebuild even when the verifier is already green:
 

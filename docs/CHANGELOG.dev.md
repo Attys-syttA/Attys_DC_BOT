@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS compose image tag recreate trigger: a NAS staging `docker-compose.yml` image tagje most a staged source commitbol generalodik. Ez erosebb compose valtozas, mint a label, es a jelenlegi restricted NAS `docker compose up -d --build` wrapper mellett is uj image referenciat ad a control-plane service-nek.
+- Version bump: a package verzio `0.1.1-prerelease.36`, mert a NAS deploy staging/rebuild szerzodes commit-alapu image taggel bovult.
 - NAS compose recreate trigger: a NAS staging `docker-compose.yml` most generated source commit es package version labelt kap. Mivel a NAS oldali restricted wrapper csak `docker compose up -d --build` parancsot futtat, a label valtozas biztonsagos compose-config valtozaskent kenyszeriti az uj control-plane kontener letrehozasat `--force-recreate` sudoers bovites nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.35`, mert a NAS deploy staging/rebuild szerzodes stabilabb lett.
 - NAS deploy final verifier retry: a `nas:deploy -- -Apply` vegso `nas:deploy:verify` lepese rovid retry-t kapott, hogy a NAS status snapshot kesoi SMB/control-plane lathatosaga ne pirositsa el a deployt kozvetlenul azelott, hogy ugyanaz a verifier zoldre valtana.

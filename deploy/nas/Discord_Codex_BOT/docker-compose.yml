@@ -2,7 +2,7 @@ services:
   attys-dc-bot-control-plane:
     build:
       context: ./app
-    image: attys-dc-bot-control-plane:local
+    image: attys-dc-bot-control-plane:__ATTYS_NAS_IMAGE_TAG__
     container_name: attys-dc-bot-control-plane
     labels:
       attys.dc-bot.source-commit: "__ATTYS_NAS_SOURCE_COMMIT__"
