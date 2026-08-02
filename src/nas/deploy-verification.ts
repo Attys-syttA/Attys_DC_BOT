@@ -30,6 +30,7 @@ interface DeployJson {
 interface SnapshotJson {
   buildInfo?: DeployJson;
   codexExecutionEnabled?: unknown;
+  configuredWorkers?: unknown;
   workerHealth?: unknown;
   handoffStore?: {
     rootStatus?: unknown;
@@ -67,6 +68,15 @@ function snapshotAgeOk(checkedAt: unknown, now: Date, maxSnapshotAgeMs: number):
   const checkedAtMs = Date.parse(checkedAt);
   if (!Number.isFinite(checkedAtMs)) return false;
   return now.getTime() - checkedAtMs <= maxSnapshotAgeMs;
+}
+
+function publicWorkerMetadataSafe(configuredWorkers: unknown): boolean {
+  if (!Array.isArray(configuredWorkers)) return true;
+  return configuredWorkers.every((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const record = entry as Record<string, unknown>;
+    return !("baseUrl" in record) && !("url" in record);
+  });
 }
 
 export function verifyNasDeploy(
@@ -115,6 +125,9 @@ export function verifyNasDeploy(
   const healthyWorkers = workerHealth.filter((entry) => entry && typeof entry === "object" && (entry as { ok?: unknown }).ok === true).length;
   const workersOk = workerHealth.length > 0 && healthyWorkers === workerHealth.length;
   pushCheck(checks, "worker-health", workersOk, workersOk ? `${healthyWorkers}/${workerHealth.length} healthy` : `${healthyWorkers}/${workerHealth.length} healthy`);
+
+  const workerMetadataSafe = publicWorkerMetadataSafe(snapshot?.configuredWorkers);
+  pushCheck(checks, "public-worker-metadata", workerMetadataSafe, workerMetadataSafe ? "worker metadata public-safe" : "worker metadata exposes URL fields");
 
   const fresh = snapshotAgeOk(snapshot?.checkedAt, now, maxSnapshotAgeMs);
   pushCheck(checks, "snapshot-freshness", fresh, fresh ? "fresh" : "stale or missing timestamp");

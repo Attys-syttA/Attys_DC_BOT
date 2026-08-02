@@ -23,6 +23,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.16`, mert az operator-facing NAS worker CLI kimenetek valtoztak.
 - NAS public worker metadata hardening: a public `configuredWorkers` snapshot es JSON kimenetek mar nem tartalmazzak a worker `baseUrl` erteket. A belso kliens tovabbra is hasznalja a config URL-t, de NAS/Discord/operatori public kimenetben csak worker ID, label, shared-secret konfiguracio jelzo es workspace label marad.
 - Version bump: a package verzio `0.1.1-prerelease.17`, mert a NAS public worker metadata kimenet szukebb lett.
+- NAS deploy verifier hardening: a `nas:deploy:verify` uj `public-worker-metadata` checket futtat, amely fail-closed jelez, ha a futó NAS snapshot public worker metadata URL mezot tartalmazna.
+- Version bump: a package verzio `0.1.1-prerelease.18`, mert a NAS deploy verifier uj public metadata guardra bovult.
 
 ## 2026-08-01
 

@@ -42,6 +42,9 @@ function writeValidShare(root: string): void {
       includeSource: true,
     },
     codexExecutionEnabled: false,
+    configuredWorkers: [
+      { id: "otthon", label: "Otthoni worker", hasSharedSecret: true, workspaceRootLabel: "codex_works-home" },
+    ],
     workerHealth: [
       { workerId: "otthon", ok: true, statusCode: 200, summary: "worker health ready", baseUrl: "http://private.example.invalid" },
     ],
@@ -70,8 +73,37 @@ describe("NAS deploy verification", () => {
       ok: true,
       summary: "fresh",
     });
+    expect(result.checks).toContainEqual({
+      name: "public-worker-metadata",
+      ok: true,
+      summary: "worker metadata public-safe",
+    });
     expect(JSON.stringify(result)).not.toContain("private.example.invalid");
     expect(JSON.stringify(result)).not.toContain(root);
+  });
+
+  it("fails closed when public worker metadata exposes URL fields", () => {
+    const root = makeTempDir();
+    writeValidShare(root);
+    const snapshotPath = path.join(root, "logs", "nas-control-plane-status.json");
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as Record<string, unknown>;
+    snapshot.configuredWorkers = [
+      { id: "otthon", baseUrl: "http://private.example.invalid:8787" },
+    ];
+    writeJson(snapshotPath, snapshot);
+
+    const result = verifyNasDeploy(root, {
+      now: () => new Date("2026-08-01T20:01:00.000Z"),
+      maxSnapshotAgeMs: 5 * 60_000,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toContainEqual({
+      name: "public-worker-metadata",
+      ok: false,
+      summary: "worker metadata exposes URL fields",
+    });
+    expect(JSON.stringify(result)).not.toContain("private.example.invalid");
   });
 
   it("fails closed when the container snapshot commit differs from the staged source", () => {
