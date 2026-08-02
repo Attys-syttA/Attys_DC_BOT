@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy current-image fast path: rebuild utan a deploy helper read-only `nas:container:status -Json` ellenorzessel felismeri, ha a NAS mar a jelenlegi commit image tagjet futtatja. Ilyenkor kihagyja a hosszu ugyanazon-folyamatu SMB snapshot pollingot, es rovidebb verifier retry utan a friss PowerShell fallbackre hagyatkozik.
+- Version bump: a package verzio `0.1.1-prerelease.41`, mert az operator-facing NAS deploy verifikacios utvonal gyorsabb es kevesbe stale SMB-erzekeny lett.
 - NAS deploy SMB cool-down fallback: a vegso izolalt verifier elott 30 masodperces cool-down lep be, es a fallback PowerShell hivasbol kikerult a hibasan npm argumentumkent atadott `-ErrorAction`. Ezt az eles NAS-on latott atmeneti `A parameter nem megfelelo` snapshot olvasasi hiba indokolta.
 - Version bump: a package verzio `0.1.1-prerelease.40`, mert az operator-facing NAS deploy fallback tenyleges futtatasa javult.
 - NAS deploy isolated verifier fallback: a `nas:deploy -- -Apply` vegso verifier hosszu retry utan egyszer kulon PowerShell processzben is ellenoriz, mert eles NAS deploynal ugyanazon folyamat SMB olvasasa stale snapshotot lathatott, mikozben a kovetkezo onallo verifier mar zold volt.

@@ -189,8 +189,39 @@ function Test-NasDeployMatchesCurrentSource {
   }
 }
 
+function Test-NasContainerImageMatchesCurrentSource {
+  $identity = Get-CurrentSourceIdentity
+  if ($identity.SourceCommit -eq "unknown") {
+    return $false
+  }
+
+  $outputLines = @(& npm run --silent nas:container:status -- -Json 2>&1 | ForEach-Object { $_.ToString() })
+  if ($LASTEXITCODE -ne 0) {
+    return $false
+  }
+
+  try {
+    $parsed = ($outputLines -join "`n") | ConvertFrom-Json
+    if ($parsed.ok -ne $true) {
+      return $false
+    }
+
+    $expectedImage = "attys-dc-bot-control-plane:$($identity.SourceCommit)"
+    foreach ($line in @($parsed.output)) {
+      if ([string]$line -match [Regex]::Escape($expectedImage)) {
+        return $true
+      }
+    }
+
+    return $false
+  } catch {
+    return $false
+  }
+}
+
 Push-Location $repoRoot
 try {
+  $rebuiltCurrentImageConfirmed = $false
   $canSkipBeforeSync = $Apply `
     -and -not $NoIncludeSource `
     -and -not $AllowDirtySource `
@@ -252,13 +283,22 @@ try {
       npm run nas:container:rebuild
     }
     if ($WaitAfterRebuildSec -gt 0 -and -not $SkipVerify) {
-      Wait-NasDeployVerification -TargetRootValue $TargetRoot -TimeoutSec $WaitAfterRebuildSec
+      if (Test-NasContainerImageMatchesCurrentSource) {
+        Write-Host "NAS container already reports the current source image; skipping long in-process snapshot polling."
+        $rebuiltCurrentImageConfirmed = $true
+      } else {
+        Wait-NasDeployVerification -TargetRootValue $TargetRoot -TimeoutSec $WaitAfterRebuildSec
+      }
     }
   }
 
   if (-not $SkipVerify) {
     Invoke-Step "verify NAS deployment" {
-      Invoke-NasDeployVerifier -TargetRootValue $TargetRoot
+      if ($rebuiltCurrentImageConfirmed) {
+        Invoke-NasDeployVerifier -TargetRootValue $TargetRoot -RetryCount 3
+      } else {
+        Invoke-NasDeployVerifier -TargetRootValue $TargetRoot
+      }
     }
   }
 } finally {
