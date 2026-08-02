@@ -30,6 +30,26 @@ function Invoke-Step {
   }
 }
 
+function Invoke-NasDeployVerifier {
+  param(
+    [string]$TargetRootValue,
+    [int]$RetryCount = 6,
+    [int]$RetryDelaySec = 5
+  )
+
+  for ($attempt = 1; $attempt -le $RetryCount; $attempt += 1) {
+    npm run nas:deploy:verify -- --target-root $TargetRootValue
+    if ($LASTEXITCODE -eq 0) {
+      return
+    }
+
+    if ($attempt -lt $RetryCount) {
+      Write-Host "NAS deploy verifier failed; retrying in ${RetryDelaySec}s (attempt $($attempt + 1)/$RetryCount)..."
+      Start-Sleep -Seconds $RetryDelaySec
+    }
+  }
+}
+
 function Test-NasDeployAlreadyCurrent {
   param(
     [string]$TargetRootValue
@@ -161,7 +181,7 @@ try {
     if ((Test-SourceCheckoutClean) -and (Test-NasDeployMatchesCurrentSource -TargetRootValue $TargetRoot)) {
       Write-Host "NAS deploy already matches current source; skipping sync and rebuild. Use -ForceRebuild to rebuild anyway."
       Invoke-Step "verify NAS deployment" {
-        npm run nas:deploy:verify -- --target-root $TargetRoot
+        Invoke-NasDeployVerifier -TargetRootValue $TargetRoot
       }
       return
     }
@@ -217,7 +237,7 @@ try {
 
   if (-not $SkipVerify) {
     Invoke-Step "verify NAS deployment" {
-      npm run nas:deploy:verify -- --target-root $TargetRoot
+      Invoke-NasDeployVerifier -TargetRootValue $TargetRoot
     }
   }
 } finally {
