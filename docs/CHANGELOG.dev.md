@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy snapshot timeout calibration: a rebuild utani verification polling default timeoutja 180 masodperc lett, mert a 120 masodperces elso stabilizalas utan a NAS snapshot valos meresben par masodperccel kesobb valtott at az uj buildre.
+- Version bump: a package verzio `0.1.1-prerelease.30`, mert az operator-facing NAS deploy snapshot polling timeout valos NAS mereshez lett igazitva.
 - NAS deploy snapshot timeout: a rebuild utani deploy-verification polling default timeoutja 120 masodpercre nott, mert a NAS control-plane status tick es az SMB lathatosag 65 masodpercnel neha kesobb valt zoldre, mikozben a kontener vegul helyesen indult.
 - Version bump: a package verzio `0.1.1-prerelease.29`, mert az operator-facing NAS deploy snapshot polling timeout stabilabb lett.
 - NAS deploy snapshot wait: `nas:deploy -- -Apply` kontener rebuild utan mar nem vak fix varakozassal halad tovabb, hanem a `nas:deploy:verify --json` eredmenyet pollolja a megadott timeouton belul. Ha a snapshot hamarabb frissul, a deploy hamarabb verifikal; ha nem, a vegso verifier ad reszleteket.
