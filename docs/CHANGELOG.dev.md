@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-run help/docs alignment: a `/audit` reszletes sugo, README, SETUP es aktiv terv most mar egyertelmuen jelzi, hogy a repair-run letezik, de default-off es csak workspace/evidence/budget/iteration guardok mellett indulhat.
+- Version bump: a package verzio `0.1.1-prerelease.51`, mert a user-visible `/audit` sugo es operatori dokumentacio pontosult.
 - Audit repair-run budget guard: `/audit repair-run` mar elutasitja az inditast, ha a job elerte a repair iteration budgetet. Igy kimeritett audit kor utan nem indul uj Codex repair turn.
 - Version bump: a package verzio `0.1.1-prerelease.50`, mert a user-visible `/audit repair-run` biztonsagi guard bovult.
 - Audit repair-run evidence guard: `/audit repair-run` mar elutasitja az inditast, ha a jobban nincs nem-passed audit evidence. Igy nem indul repair prompt sikeres vagy ures audit bizonyitek alapjan.

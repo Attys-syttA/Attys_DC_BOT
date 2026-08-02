@@ -39,6 +39,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "A lefutott check lepesek public-safe `audit-check-*` tokenkent bekerulnek az `/events` timeline-ba.",
       "`/audit repair` kulon `DISCORD_ENABLE_AUDIT_REPAIR=true` flaget ker, approval nelkul nem hoz letre worktree-t, approval utan a repair workspace-t helyben rogzitjuk.",
       "`/audit repair-run` kulon `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` flaget is ker; egy izolalt Codex repair turnt indit es public-safe execution ledgerbe rogzit.",
+      "Repair-run csak prepared/retained repair workspace, nem-passed audit evidence, ervenyes repair contract/prompt es szabad iteration budget mellett indul.",
+      "Ugyanarra az audit iterationre masodik started repair-run nincs; elobb review, majd `/audit recheck` kell.",
       "`/audit recheck` ugyanennek a flagnek a hatasa alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",

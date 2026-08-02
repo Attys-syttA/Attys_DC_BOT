@@ -365,7 +365,7 @@ Optional source-repo parity mode:
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
 - read-only audit checks are disabled unless `DISCORD_ENABLE_AUDIT=true`
 - audit repair approval/worktree preparation is disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true`
-- audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but it still does not merge, commit, push, deploy, or write the normal source worktree
+- audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but only with non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It still does not merge, commit, push, deploy, or write the normal source worktree
 - `/audit recheck` can rerun the original named check in the isolated repair workspace while respecting the job iteration budget; repeated matching public-safe failures stop as `stagnated`
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
