@@ -7,6 +7,7 @@ param(
   [switch]$AllowStaleSource,
   [switch]$NoIncludeSource,
   [switch]$SkipRebuild,
+  [switch]$ForceRebuild,
   [switch]$SkipVerify,
   [int]$WaitAfterRebuildSec = 65
 )
@@ -26,6 +27,24 @@ function Invoke-Step {
   & $Command
   if ($LASTEXITCODE -ne 0) {
     throw "$Name failed with exit code $LASTEXITCODE."
+  }
+}
+
+function Test-NasDeployAlreadyCurrent {
+  param(
+    [string]$TargetRootValue
+  )
+
+  $outputLines = @(& npm run --silent nas:deploy:verify -- --target-root $TargetRootValue --json 2>&1 | ForEach-Object { $_.ToString() })
+  if ($LASTEXITCODE -ne 0) {
+    return $false
+  }
+
+  try {
+    $parsed = ($outputLines -join "`n") | ConvertFrom-Json
+    return $parsed.ok -eq $true
+  } catch {
+    return $false
   }
 }
 
@@ -52,7 +71,18 @@ try {
     return
   }
 
-  if (-not $SkipRebuild) {
+  $shouldRebuild = -not $SkipRebuild
+  if ($shouldRebuild -and -not $ForceRebuild -and -not $SkipVerify) {
+    Write-Host "==> check whether NAS rebuild is needed"
+    if (Test-NasDeployAlreadyCurrent -TargetRootValue $TargetRoot) {
+      Write-Host "NAS deploy already current; skipping rebuild. Use -ForceRebuild to rebuild anyway."
+      $shouldRebuild = $false
+    } else {
+      Write-Host "NAS deploy is not current yet; rebuild required."
+    }
+  }
+
+  if ($shouldRebuild) {
     Invoke-Step "rebuild NAS container" {
       npm run nas:container:rebuild
     }
