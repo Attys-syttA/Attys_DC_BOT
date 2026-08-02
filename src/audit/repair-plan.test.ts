@@ -82,6 +82,7 @@ describe("renderAuditRepairPlan", () => {
 
     expect(content).toContain("repair workspace: missing; approve /audit repair first");
     expect(content).toContain("repair prompt: blocked (1 issue(s))");
+    expect(content).toContain("repair prompt issues: repair contract has no prepared repair workspace");
     expect(content).toContain("operator decision: review this contract");
   });
 
@@ -96,6 +97,7 @@ describe("renderAuditRepairPlan", () => {
     expect(content).toContain("latest evidence: tests:passed");
     expect(content).toContain("repair workspace: prepared");
     expect(content).toContain("repair prompt: blocked (1 issue(s))");
+    expect(content).toContain("repair prompt issues: repair contract has no non-passed audit evidence");
   });
 
   it("keeps long evidence summaries bounded", () => {

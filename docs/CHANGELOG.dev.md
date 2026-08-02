@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-plan blocked issue visibility: `/audit repair-plan` a `repair prompt: blocked` sor mellett mar public-safe `repair prompt issues` sort is mutat, hogy latszodjon, hianyzo workspace vagy hianyzo nem-passed evidence miatt blokkolt-e.
+- Version bump: a package verzio `0.1.1-prerelease.64`, mert a user-visible audit repair-plan diagnosztika bovult.
 - Audit start bounded max-iterations option: `/audit start` opcionalis `max_iterations` integer opciot kapott. Alapertelmezett erteke 2, runtime es Discord schema szerint is 1-3 kozott engedett; ez csak a repair/recheck iteration budgetet allitja, nem ad automatikus repair/deploy jogot.
 - Version bump: a package verzio `0.1.1-prerelease.63`, mert uj user-visible `/audit start max_iterations` opcio jelent meg.
 - Audit review budget guidance: `/audit review` most explicit `iteration budget` sort mutat, es kimerult budgetnel mar nem ajanl uj repair/recheck lepest; a mar started repair execution manualis `/audit repair-reviewed` jelolese tovabbra is megmarad.

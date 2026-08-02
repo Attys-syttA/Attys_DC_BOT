@@ -32,6 +32,7 @@ export function renderAuditRepairPlan(input: AuditRepairPlanInput): string {
     `allowed capabilities: ${contract.allowedCapabilities.join(", ")}`,
     `required validation: ${contract.requiredValidation}`,
     `repair prompt: ${promptIssues.length === 0 ? "ready" : `blocked (${promptIssues.length} issue(s))`}`,
+    `repair prompt issues: ${promptIssues.length === 0 ? "none" : promptIssues.join("; ")}`,
     `blocked actions: ${contract.blockedActions.join(", ")}`,
     `operator decision: ${contract.operatorDecision}`,
   ];
