@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy verifier compose identity guard: a `nas:deploy:verify` most a NAS share `docker-compose.yml` fajljat is ellenorzi, es fail-closed jelzi, ha a commit-alapu image tag vagy a generated source/package label nem egyezik a staged build infoval.
+- Version bump: a package verzio `0.1.1-prerelease.37`, mert a NAS deploy verifier uj compose identity guarddal bovult.
 - NAS compose image tag recreate trigger: a NAS staging `docker-compose.yml` image tagje most a staged source commitbol generalodik. Ez erosebb compose valtozas, mint a label, es a jelenlegi restricted NAS `docker compose up -d --build` wrapper mellett is uj image referenciat ad a control-plane service-nek.
 - Version bump: a package verzio `0.1.1-prerelease.36`, mert a NAS deploy staging/rebuild szerzodes commit-alapu image taggel bovult.
 - NAS compose recreate trigger: a NAS staging `docker-compose.yml` most generated source commit es package version labelt kap. Mivel a NAS oldali restricted wrapper csak `docker compose up -d --build` parancsot futtat, a label valtozas biztonsagos compose-config valtozaskent kenyszeriti az uj control-plane kontener letrehozasat `--force-recreate` sudoers bovites nelkul.

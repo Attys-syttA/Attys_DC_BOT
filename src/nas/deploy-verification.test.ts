@@ -35,6 +35,15 @@ function writeValidShare(root: string): void {
     generatedAt: "2026-08-01T19:48:21Z",
     includeSource: true,
   });
+  fs.writeFileSync(path.join(root, "docker-compose.yml"), [
+    "services:",
+    "  attys-dc-bot-control-plane:",
+    "    image: attys-dc-bot-control-plane:b92133b0d087",
+    "    labels:",
+    "      attys.dc-bot.source-commit: \"b92133b0d087\"",
+    "      attys.dc-bot.package-version: \"0.1.1-prerelease.2\"",
+    "",
+  ].join("\n"), "utf8");
   writeJson(path.join(root, "logs", "nas-control-plane-status.json"), {
     buildInfo: {
       sourceCommit: "b92133b0d087",
@@ -77,6 +86,11 @@ describe("NAS deploy verification", () => {
       name: "public-worker-metadata",
       ok: true,
       summary: "worker metadata public-safe",
+    });
+    expect(result.checks).toContainEqual({
+      name: "compose-image-build-match",
+      ok: true,
+      summary: "compose image tag matches build info",
     });
     expect(JSON.stringify(result)).not.toContain("private.example.invalid");
     expect(JSON.stringify(result)).not.toContain(root);
@@ -134,6 +148,33 @@ describe("NAS deploy verification", () => {
       ok: false,
       summary: "snapshot does not match staged build",
     });
+  });
+
+  it("fails closed when the compose image tag differs from the staged source", () => {
+    const root = makeTempDir();
+    writeValidShare(root);
+    fs.writeFileSync(path.join(root, "docker-compose.yml"), [
+      "services:",
+      "  attys-dc-bot-control-plane:",
+      "    image: attys-dc-bot-control-plane:oldcommit",
+      "    labels:",
+      "      attys.dc-bot.source-commit: \"b92133b0d087\"",
+      "      attys.dc-bot.package-version: \"0.1.1-prerelease.2\"",
+      "",
+    ].join("\n"), "utf8");
+
+    const result = verifyNasDeploy(root, {
+      now: () => new Date("2026-08-01T20:01:00.000Z"),
+      maxSnapshotAgeMs: 5 * 60_000,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toContainEqual({
+      name: "compose-image-build-match",
+      ok: false,
+      summary: "compose image tag does not match build info",
+    });
+    expect(JSON.stringify(result)).not.toContain("oldcommit");
   });
 
   it("reports missing files without leaking paths", () => {

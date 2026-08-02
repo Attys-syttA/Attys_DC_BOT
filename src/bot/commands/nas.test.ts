@@ -189,6 +189,17 @@ describe("/nas", () => {
           includeSource: true,
         });
       }
+      if (filePath.endsWith("docker-compose.yml")) {
+        return [
+          "services:",
+          "  attys-dc-bot-control-plane:",
+          "    image: attys-dc-bot-control-plane:ebfa22a9abcd",
+          "    labels:",
+          "      attys.dc-bot.source-commit: \"ebfa22a9abcd\"",
+          "      attys.dc-bot.package-version: \"0.1.1-prerelease.2\"",
+          "",
+        ].join("\n");
+      }
       if (filePath.endsWith("nas-control-plane-status.json")) {
         return JSON.stringify({
           buildInfo: {
@@ -660,7 +671,7 @@ describe("/nas", () => {
     expect(report).toContain("NAS Doctor");
     expect(report).toContain("overall=ok");
     expect(report).toContain("OK bridge ready: PC worker and NAS handoff are connected");
-    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=11/11");
+    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=14/14");
     expect(report).toContain("OK NAS container: control-plane service is up, duration 0.2s");
     expect(report).toContain("OK sync dry-run: staging-source=fresh pending=0 unchanged=160 protected=6");
     expect(report).toContain("root=ready");
@@ -808,7 +819,7 @@ describe("/nas", () => {
     expect(report).toContain("OK handoff worker: running, NAS root reachable, processes 3");
     expect(report).toContain("OK handoff mailbox: inbox:0 outbox:2 archive:2");
     expect(report).toContain("OK NAS control-plane snapshot: build=ebfa22a9abcd version=0.1.1-prerelease.2 handoff=ready checked=");
-    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=11/11");
+    expect(report).toContain("OK NAS deploy verification: build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=14/14");
     expect(report).toContain("OK result notifier: enabled, poll 30s");
     expect(report).toContain("OK request stale timeout: 15m");
     expect(report).toContain("OK request tracking: queued:1 completed:2 failed:3");
@@ -908,7 +919,7 @@ describe("/nas", () => {
 
     expect(report).toContain("NAS Deploy Status");
     expect(report).toContain("OK deploy verified");
-    expect(report).toContain("checks=11/11");
+    expect(report).toContain("checks=14/14");
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
   });

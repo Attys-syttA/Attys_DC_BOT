@@ -41,6 +41,12 @@ interface SnapshotJson {
   checkedAt?: unknown;
 }
 
+interface ComposeIdentity {
+  imageTag?: string;
+  sourceCommitLabel?: string;
+  packageVersionLabel?: string;
+}
+
 function readJsonObject(filePath: string): Record<string, unknown> | null {
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
@@ -50,6 +56,25 @@ function readJsonObject(filePath: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function readComposeIdentity(filePath: string): ComposeIdentity | null {
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+
+  const imageMatch = content.match(/^\s*image:\s*attys-dc-bot-control-plane:([A-Za-z0-9_.-]+)\s*$/m);
+  const sourceCommitLabelMatch = content.match(/^\s*attys\.dc-bot\.source-commit:\s*["']?([^"'\r\n#]+)["']?\s*$/m);
+  const packageVersionLabelMatch = content.match(/^\s*attys\.dc-bot\.package-version:\s*["']?([^"'\r\n#]+)["']?\s*$/m);
+
+  return {
+    imageTag: imageMatch?.[1]?.trim(),
+    sourceCommitLabel: sourceCommitLabelMatch?.[1]?.trim(),
+    packageVersionLabel: packageVersionLabelMatch?.[1]?.trim(),
+  };
 }
 
 function sleepMs(delayMs: number): void {
@@ -129,6 +154,7 @@ export function verifyNasDeploy(
   const snapshotReadRetryDelayMs = options.snapshotReadRetryDelayMs ?? 0;
   const manifest = readJsonObject(path.join(shareRoot, "NAS_STAGING_MANIFEST.json")) as DeployJson | null;
   const buildInfo = readJsonObject(path.join(shareRoot, "app", "NAS_BUILD_INFO.json")) as DeployJson | null;
+  const compose = readComposeIdentity(path.join(shareRoot, "docker-compose.yml"));
   const snapshot = readSnapshotWithRetry(
     path.join(shareRoot, "logs", "nas-control-plane-status.json"),
     buildInfo,
@@ -139,6 +165,7 @@ export function verifyNasDeploy(
 
   pushCheck(checks, "manifest", Boolean(manifest), manifest ? "readable" : "missing or unreadable");
   pushCheck(checks, "build-info", Boolean(buildInfo), buildInfo ? "readable" : "missing or unreadable");
+  pushCheck(checks, "compose-file", Boolean(compose), compose ? "readable" : "missing or unreadable");
   pushCheck(checks, "control-plane-snapshot", Boolean(snapshot), snapshot ? "readable" : "missing or unreadable");
 
   const sourceCommit = safeText(buildInfo?.sourceCommit ?? manifest?.sourceCommit);
@@ -150,6 +177,22 @@ export function verifyNasDeploy(
     manifest.packageVersion === buildInfo.packageVersion,
   );
   pushCheck(checks, "manifest-build-match", manifestMatchesBuild, manifestMatchesBuild ? "manifest matches build info" : "manifest does not match build info");
+
+  const composeImageMatchesBuild = Boolean(
+    compose &&
+    buildInfo &&
+    typeof buildInfo.sourceCommit === "string" &&
+    compose.imageTag === buildInfo.sourceCommit,
+  );
+  pushCheck(checks, "compose-image-build-match", composeImageMatchesBuild, composeImageMatchesBuild ? "compose image tag matches build info" : "compose image tag does not match build info");
+
+  const composeLabelsMatchBuild = Boolean(
+    compose &&
+    buildInfo &&
+    compose.sourceCommitLabel === buildInfo.sourceCommit &&
+    compose.packageVersionLabel === buildInfo.packageVersion,
+  );
+  pushCheck(checks, "compose-labels-build-match", composeLabelsMatchBuild, composeLabelsMatchBuild ? "compose labels match build info" : "compose labels do not match build info");
 
   const snapshotMatchesBuild = snapshotMatchesBuildInfo(snapshot, buildInfo);
   pushCheck(checks, "snapshot-build-match", snapshotMatchesBuild, snapshotMatchesBuild ? "snapshot matches staged build" : "snapshot does not match staged build");
