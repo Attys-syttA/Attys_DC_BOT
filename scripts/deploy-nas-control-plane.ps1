@@ -138,6 +138,12 @@ try {
     npm run nas:check -- -StagingRoot $StagingRoot
   }
 
+  if ($Apply -and -not $SkipRebuild) {
+    Invoke-Step "preflight NAS container lifecycle" {
+      npm run --silent nas:container:status
+    }
+  }
+
   $syncArgs = @("run", "nas:sync-share", "--", "-StagingRoot", $StagingRoot, "-TargetRoot", $TargetRoot)
   if ($Apply) { $syncArgs += "-Apply" }
   if ($AllowStaleSource) { $syncArgs += "-AllowStaleSource" }
