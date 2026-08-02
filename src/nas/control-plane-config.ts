@@ -15,7 +15,7 @@ export interface NasWorkerTarget {
   id: string;
   label: string;
   baseUrl: string;
-  sharedSecretEnv?: string;
+  sharedSecretEnv: string;
   workspaceRootLabel: string;
 }
 
@@ -115,6 +115,17 @@ function safeWorkerLabel(value: string): string {
   return label || "Worker";
 }
 
+function safeEnvName(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${fieldName} must be a non-empty environment variable name`);
+  }
+  const trimmed = value.trim();
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(trimmed)) {
+    throw new Error(`${fieldName} must be an uppercase environment variable name`);
+  }
+  return trimmed;
+}
+
 function safeProjectName(value: string): string {
   const trimmed = value.trim();
   if (!/^[A-Za-z0-9._ -]{1,120}$/.test(trimmed) || trimmed.includes("..")) {
@@ -167,15 +178,13 @@ function parseNasWorkers(raw: string, options: { allowLoopbackForSmoke?: boolean
       throw new Error(`ATTYS_NAS_WORKERS_JSON[${index}].baseUrl must be a non-empty URL`);
     }
 
-    const sharedSecretEnv = typeof record.sharedSecretEnv === "string" && record.sharedSecretEnv.trim()
-      ? record.sharedSecretEnv.trim()
-      : undefined;
+    const sharedSecretEnv = safeEnvName(record.sharedSecretEnv, `ATTYS_NAS_WORKERS_JSON[${index}].sharedSecretEnv`);
 
     return {
       id,
       label: typeof record.label === "string" ? safeWorkerLabel(record.label) : "Worker",
       baseUrl: normalizeWorkerBaseUrl(record.baseUrl, options),
-      ...(sharedSecretEnv ? { sharedSecretEnv } : {}),
+      sharedSecretEnv,
       workspaceRootLabel: typeof record.workspaceRootLabel === "string"
         ? safeWorkerLabel(record.workspaceRootLabel)
         : "workspace",

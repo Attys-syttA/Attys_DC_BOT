@@ -32,7 +32,7 @@ Current slice status:
 - the staging folder is a NAS control-plane deploy skeleton;
 - the staged Dockerfile starts `npm run nas:control-plane`, a long-running public-safe status loop;
 - `npm run nas:status` can print a public-safe dry-run control-plane status from a local worker store;
-- `ATTYS_NAS_WORKERS_JSON` describes future PC worker targets with `id`, `label`, `baseUrl`, `sharedSecretEnv`, and `workspaceRootLabel`;
+- `ATTYS_NAS_WORKERS_JSON` describes future PC worker targets with `id`, `label`, `baseUrl`, required `sharedSecretEnv`, and `workspaceRootLabel`;
 - `npm run nas:handoff:status` can print a public-safe dry-run status for the file-backed handoff mailbox;
 - the staged `data\handoff\` mailbox contains `inbox`, `outbox`, `archive`, and `tmp`;
 - NAS-side Codex execution is explicitly disabled;
@@ -161,7 +161,7 @@ Worker health probe:
 npm run nas:workers:health
 ```
 
-This probes configured worker `baseUrl` values with `GET /health`. It uses the historical archive-compatible `x-telecodex-shared-secret` header when the configured `sharedSecretEnv` exists in the local environment. The output reports only public-safe worker IDs, HTTP status, and compact status summaries.
+This probes configured worker `baseUrl` values with `GET /health`. Each worker target must define `sharedSecretEnv`; the value is only an environment-variable name, and the actual secret stays in ignored local/NAS env files. The client uses the historical archive-compatible `x-telecodex-shared-secret` header when that env value exists in the local environment. The output reports only public-safe worker IDs, HTTP status, and compact status summaries.
 
 For NAS control-plane configuration, worker `baseUrl` must point to a real Windows PC worker host reachable from the NAS. Loopback values such as `localhost`, `127.*`, `0.0.0.0`, and `::1` are rejected by default because inside the NAS container they would refer to the NAS/container itself. The only exception is the local `worker:smoke` script, which sets `ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE=true` temporarily for its own loopback test.
 

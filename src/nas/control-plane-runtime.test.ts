@@ -116,6 +116,7 @@ describe("NAS control-plane runtime", () => {
         id: "otthon",
         label: "Otthoni Worker",
         baseUrl: "http://worker-home.example.invalid:8787",
+        sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
       }]),
       ATTYS_NAS_STATUS_CHECK: "plans",
     });

@@ -74,16 +74,50 @@ describe("NAS control-plane config", () => {
   it("rejects duplicate or non-http worker targets", () => {
     expect(() => parseNasControlPlaneConfig({
       ATTYS_NAS_WORKERS_JSON: JSON.stringify([
-        { id: "home", label: "Home", baseUrl: "http://worker-home.example.invalid" },
-        { id: "home", label: "Home 2", baseUrl: "http://worker-home-2.example.invalid" },
+        {
+          id: "home",
+          label: "Home",
+          baseUrl: "http://worker-home.example.invalid",
+          sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+        },
+        {
+          id: "home",
+          label: "Home 2",
+          baseUrl: "http://worker-home-2.example.invalid",
+          sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+        },
       ]),
     })).toThrow("Duplicate worker id");
 
     expect(() => parseNasControlPlaneConfig({
       ATTYS_NAS_WORKERS_JSON: JSON.stringify([
-        { id: "home", label: "Home", baseUrl: "file:///tmp/worker.sock" },
+        {
+          id: "home",
+          label: "Home",
+          baseUrl: "file:///tmp/worker.sock",
+          sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+        },
       ]),
     })).toThrow("worker baseUrl must be an http(s) URL");
+  });
+
+  it("requires public worker targets to use a configured shared-secret env name", () => {
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([{
+        id: "home",
+        label: "Home",
+        baseUrl: "http://worker-home.example.invalid:8787",
+      }]),
+    })).toThrow("sharedSecretEnv must be a non-empty environment variable name");
+
+    expect(() => parseNasControlPlaneConfig({
+      ATTYS_NAS_WORKERS_JSON: JSON.stringify([{
+        id: "home",
+        label: "Home",
+        baseUrl: "http://worker-home.example.invalid:8787",
+        sharedSecretEnv: "worker-secret",
+      }]),
+    })).toThrow("sharedSecretEnv must be an uppercase environment variable name");
   });
 
   it("rejects loopback worker targets for the NAS control-plane", () => {
@@ -95,7 +129,12 @@ describe("NAS control-plane config", () => {
       "http://[::1]:8787",
     ]) {
       expect(() => parseNasControlPlaneConfig({
-        ATTYS_NAS_WORKERS_JSON: JSON.stringify([{ id: "home", label: "Home", baseUrl }]),
+        ATTYS_NAS_WORKERS_JSON: JSON.stringify([{
+          id: "home",
+          label: "Home",
+          baseUrl,
+          sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
+        }]),
       }), baseUrl).toThrow("worker baseUrl must point to a reachable PC worker host");
     }
   });
@@ -107,6 +146,7 @@ describe("NAS control-plane config", () => {
         id: "loopback",
         label: "Loopback",
         baseUrl: "http://127.0.0.1:8787",
+        sharedSecretEnv: "ATTYS_WORKER_SHARED_SECRET_HOME",
       }]),
     }).workers[0]?.baseUrl).toBe("http://127.0.0.1:8787");
   });

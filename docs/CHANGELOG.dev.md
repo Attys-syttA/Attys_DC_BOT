@@ -15,6 +15,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.12`, mert az operator-facing NAS container lifecycle kimenet kezelhetosege javult.
 - NAS share sync output: a `nas:sync-share` alapertelmezett terminalos kimenete JSON helyett rovid emberi osszegzes lett. A gepi/Discord fogyasztok explicit `-Json` kapcsolot hasznalnak tovabbra is, a `-Detailed` pedig reszletes managed file action listat ad.
 - Version bump: a package verzio `0.1.1-prerelease.13`, mert az operator-facing NAS share sync CLI kimenete valtozott.
+- NAS worker secret config hardening: az `ATTYS_NAS_WORKERS_JSON` worker targeteknel a `sharedSecretEnv` most kotelezo es csak nagybetus env-valtozo nev lehet. A NAS control-plane igy nem fogad el veletlenul unauthenticated PC worker celpontot; a tenyleges secret tovabbra is csak ignored `.env` fajlban marad.
+- Version bump: a package verzio `0.1.1-prerelease.14`, mert a NAS worker target auth config fail-closed validacioja szigorodott.
 
 ## 2026-08-01
 
