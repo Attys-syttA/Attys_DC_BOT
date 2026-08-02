@@ -3,7 +3,7 @@ import { buildAuditRepairContract, type AuditRepairContract } from "./repair-con
 import { createAuditRepairCodexStarter } from "./repair-codex-starter.js";
 import { startAuditRepairExecution } from "./repair-executor.js";
 import { buildAuditRepairPrompt } from "./repair-prompt.js";
-import type { AuditJobRecord, AuditStepRecord } from "../db/types.js";
+import type { AuditJobRecord, AuditRepairWorktreeRecord, AuditStepRecord } from "../db/types.js";
 
 function makeJob(overrides: Partial<AuditJobRecord> = {}): AuditJobRecord {
   return {
@@ -42,10 +42,24 @@ function makeStep(overrides: Partial<AuditStepRecord> = {}): AuditStepRecord {
   };
 }
 
+function makeRepairWorktree(overrides: Partial<AuditRepairWorktreeRecord> = {}): AuditRepairWorktreeRecord {
+  return {
+    job_id: "audit-job-1",
+    worktree_path: "C:\\isolated\\worktree",
+    branch_name: "audit-repair/audit-job-1",
+    head_commit: "0123456789abcdef",
+    status: "retained",
+    created_at: "2026-08-02T10:02:00.000Z",
+    updated_at: "2026-08-02T10:03:00.000Z",
+    ...overrides,
+  };
+}
+
 function makeContract(): AuditRepairContract {
   return buildAuditRepairContract({
     job: makeJob(),
     steps: [makeStep()],
+    repairWorktree: makeRepairWorktree(),
     repairChangeSummary: "clean",
   });
 }

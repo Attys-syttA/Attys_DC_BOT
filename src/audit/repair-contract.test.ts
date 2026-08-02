@@ -81,10 +81,28 @@ describe("audit repair contract", () => {
     expect(validateAuditRepairContract(contract)).toEqual([]);
   });
 
+  it("requires non-passed evidence and a prepared repair workspace", () => {
+    const missingWorkspace = buildAuditRepairContract({
+      job: makeJob(),
+      steps: [makeStep()],
+      repairChangeSummary: "unavailable",
+    });
+    const passedOnly = buildAuditRepairContract({
+      job: makeJob(),
+      steps: [makeStep({ status: "passed", exit_code: 0 })],
+      repairWorktree: makeRepairWorktree({ status: "prepared" }),
+      repairChangeSummary: "clean",
+    });
+
+    expect(validateAuditRepairContract(missingWorkspace)).toContain("repair contract has no prepared repair workspace");
+    expect(validateAuditRepairContract(passedOnly)).toContain("repair contract has no non-passed audit evidence");
+  });
+
   it("detects contract drift before future execution can rely on it", () => {
     const contract = buildAuditRepairContract({
       job: makeJob(),
       steps: [makeStep()],
+      repairWorktree: makeRepairWorktree(),
       repairChangeSummary: "unavailable",
     });
     const broken: AuditRepairContract = {

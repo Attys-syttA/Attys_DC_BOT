@@ -81,7 +81,21 @@ describe("renderAuditRepairPlan", () => {
     });
 
     expect(content).toContain("repair workspace: missing; approve /audit repair first");
+    expect(content).toContain("repair prompt: blocked (1 issue(s))");
     expect(content).toContain("operator decision: review this contract");
+  });
+
+  it("blocks prompt readiness when there is no non-passed evidence", () => {
+    const content = renderAuditRepairPlan({
+      job: makeJob(),
+      steps: [makeStep({ status: "passed", exit_code: 0, public_output: "OK tests" })],
+      repairWorktree: makeRepairWorktree({ status: "prepared" }),
+      repairChangeSummary: "clean",
+    });
+
+    expect(content).toContain("latest evidence: tests:passed");
+    expect(content).toContain("repair workspace: prepared");
+    expect(content).toContain("repair prompt: blocked (1 issue(s))");
   });
 
   it("keeps long evidence summaries bounded", () => {

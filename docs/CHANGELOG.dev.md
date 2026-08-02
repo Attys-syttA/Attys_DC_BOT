@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-plan prompt readiness hardening: `/audit repair-plan` mar csak prepared/retained repair workspace es nem-passed audit evidence mellett mutat `repair prompt: ready` allapotot; hianyos elofeltetelnel read-only `blocked` elonezetet ad parancshiba vagy repair inditas nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.61`, mert a user-visible audit repair contract elonezet fail-closed guardot kapott.
 - Audit removed workspace visibility: `/audit status`, `/audit review` es `/audit repair-plan` removed repair workspace eseten mar `changes: removed` jelzest hasznal, es nem probal torolt worktree pathot ujraolvasni.
 - Version bump: a package verzio `0.1.1-prerelease.60`, mert a user-visible audit workspace status kimenet pontosult.
 - Audit cleanup next-action guidance: `/audit review` terminal job es cleanup-ready repair workspace mellett mar `/audit repair-cleanup` kovetkezo lepest mutat, removed workspace eseten pedig csak status/review marad.

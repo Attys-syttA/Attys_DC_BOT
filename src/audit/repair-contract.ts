@@ -120,6 +120,12 @@ export function validateAuditRepairContract(contract: AuditRepairContract): stri
   if (contract.version !== AUDIT_REPAIR_CONTRACT_VERSION) {
     issues.push("unsupported repair contract version");
   }
+  if (!contract.latestEvidence || contract.latestEvidence.status === "passed") {
+    issues.push("repair contract has no non-passed audit evidence");
+  }
+  if (contract.repairWorkspace.status !== "prepared" && contract.repairWorkspace.status !== "retained") {
+    issues.push("repair contract has no prepared repair workspace");
+  }
   if (contract.allowedScope !== "isolated repair worktree only") {
     issues.push("repair contract scope is not isolated");
   }
