@@ -42,7 +42,11 @@ describe("NAS worker HTTP client", () => {
       statusText: "Service Unavailable",
     }));
 
-    const result = await new NasWorkerHttpClient({ worker, fetchImpl }).probeHealth();
+    const result = await new NasWorkerHttpClient({
+      worker,
+      env: { ATTYS_WORKER_SHARED_SECRET_HOME: "secret-value" },
+      fetchImpl,
+    }).probeHealth();
 
     expect(result).toEqual({
       workerId: "otthon",
@@ -54,10 +58,29 @@ describe("NAS worker HTTP client", () => {
     expect(JSON.stringify(result)).not.toContain("abc123");
   });
 
+  it("does not probe a worker when the configured shared secret env is missing", async () => {
+    const fetchImpl = vi.fn(async () => new Response("", { status: 200 }));
+
+    const result = await new NasWorkerHttpClient({
+      worker,
+      env: {},
+      fetchImpl,
+    }).probeHealth();
+
+    expect(result).toEqual({
+      workerId: "otthon",
+      ok: false,
+      statusCode: null,
+      summary: "Worker shared secret env is missing: ATTYS_WORKER_SHARED_SECRET_HOME",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("probes configured workers sequentially", async () => {
     const fetchImpl = vi.fn(async () => new Response("", { status: 200 }));
 
     await expect(probeNasWorkersHealth([worker, { ...worker, id: "munkahely" }], {
+      env: { ATTYS_WORKER_SHARED_SECRET_HOME: "secret-value" },
       fetchImpl,
     })).resolves.toEqual([
       {
@@ -118,6 +141,7 @@ describe("NAS worker HTTP client", () => {
 
     await expect(new NasWorkerHttpClient({
       worker,
+      env: { ATTYS_WORKER_SHARED_SECRET_HOME: "secret-value" },
       fetchImpl,
     }).runNamedCheck("Attys_DC_BOT", "plans")).resolves.toEqual({
       workerId: "otthon",
@@ -150,10 +174,12 @@ describe("NAS worker HTTP client", () => {
     });
 
     await expect(readNasWorkersRepoStatus([worker, { ...worker, id: "munkahely" }], "Attys_DC_BOT", {
+      env: { ATTYS_WORKER_SHARED_SECRET_HOME: "secret-value" },
       fetchImpl,
     })).resolves.toHaveLength(2);
 
     await expect(runNasWorkersNamedCheck([worker, { ...worker, id: "munkahely" }], "Attys_DC_BOT", "plans", {
+      env: { ATTYS_WORKER_SHARED_SECRET_HOME: "secret-value" },
       fetchImpl,
     })).resolves.toHaveLength(2);
   });

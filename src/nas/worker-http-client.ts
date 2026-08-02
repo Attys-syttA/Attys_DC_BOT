@@ -147,9 +147,10 @@ export class NasWorkerHttpClient {
   }
 
   private authHeaders(): Record<string, string> {
-    if (!this.worker.sharedSecretEnv) return {};
     const secret = this.env[this.worker.sharedSecretEnv]?.trim();
-    if (!secret) return {};
+    if (!secret) {
+      throw new Error(`Worker shared secret env is missing: ${this.worker.sharedSecretEnv}`);
+    }
 
     // Keep the old NAS archive worker header for compatibility with the historical worker contract.
     return { "x-telecodex-shared-secret": secret };
