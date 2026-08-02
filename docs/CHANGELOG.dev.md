@@ -5,6 +5,8 @@
 - NAS container lifecycle helper: uj `scripts/nas-container-lifecycle.ps1`, `npm run nas:container:status` es `npm run nas:container:rebuild` parancsok keszultek. A helper helyi ignored `.env.nas-ssh.local` fajlt vagy explicit parametereket hasznal, OpenSSH kulcsos belepessel hivja a NAS oldali korlatozott sudo wrapper scripteket, es nem tarol NAS jelszot, privat kulcsot, valos hostot vagy tokent tracked fajlban.
 - NAS container lifecycle smoke: a `npm run nas:container:status` parancs sikeresen elerte a NAS-t es public-safe modon visszaadta, hogy az `attys-dc-bot-control-plane` kontener fut.
 - Version bump: a package verzio `0.1.1-prerelease.8`, mert uj operator-facing NAS container lifecycle parancsok jelentek meg.
+- Worker bridge lifecycle detach fix: a `worker:http:*`, `worker:handoff:*` es `nas:bridge:*` helper scriptek a hatterfolyamatokat WMI/CIM `Win32_Process.Create` utvonalon inditjak, igy Codex/PowerShell futtatasbol nem ragadnak be a child process tree miatt. A javitott `npm run nas:bridge:restart` 8 masodperc alatt visszatert, majd `bridgeReady:true` statuszt adott.
+- Version bump: a package verzio `0.1.1-prerelease.9`, mert az operator-facing bridge lifecycle helper megbizhatosagi hibaja javult.
 
 ## 2026-08-01
 

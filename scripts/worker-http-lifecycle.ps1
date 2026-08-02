@@ -66,6 +66,37 @@ function Write-Status {
   } | ConvertTo-Json -Compress
 }
 
+function ConvertTo-PowerShellLiteral([string]$Value) {
+  return "'" + ($Value -replace "'", "''") + "'"
+}
+
+function ConvertTo-CommandLineArgument([string]$Value) {
+  return '"' + ($Value -replace '"', '\"') + '"'
+}
+
+function Start-DetachedPowerShellScript {
+  param(
+    [string]$ScriptPath,
+    [string[]]$ScriptArguments,
+    [string]$StdOutPath,
+    [string]$StdErrPath
+  )
+
+  $pwsh = Get-Command pwsh -ErrorAction Stop
+  $argumentText = ($ScriptArguments | ForEach-Object {
+    if ($_ -match "^-[A-Za-z][A-Za-z0-9-]*$") { $_ } else { ConvertTo-PowerShellLiteral $_ }
+  }) -join " "
+  $command = "& $(ConvertTo-PowerShellLiteral $ScriptPath) $argumentText 1> $(ConvertTo-PowerShellLiteral $StdOutPath) 2> $(ConvertTo-PowerShellLiteral $StdErrPath)"
+  $commandLine = "$(ConvertTo-CommandLineArgument $pwsh.Source) -NoProfile -Command $(ConvertTo-CommandLineArgument $command)"
+  $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+    CommandLine = $commandLine
+    CurrentDirectory = $repoRoot
+  }
+  if ($result.ReturnValue -ne 0) {
+    throw "Failed to start detached worker process. Win32_Process.Create returned $($result.ReturnValue)."
+  }
+}
+
 function Stop-Worker {
   $processes = @(Get-WorkerProcesses)
   if ($processes.Count -eq 0) {
@@ -86,12 +117,11 @@ function Start-Worker {
 
   New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
   $script = Join-Path $repoRoot "scripts\start-worker-http.ps1"
-  Start-Process -FilePath "pwsh" `
-    -ArgumentList @("-NoProfile", "-File", $script, "-EnvFile", $EnvFile, "-HostName", $HostName, "-Port", [string]$Port) `
-    -WorkingDirectory $repoRoot `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $outLog `
-    -RedirectStandardError $errLog | Out-Null
+  Start-DetachedPowerShellScript `
+    -ScriptPath $script `
+    -ScriptArguments @("-EnvFile", $EnvFile, "-HostName", $HostName, "-Port", [string]$Port) `
+    -StdOutPath $outLog `
+    -StdErrPath $errLog
 
   for ($attempt = 0; $attempt -lt 40; $attempt++) {
     if (Test-WorkerListening) {
