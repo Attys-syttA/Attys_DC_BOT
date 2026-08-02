@@ -98,6 +98,8 @@ npm run nas:deploy -- -Apply -ForceRebuild
 
 The preflight is intentionally before the NAS share write. If the SSH key, NAS-side narrow sudo wrapper, or container status command is unavailable, `nas:deploy -- -Apply` stops before changing managed files on the share. Use `-SkipRebuild` only when the operator intentionally wants a share sync without container lifecycle access.
 
+After rebuild, the default snapshot polling timeout is 120 seconds. This gives the NAS control-plane loop and SMB share visibility enough time to publish the new `logs\nas-control-plane-status.json` snapshot before the final verifier runs. Override with `-WaitAfterRebuildSec <seconds>` only after an explicit operator decision.
+
 Restricted SSH container lifecycle:
 
 ```powershell
