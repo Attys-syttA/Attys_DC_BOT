@@ -24,7 +24,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed | /audit recheck",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed note:<optional> | /audit recheck",
     short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, izolalt repair turnt indithat, review-readyre jelol, es recheckel.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
@@ -41,7 +41,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit repair-run` kulon `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` flaget is ker; egy izolalt Codex repair turnt indit es public-safe execution ledgerbe rogzit.",
       "Repair-run csak prepared/retained repair workspace, nem-passed audit evidence, ervenyes repair contract/prompt es szabad iteration budget mellett indul.",
       "Ugyanarra az audit iterationre masodik started repair-run nincs; elobb review, majd `/audit recheck` kell.",
-      "`/audit repair-reviewed` a legutobbi started repair executiont jeloli kezzel reviewed allapotra; nem ir fajlt es nem futtat checket.",
+      "`/audit repair-reviewed` a legutobbi started repair executiont jeloli kezzel reviewed allapotra; opcionalis public-safe `note` megjegyzest is rogzithesz, de nem ir fajlt es nem futtat checket.",
       "`/audit recheck` started same-iteration repair execution utan elobb ezt a reviewed jelolest keri.",
       "`/audit recheck` a `DISCORD_ENABLE_AUDIT_REPAIR=true` flag alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",

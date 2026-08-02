@@ -74,12 +74,16 @@ import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 function makeInteraction(
   subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "repair-run" | "repair-reviewed" | "recheck",
   check = "tests",
+  stringOptions: Record<string, string | null> = {},
 ) {
   return {
     channelId: "channel-1",
     options: {
       getSubcommand: vi.fn(() => subcommand),
-      getString: vi.fn(() => check),
+      getString: vi.fn((name: string) => {
+        if (Object.prototype.hasOwnProperty.call(stringOptions, name)) return stringOptions[name];
+        return name === "check" ? check : null;
+      }),
     },
     editReply: vi.fn(),
     followUp: vi.fn(),
@@ -866,6 +870,47 @@ describe("/audit", () => {
     });
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "Audit job `audit-jo...` repair execution was marked reviewed.\nNext: run `/audit recheck` to validate the isolated repair workspace.",
+    });
+  });
+
+  it("stores a public-safe review note when marking repair execution reviewed", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      mode: "approved-repair",
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "started",
+      iteration: 1,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "repair Codex turn started in isolated worktree",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("repair-reviewed", "tests", {
+      note: "checked E:\\codex_works\\secret-app and worker 192.168.0.205 output manually",
+    });
+
+    await execute(interaction as never);
+
+    expect(mocks.updateAuditRepairExecutionResult).toHaveBeenCalledWith(
+      "repair-exec-1",
+      "reviewed",
+      "operator reviewed repair execution: checked <local-path> and worker <ip> output manually",
+      expect.any(String),
+      "thread-1",
+      "turn-1",
+    );
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` repair execution was marked reviewed.\nReview note: checked <local-path> and worker <ip> output manually\nNext: run `/audit recheck` to validate the isolated repair workspace.",
     });
   });
 

@@ -39,7 +39,7 @@ import {
 import type { AuditJobRecord, AuditRepairExecutionRecord, AuditStepRecord } from "../../db/types.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
-import { sanitizePublicFileLabel } from "../../utils/public-safety.js";
+import { sanitizePublicFileLabel, sanitizePublicText } from "../../utils/public-safety.js";
 import { recordOperatorEvent } from "../operator-events.js";
 
 export const data = new SlashCommandBuilder()
@@ -80,7 +80,12 @@ export const data = new SlashCommandBuilder()
     .setDescription("Start one explicitly enabled isolated repair Codex turn"))
   .addSubcommand((subcommand) => subcommand
     .setName("repair-reviewed")
-    .setDescription("Mark the latest isolated repair Codex turn as manually reviewed"))
+    .setDescription("Mark the latest isolated repair Codex turn as manually reviewed")
+    .addStringOption((option) => option
+      .setName("note")
+      .setDescription("Optional public-safe review note")
+      .setRequired(false)
+      .setMaxLength(300)))
   .addSubcommand((subcommand) => subcommand
     .setName("recheck")
     .setDescription("Rerun the original named check in the isolated repair worktree"));
@@ -680,10 +685,15 @@ async function executeRepairReviewed(interaction: ChatInputCommandInteraction): 
     return;
   }
 
+  const rawNote = interaction.options.getString("note");
+  const reviewSummary = rawNote
+    ? `operator reviewed repair execution: ${sanitizePublicText(rawNote, 180) || "note redacted"}`
+    : "operator marked repair execution reviewed";
+
   updateAuditRepairExecutionResult(
     latestRepairExecution.id,
     "reviewed",
-    "operator marked repair execution reviewed",
+    reviewSummary,
     new Date().toISOString(),
     latestRepairExecution.thread_id,
     latestRepairExecution.turn_id,
@@ -692,8 +702,9 @@ async function executeRepairReviewed(interaction: ChatInputCommandInteraction): 
   await interaction.editReply({
     content: [
       `Audit job \`${job.id.slice(0, 8)}...\` repair execution was marked reviewed.`,
+      rawNote ? `Review note: ${reviewSummary.replace(/^operator reviewed repair execution: /, "")}` : null,
       "Next: run `/audit recheck` to validate the isolated repair workspace.",
-    ].join("\n"),
+    ].filter(Boolean).join("\n"),
   });
 }
 
