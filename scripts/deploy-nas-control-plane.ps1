@@ -38,13 +38,28 @@ function Invoke-NasDeployVerifier {
   )
 
   for ($attempt = 1; $attempt -le $RetryCount; $attempt += 1) {
-    npm run nas:deploy:verify -- --target-root $TargetRootValue
-    if ($LASTEXITCODE -eq 0) {
+    $outputLines = @(& npm run --silent nas:deploy:verify -- --target-root $TargetRootValue --json 2>&1 | ForEach-Object { $_.ToString() })
+    $verifierExitCode = $LASTEXITCODE
+    if ($verifierExitCode -eq 0) {
+      npm run nas:deploy:verify -- --target-root $TargetRootValue
+      if ($LASTEXITCODE -ne 0) {
+        throw "NAS deploy verifier detail pass failed after a successful JSON retry."
+      }
       return
     }
 
     if ($attempt -lt $RetryCount) {
-      Write-Host "NAS deploy verifier failed; retrying in ${RetryDelaySec}s (attempt $($attempt + 1)/$RetryCount)..."
+      $summary = "not ready"
+      try {
+        $parsed = ($outputLines -join "`n") | ConvertFrom-Json
+        $failedChecks = @($parsed.checks | Where-Object { $_.ok -ne $true } | ForEach-Object { $_.name })
+        if ($failedChecks.Count -gt 0) {
+          $summary = ($failedChecks -join ", ")
+        }
+      } catch {
+        $summary = "verifier output unreadable"
+      }
+      Write-Host "NAS deploy verifier not ready ($summary); retrying in ${RetryDelaySec}s (attempt $($attempt + 1)/$RetryCount)..."
       Start-Sleep -Seconds $RetryDelaySec
     }
   }

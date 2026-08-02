@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy verifier retry output: `nas:deploy -- -Apply` koztes verifier retryjai most JSON/silent modban futnak, es csak rovid not-ready sort irnak a bukott check neveivel. A teljes checklist megmarad a vegso sikeres vagy diagnosztikai verifiernel.
+- Version bump: a package verzio `0.1.1-prerelease.56`, mert az operator-facing NAS deploy kimenet olvashatobb lett.
 - Audit stop terminalization: `/audit stop` mostantol controller nelkuli aktiv audit jobnal `stopped` terminal allapotot allit. Igy manual-review/repair-review fazisban nincs felig aktiv stop-requested job, es nincs repair workspace cleanup vagy source write.
 - Version bump: a package verzio `0.1.1-prerelease.55`, mert a user-visible `/audit stop` viselkedes pontosult.
 - Audit review next-action guidance: `/audit review` mostantol a legutobbi repair execution statusza alapjan mutatja a kovetkezo biztonsagos lepest: `started` utan `/audit repair-reviewed`, `reviewed` utan `/audit recheck`.
