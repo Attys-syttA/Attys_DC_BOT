@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy verifier snapshot reread: a `nas:deploy:verify` CLI rovid, celzott snapshot ujraolvasast vegez, ha a control-plane snapshot nem egyezik a staged builddel. Ez az SMB stale-read jellegu atmeneti allapotot kezeli anelkul, hogy a unit tesztek vagy a verifier core alapbol varakozna.
+- Version bump: a package verzio `0.1.1-prerelease.33`, mert a NAS deploy verifier runtime olvasasi konzisztenciaja javult.
 - NAS deploy snapshot grace verification: a rebuild utani verification polling timeout utan a deploy helper meg egy rovid grace intervallumot var es ujraellenoriz, mielott a vegso verifierrel pirosra futna. Ez a NAS snapshot tick es a final verifier kozotti hataridos versenyt kezeli.
 - Version bump: a package verzio `0.1.1-prerelease.32`, mert az operator-facing NAS deploy polling hataridos viselkedese stabilabb lett.
 - NAS deploy snapshot timeout final calibration: a rebuild utani verification polling default timeoutja 300 masodperc lett, mert ket egymas utani eles deploynal is csak a korabbi timeout utan valtott at a NAS snapshot az uj buildre. A verifier vegul zold lett, ezert a valtozas hamis piros elkerulesere szolgalo konzervativ operatori default.

@@ -20,6 +20,8 @@ export interface NasDeployVerificationOptions {
   now?: () => Date;
   maxSnapshotAgeMs?: number;
   maxSnapshotFutureSkewMs?: number;
+  snapshotReadRetryCount?: number;
+  snapshotReadRetryDelayMs?: number;
 }
 
 interface DeployJson {
@@ -48,6 +50,13 @@ function readJsonObject(filePath: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function sleepMs(delayMs: number): void {
+  if (delayMs <= 0) return;
+  const buffer = new SharedArrayBuffer(4);
+  const view = new Int32Array(buffer);
+  Atomics.wait(view, 0, 0, delayMs);
 }
 
 function safeText(value: unknown, fallback = "unknown"): string {
@@ -86,6 +95,29 @@ function publicWorkerMetadataSafe(configuredWorkers: unknown): boolean {
   });
 }
 
+function snapshotMatchesBuildInfo(snapshot: SnapshotJson | null, buildInfo: DeployJson | null): boolean {
+  return Boolean(
+    snapshot &&
+    buildInfo &&
+    snapshot.buildInfo?.sourceCommit === buildInfo.sourceCommit &&
+    snapshot.buildInfo?.packageVersion === buildInfo.packageVersion,
+  );
+}
+
+function readSnapshotWithRetry(
+  filePath: string,
+  buildInfo: DeployJson | null,
+  retryCount: number,
+  retryDelayMs: number,
+): SnapshotJson | null {
+  let snapshot = readJsonObject(filePath) as SnapshotJson | null;
+  for (let attempt = 0; attempt < retryCount && !snapshotMatchesBuildInfo(snapshot, buildInfo); attempt += 1) {
+    sleepMs(retryDelayMs);
+    snapshot = readJsonObject(filePath) as SnapshotJson | null;
+  }
+  return snapshot;
+}
+
 export function verifyNasDeploy(
   shareRoot: string,
   options: NasDeployVerificationOptions = {},
@@ -93,9 +125,16 @@ export function verifyNasDeploy(
   const now = options.now?.() ?? new Date();
   const maxSnapshotAgeMs = options.maxSnapshotAgeMs ?? 10 * 60_000;
   const maxSnapshotFutureSkewMs = options.maxSnapshotFutureSkewMs ?? 60_000;
+  const snapshotReadRetryCount = options.snapshotReadRetryCount ?? 0;
+  const snapshotReadRetryDelayMs = options.snapshotReadRetryDelayMs ?? 0;
   const manifest = readJsonObject(path.join(shareRoot, "NAS_STAGING_MANIFEST.json")) as DeployJson | null;
   const buildInfo = readJsonObject(path.join(shareRoot, "app", "NAS_BUILD_INFO.json")) as DeployJson | null;
-  const snapshot = readJsonObject(path.join(shareRoot, "logs", "nas-control-plane-status.json")) as SnapshotJson | null;
+  const snapshot = readSnapshotWithRetry(
+    path.join(shareRoot, "logs", "nas-control-plane-status.json"),
+    buildInfo,
+    snapshotReadRetryCount,
+    snapshotReadRetryDelayMs,
+  );
   const checks: NasDeployVerificationCheck[] = [];
 
   pushCheck(checks, "manifest", Boolean(manifest), manifest ? "readable" : "missing or unreadable");
@@ -112,12 +151,7 @@ export function verifyNasDeploy(
   );
   pushCheck(checks, "manifest-build-match", manifestMatchesBuild, manifestMatchesBuild ? "manifest matches build info" : "manifest does not match build info");
 
-  const snapshotMatchesBuild = Boolean(
-    snapshot &&
-    buildInfo &&
-    snapshot.buildInfo?.sourceCommit === buildInfo.sourceCommit &&
-    snapshot.buildInfo?.packageVersion === buildInfo.packageVersion,
-  );
+  const snapshotMatchesBuild = snapshotMatchesBuildInfo(snapshot, buildInfo);
   pushCheck(checks, "snapshot-build-match", snapshotMatchesBuild, snapshotMatchesBuild ? "snapshot matches staged build" : "snapshot does not match staged build");
 
   const sourceIncluded = manifest?.includeSource === true && buildInfo?.includeSource === true && snapshot?.buildInfo?.includeSource === true;
