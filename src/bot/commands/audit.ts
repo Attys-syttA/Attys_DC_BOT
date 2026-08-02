@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
+import { inspectRepairWorktreeChanges } from "../../audit/worktree-manager.js";
 import {
   assertAuditModeAllowsCapabilities,
   defaultAuditCapabilities,
@@ -96,6 +97,7 @@ function renderAuditJob(job: AuditJobRecord, steps: AuditStepRecord[]): string {
       `- status: ${repairWorktree.status}`,
       `- branch: ${repairWorktree.branch_name}`,
       `- head: ${repairWorktree.head_commit.slice(0, 12)}`,
+      `- changes: ${inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary}`,
     );
   }
 

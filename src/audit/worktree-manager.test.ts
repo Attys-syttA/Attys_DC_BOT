@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prepareRepairWorktree, type GitCommandRunner } from "./worktree-manager.js";
+import { inspectRepairWorktreeChanges, prepareRepairWorktree, type GitCommandRunner } from "./worktree-manager.js";
 
 const tempRoots: string[] = [];
 
@@ -10,6 +11,18 @@ function makeTempRepo(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "attys-audit-worktree-"));
   tempRoots.push(root);
   fs.mkdirSync(path.join(root, ".git"));
+  return root;
+}
+
+function makeRealGitRepo(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "attys-audit-worktree-real-"));
+  tempRoots.push(root);
+  execFileSync("git", ["init"], { cwd: root, stdio: "ignore", windowsHide: true });
+  execFileSync("git", ["config", "user.email", "codex@example.invalid"], { cwd: root, stdio: "ignore", windowsHide: true });
+  execFileSync("git", ["config", "user.name", "Codex Test"], { cwd: root, stdio: "ignore", windowsHide: true });
+  fs.writeFileSync(path.join(root, "package.json"), "{\"scripts\":{\"test\":\"vitest\"}}\n", "utf8");
+  execFileSync("git", ["add", "package.json"], { cwd: root, stdio: "ignore", windowsHide: true });
+  execFileSync("git", ["commit", "-m", "initial"], { cwd: root, stdio: "ignore", windowsHide: true });
   return root;
 }
 
@@ -119,5 +132,35 @@ describe("prepareRepairWorktree", () => {
       baseDir: linkedBase,
       runGit: makeGitRunner(repoRoot),
     })).rejects.toThrow("symlink");
+  });
+});
+
+describe("inspectRepairWorktreeChanges", () => {
+  it("summarizes repair worktree changes without exposing file names", () => {
+    const repoRoot = makeRealGitRepo();
+    fs.writeFileSync(path.join(repoRoot, "package.json"), "{\"scripts\":{\"test\":\"vitest\",\"build\":\"tsup\"}}\n", "utf8");
+    fs.writeFileSync(path.join(repoRoot, "new-secret-looking-name.txt"), "do not expose filename\n", "utf8");
+
+    const summary = inspectRepairWorktreeChanges(repoRoot);
+
+    expect(summary).toMatchObject({
+      available: true,
+      changedFiles: 2,
+      staged: 0,
+      unstaged: 1,
+      untracked: 1,
+      summary: "files=2 staged=0 unstaged=1 untracked=1",
+    });
+    expect(summary.summary).not.toContain("new-secret-looking-name");
+  });
+
+  it("reports unavailable repair worktree changes safely", () => {
+    const summary = inspectRepairWorktreeChanges(path.join(os.tmpdir(), "missing-audit-worktree"));
+
+    expect(summary).toMatchObject({
+      available: false,
+      summary: "unavailable",
+      changedFiles: 0,
+    });
   });
 });

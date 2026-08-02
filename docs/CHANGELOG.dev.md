@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair workspace diff visibility: az `/audit status` repair worktree blokkja most public-safe `changes:` osszegzest mutat (`clean`, `unavailable`, vagy fajl/staged/unstaged/untracked darabszamok), lokalis path, fajlnev vagy diff tartalom nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.43`, mert a user-visible audit repair workspace review kimenet bovult.
 - NAS container image visibility: a `/nas container-status` es `/nas doctor` public-safe kimenete most rovid `image=<commit>` mezot is mutat a futó NAS control-plane image tagbol, raw Docker/SSH output nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.42`, mert a user-visible NAS container status kimenet bovult.
 - NAS deploy current-image fast path: rebuild utan a deploy helper read-only `nas:container:status -Json` ellenorzessel felismeri, ha a NAS mar a jelenlegi commit image tagjet futtatja. Ilyenkor kihagyja a hosszu ugyanazon-folyamatu SMB snapshot pollingot, es rovidebb verifier retry utan a friss PowerShell fallbackre hagyatkozik.

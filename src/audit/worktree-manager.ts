@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -28,6 +29,15 @@ export interface PreparedRepairWorktree {
   worktreePath: string;
   branchName: string;
   headCommit: string;
+}
+
+export interface RepairWorktreeChangeSummary {
+  available: boolean;
+  summary: string;
+  changedFiles: number;
+  staged: number;
+  unstaged: number;
+  untracked: number;
 }
 
 async function defaultRunGit(args: string[], options: { cwd: string }): Promise<GitCommandResult> {
@@ -139,5 +149,62 @@ export async function prepareRepairWorktree(
     worktreePath,
     branchName,
     headCommit,
+  };
+}
+
+export function inspectRepairWorktreeChanges(worktreePath: string): RepairWorktreeChangeSummary {
+  if (!fs.existsSync(worktreePath)) {
+    return {
+      available: false,
+      summary: "unavailable",
+      changedFiles: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+    };
+  }
+
+  const result = spawnSync("git", ["status", "--porcelain=v1"], {
+    cwd: worktreePath,
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 30_000,
+    maxBuffer: 128 * 1024,
+  });
+  if (result.status !== 0 || result.error) {
+    return {
+      available: false,
+      summary: "unavailable",
+      changedFiles: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+    };
+  }
+
+  const lines = result.stdout.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  let staged = 0;
+  let unstaged = 0;
+  let untracked = 0;
+  for (const line of lines) {
+    if (line.startsWith("??")) {
+      untracked += 1;
+      continue;
+    }
+    if (line[0] && line[0] !== " ") staged += 1;
+    if (line[1] && line[1] !== " ") unstaged += 1;
+  }
+
+  const changedFiles = lines.length;
+  const summary = changedFiles === 0
+    ? "clean"
+    : `files=${changedFiles} staged=${staged} unstaged=${unstaged} untracked=${untracked}`;
+  return {
+    available: true,
+    summary,
+    changedFiles,
+    staged,
+    unstaged,
+    untracked,
   };
 }

@@ -327,6 +327,7 @@ describe("/audit", () => {
     expect(content).toContain("- status: prepared");
     expect(content).toContain("- branch: audit-repair/audit-job-1");
     expect(content).toContain("- head: 0123456789ab");
+    expect(content).toContain("- changes: unavailable");
     expect(content).not.toContain("/projects/app");
     expect(content).not.toContain(".discord-bot-state");
   });
