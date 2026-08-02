@@ -162,7 +162,7 @@ npm run nas:workers:health
 npm run nas:workers:health -- --json
 ```
 
-This probes configured worker `baseUrl` values with `GET /health`. Each worker target must define `sharedSecretEnv`; the value is only an environment-variable name, and the actual secret stays in ignored local/NAS env files. The client uses the historical archive-compatible `x-telecodex-shared-secret` header when that env value exists in the local environment. The default output reports only public-safe worker IDs, HTTP status, and compact status summaries; use `--json` for structured output.
+This probes configured worker `baseUrl` values with `GET /health`. Each worker target must define `sharedSecretEnv`; the value is only an environment-variable name, and the actual secret stays in ignored local/NAS env files. The client uses the historical archive-compatible `x-telecodex-shared-secret` header when that env value exists in the local environment. The default output reports only public-safe worker IDs, HTTP status, and compact status summaries; use `--json` for structured output. Public worker metadata does not print configured worker URLs.
 
 For NAS control-plane configuration, worker `baseUrl` must point to a real Windows PC worker host reachable from the NAS. Loopback values such as `localhost`, `127.*`, `0.0.0.0`, and `::1` are rejected by default because inside the NAS container they would refer to the NAS/container itself. The only exception is the local `worker:smoke` script, which sets `ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE=true` temporarily for its own loopback test.
 

@@ -22,7 +22,6 @@ export interface NasWorkerTarget {
 export interface PublicNasWorkerTarget {
   id: string;
   label: string;
-  baseUrl: string;
   hasSharedSecret: boolean;
   workspaceRootLabel: string;
 }
@@ -196,7 +195,6 @@ export function buildPublicNasWorkerTargets(workers: NasWorkerTarget[]): PublicN
   return workers.map((worker) => ({
     id: worker.id,
     label: worker.label,
-    baseUrl: worker.baseUrl,
     hasSharedSecret: Boolean(worker.sharedSecretEnv),
     workspaceRootLabel: worker.workspaceRootLabel,
   }));

@@ -72,7 +72,6 @@ describe("NAS control-plane runtime", () => {
       configuredWorkers: [{
         id: "otthon",
         label: "Otthoni Worker",
-        baseUrl: "http://worker-home.example.invalid:8787",
         hasSharedSecret: true,
         workspaceRootLabel: "<local-path>",
       }],
@@ -107,6 +106,7 @@ describe("NAS control-plane runtime", () => {
       checkedAt: "2026-08-01T12:00:00.000Z",
     });
     expect(JSON.stringify(snapshot)).not.toContain("codex_works");
+    expect(JSON.stringify(snapshot)).not.toContain("worker-home.example.invalid");
   });
 
   it("runs only an explicitly configured lightweight named check", async () => {

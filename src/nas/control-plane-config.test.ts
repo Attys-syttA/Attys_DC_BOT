@@ -65,10 +65,10 @@ describe("NAS control-plane config", () => {
     expect(buildPublicNasWorkerTargets(config.workers)).toEqual([{
       id: "otthon",
       label: "Otthoni Worker",
-      baseUrl: "http://worker-home.example.invalid:8787",
       hasSharedSecret: true,
       workspaceRootLabel: "<local-path>",
     }]);
+    expect(JSON.stringify(buildPublicNasWorkerTargets(config.workers))).not.toContain("worker-home.example.invalid");
   });
 
   it("rejects duplicate or non-http worker targets", () => {

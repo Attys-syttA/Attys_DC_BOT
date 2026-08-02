@@ -21,6 +21,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.15`, mert a worker HTTP runtime auth guard fail-closed modon szigorodott.
 - NAS worker CLI output: a `nas:workers:health`, `nas:workers:repo-status` es `nas:workers:check` alapertelmezett kimenete rovid emberi osszegzes lett. A korabbi strukturalt JSON kimenet `--json` kapcsoloval marad elerheto.
 - Version bump: a package verzio `0.1.1-prerelease.16`, mert az operator-facing NAS worker CLI kimenetek valtoztak.
+- NAS public worker metadata hardening: a public `configuredWorkers` snapshot es JSON kimenetek mar nem tartalmazzak a worker `baseUrl` erteket. A belso kliens tovabbra is hasznalja a config URL-t, de NAS/Discord/operatori public kimenetben csak worker ID, label, shared-secret konfiguracio jelzo es workspace label marad.
+- Version bump: a package verzio `0.1.1-prerelease.17`, mert a NAS public worker metadata kimenet szukebb lett.
 
 ## 2026-08-01
 
