@@ -19,6 +19,7 @@ export interface NasDeployVerificationResult {
 export interface NasDeployVerificationOptions {
   now?: () => Date;
   maxSnapshotAgeMs?: number;
+  maxSnapshotFutureSkewMs?: number;
 }
 
 interface DeployJson {
@@ -63,11 +64,17 @@ function pushCheck(checks: NasDeployVerificationCheck[], name: string, ok: boole
   });
 }
 
-function snapshotAgeOk(checkedAt: unknown, now: Date, maxSnapshotAgeMs: number): boolean {
+function snapshotAgeOk(
+  checkedAt: unknown,
+  now: Date,
+  maxSnapshotAgeMs: number,
+  maxSnapshotFutureSkewMs: number,
+): boolean {
   if (typeof checkedAt !== "string") return false;
   const checkedAtMs = Date.parse(checkedAt);
   if (!Number.isFinite(checkedAtMs)) return false;
-  return now.getTime() - checkedAtMs <= maxSnapshotAgeMs;
+  const ageMs = now.getTime() - checkedAtMs;
+  return ageMs >= -maxSnapshotFutureSkewMs && ageMs <= maxSnapshotAgeMs;
 }
 
 function publicWorkerMetadataSafe(configuredWorkers: unknown): boolean {
@@ -85,6 +92,7 @@ export function verifyNasDeploy(
 ): NasDeployVerificationResult {
   const now = options.now?.() ?? new Date();
   const maxSnapshotAgeMs = options.maxSnapshotAgeMs ?? 10 * 60_000;
+  const maxSnapshotFutureSkewMs = options.maxSnapshotFutureSkewMs ?? 60_000;
   const manifest = readJsonObject(path.join(shareRoot, "NAS_STAGING_MANIFEST.json")) as DeployJson | null;
   const buildInfo = readJsonObject(path.join(shareRoot, "app", "NAS_BUILD_INFO.json")) as DeployJson | null;
   const snapshot = readJsonObject(path.join(shareRoot, "logs", "nas-control-plane-status.json")) as SnapshotJson | null;
@@ -129,8 +137,8 @@ export function verifyNasDeploy(
   const workerMetadataSafe = publicWorkerMetadataSafe(snapshot?.configuredWorkers);
   pushCheck(checks, "public-worker-metadata", workerMetadataSafe, workerMetadataSafe ? "worker metadata public-safe" : "worker metadata exposes URL fields");
 
-  const fresh = snapshotAgeOk(snapshot?.checkedAt, now, maxSnapshotAgeMs);
-  pushCheck(checks, "snapshot-freshness", fresh, fresh ? "fresh" : "stale or missing timestamp");
+  const fresh = snapshotAgeOk(snapshot?.checkedAt, now, maxSnapshotAgeMs, maxSnapshotFutureSkewMs);
+  pushCheck(checks, "snapshot-freshness", fresh, fresh ? "fresh" : "stale, missing, or clock-skewed timestamp");
 
   return {
     ok: checks.every((check) => check.ok),

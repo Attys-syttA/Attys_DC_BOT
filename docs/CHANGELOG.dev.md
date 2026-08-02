@@ -28,6 +28,8 @@
 - NAS runbook: a `docs/NAS_STAGING.md` kiegeszult a korlatozott SSH/sudo container lifecycle setup rovid, titokmentes NAS-oldali osszefoglalojaval. Docs-only, nincs verzio bump.
 - NAS deploy rebuild skip: a `nas:deploy -- -Apply` rebuild elott ellenorzi, hogy a `nas:deploy:verify --json` mar zold-e. Ha a NAS deploy mar aktualis, kihagyja a kontener rebuildet; `-ForceRebuild` kapcsoloval a regi mindig-ujraepitos viselkedes kerheto.
 - Version bump: a package verzio `0.1.1-prerelease.19`, mert az operator-facing NAS deploy orchestration viselkedese bovult.
+- NAS deploy verifier clock-skew guard: a `nas:deploy:verify` snapshot freshness check most fail-closed jelez akkor is, ha a NAS control-plane snapshot timestampje tul messze a jovoben van a PC oldali ellenorzeshez kepest.
+- Version bump: a package verzio `0.1.1-prerelease.20`, mert a NAS deploy verifier biztonsagi/uzemeltetesi guardja szigorodott.
 
 ## 2026-08-01
 

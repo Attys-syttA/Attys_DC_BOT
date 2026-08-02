@@ -149,4 +149,26 @@ describe("NAS deploy verification", () => {
     });
     expect(JSON.stringify(result)).not.toContain(root);
   });
+
+  it("fails closed when the control-plane snapshot timestamp is too far in the future", () => {
+    const root = makeTempDir();
+    writeValidShare(root);
+    const snapshotPath = path.join(root, "logs", "nas-control-plane-status.json");
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as Record<string, unknown>;
+    snapshot.checkedAt = "2026-08-01T20:05:00.000Z";
+    writeJson(snapshotPath, snapshot);
+
+    const result = verifyNasDeploy(root, {
+      now: () => new Date("2026-08-01T20:01:00.000Z"),
+      maxSnapshotAgeMs: 5 * 60_000,
+      maxSnapshotFutureSkewMs: 60_000,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toContainEqual({
+      name: "snapshot-freshness",
+      ok: false,
+      summary: "stale, missing, or clock-skewed timestamp",
+    });
+  });
 });
