@@ -452,6 +452,16 @@ async function executeRecheck(interaction: ChatInputCommandInteraction): Promise
     return;
   }
 
+  const pendingRepairExecution = listAuditRepairExecutions(job.id, 5).find((execution) =>
+    execution.iteration === job.iteration && execution.status === "started"
+  );
+  if (pendingRepairExecution) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has a started repair execution for iteration ${job.iteration}; run /audit repair-reviewed before /audit recheck.`,
+    });
+    return;
+  }
+
   const nextIteration = job.iteration + 1;
   updateAuditJobProgress(job.id, "rechecking", job.requested_check, nextIteration, new Date().toISOString());
   recordOperatorEvent({ kind: "task", status: "audit-recheck-started", channelId: interaction.channelId });

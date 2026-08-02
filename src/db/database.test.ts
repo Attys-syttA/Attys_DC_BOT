@@ -537,6 +537,20 @@ describe("database", () => {
       expect(execution!.result_summary).not.toContain("someone");
       expect(listAuditRepairExecutions("audit-1", 1).map((entry) => entry.id)).toEqual(["repair-exec-1"]);
 
+      updateAuditRepairExecutionResult(
+        "repair-exec-1",
+        "reviewed",
+        "operator reviewed repair for C:\\Users\\someone\\repo",
+        "2026-08-01T12:01:20.000Z",
+      );
+      expect(getAuditRepairExecution("repair-exec-1")).toMatchObject({
+        status: "reviewed",
+        thread_id: "thread-1",
+        turn_id: "turn-1",
+        result_summary: "operator reviewed repair for <local-path>",
+        updated_at: "2026-08-01T12:01:20.000Z",
+      });
+
       unregisterProject("ch1");
       expect(getAuditRepairExecution("repair-exec-1")).toBeUndefined();
     });

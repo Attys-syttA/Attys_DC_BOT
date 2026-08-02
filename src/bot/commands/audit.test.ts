@@ -895,6 +895,42 @@ describe("/audit", () => {
     });
   });
 
+  it("rejects recheck while a same-iteration repair execution is still only started", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "started",
+      iteration: 1,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "repair Codex turn started in isolated worktree",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("recheck");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` has a started repair execution for iteration 1; run /audit repair-reviewed before /audit recheck.",
+    });
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
+  });
+
   it("rejects recheck when the iteration budget is exhausted", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "waiting_manual_review",

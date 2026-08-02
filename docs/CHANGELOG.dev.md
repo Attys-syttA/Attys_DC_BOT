@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit recheck reviewed gate: `/audit recheck` mar elutasitja a futast, ha az aktualis iterationben van meg csak `started` repair execution. Ilyenkor elobb `/audit repair-reviewed` kell, majd utana johet a recheck.
+- Version bump: a package verzio `0.1.1-prerelease.53`, mert a user-visible `/audit recheck` guard bovult.
 - Audit repair-reviewed marker: uj `/audit repair-reviewed` subcommand keszult. A legutobbi same-iteration `started` repair executiont `reviewed` allapotra jeloli public-safe ledgerben, majd `/audit recheck` kovetkezhet; nem futtat checket, nem ir fajlt, es nem merge-el.
 - Version bump: a package verzio `0.1.1-prerelease.52`, mert uj user-visible `/audit repair-reviewed` subcommand jelent meg.
 - Audit repair-run help/docs alignment: a `/audit` reszletes sugo, README, SETUP es aktiv terv most mar egyertelmuen jelzi, hogy a repair-run letezik, de default-off es csak workspace/evidence/budget/iteration guardok mellett indulhat.

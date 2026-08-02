@@ -374,6 +374,7 @@ Optional local commands:
 - `/audit repair` and `/audit recheck` are disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true` is set in `.env`; repair requests explicit approval, prepares and records an isolated repair worktree after approval, and recheck reruns the original named check in that isolated workspace while respecting the job iteration budget. Repeated matching public-safe failures stop as `stagnated`.
 - `/audit repair-run` is additionally disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` is set in `.env`; when enabled it can start one tracked Codex repair turn in the isolated repair worktree only when there is non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It does not merge, commit, push, deploy, or write the normal source worktree.
 - `/audit repair-reviewed` marks the latest started repair execution as manually reviewed before `/audit recheck`; it only updates the local public-safe ledger and does not run checks, merge, commit, push, deploy, or write files.
+- `/audit recheck` refuses to run while the current iteration has a repair execution that is still only `started`; mark it with `/audit repair-reviewed` first.
 
 ## 9. Troubleshooting
 
