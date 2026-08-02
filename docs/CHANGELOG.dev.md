@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy isolated verifier fallback: a `nas:deploy -- -Apply` vegso verifier hosszu retry utan egyszer kulon PowerShell processzben is ellenoriz, mert eles NAS deploynal ugyanazon folyamat SMB olvasasa stale snapshotot lathatott, mikozben a kovetkezo onallo verifier mar zold volt.
+- Version bump: a package verzio `0.1.1-prerelease.39`, mert az operator-facing NAS deploy verifikacios fallbackje bovult.
 - NAS deploy final verifier tolerance: a `nas:deploy -- -Apply` vegso verifier retry ablaka 90 masodpercre nott, mert eles NAS deploynal a kontener mar uj image-bol futott, de az SMB snapshot olvasas csak rovid kesessel valtott zoldre.
 - Version bump: a package verzio `0.1.1-prerelease.38`, mert az operator-facing NAS deploy verifikacios toleranciaja bovult.
 - NAS deploy verifier compose identity guard: a `nas:deploy:verify` most a NAS share `docker-compose.yml` fajljat is ellenorzi, es fail-closed jelzi, ha a commit-alapu image tag vagy a generated source/package label nem egyezik a staged build infoval.

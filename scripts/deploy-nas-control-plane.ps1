@@ -48,6 +48,26 @@ function Invoke-NasDeployVerifier {
       Start-Sleep -Seconds $RetryDelaySec
     }
   }
+
+  Write-Host "NAS deploy verifier still failed in this process; retrying once in an isolated PowerShell process..."
+  $encodedRepoRoot = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($repoRoot))
+  $encodedTargetRoot = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($TargetRootValue))
+  $env:ATTYS_DEPLOY_VERIFY_REPO_ROOT_B64 = $encodedRepoRoot
+  $env:ATTYS_DEPLOY_VERIFY_TARGET_ROOT_B64 = $encodedTargetRoot
+  try {
+    & pwsh -NoProfile -Command @'
+$repoRoot = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($env:ATTYS_DEPLOY_VERIFY_REPO_ROOT_B64))
+$targetRoot = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($env:ATTYS_DEPLOY_VERIFY_TARGET_ROOT_B64))
+Set-Location -LiteralPath $repoRoot
+npm run nas:deploy:verify -- --target-root $targetRoot
+'@ -ErrorAction Stop
+    if ($LASTEXITCODE -eq 0) {
+      return
+    }
+  } finally {
+    Remove-Item Env:\ATTYS_DEPLOY_VERIFY_REPO_ROOT_B64 -ErrorAction SilentlyContinue
+    Remove-Item Env:\ATTYS_DEPLOY_VERIFY_TARGET_ROOT_B64 -ErrorAction SilentlyContinue
+  }
 }
 
 function Test-NasDeployAlreadyCurrent {
