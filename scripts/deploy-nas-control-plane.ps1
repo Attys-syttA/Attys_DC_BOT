@@ -77,7 +77,14 @@ function Wait-NasDeployVerification {
     $attempt += 1
   }
 
-  Write-Host "NAS deploy verification was not ready within ${TimeoutSec}s; running final verifier for details."
+  Write-Host "NAS deploy verification was not ready within ${TimeoutSec}s; waiting one final ${PollIntervalSec}s grace interval..."
+  Start-Sleep -Seconds $PollIntervalSec
+  if (Test-NasDeployAlreadyCurrent -TargetRootValue $TargetRootValue) {
+    Write-Host "NAS deploy verification is ready after final grace interval."
+    return
+  }
+
+  Write-Host "NAS deploy verification was not ready within ${TimeoutSec}s plus grace interval; running final verifier for details."
 }
 
 function Get-CurrentSourceIdentity {

@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy snapshot grace verification: a rebuild utani verification polling timeout utan a deploy helper meg egy rovid grace intervallumot var es ujraellenoriz, mielott a vegso verifierrel pirosra futna. Ez a NAS snapshot tick es a final verifier kozotti hataridos versenyt kezeli.
+- Version bump: a package verzio `0.1.1-prerelease.32`, mert az operator-facing NAS deploy polling hataridos viselkedese stabilabb lett.
 - NAS deploy snapshot timeout final calibration: a rebuild utani verification polling default timeoutja 300 masodperc lett, mert ket egymas utani eles deploynal is csak a korabbi timeout utan valtott at a NAS snapshot az uj buildre. A verifier vegul zold lett, ezert a valtozas hamis piros elkerulesere szolgalo konzervativ operatori default.
 - Version bump: a package verzio `0.1.1-prerelease.31`, mert az operator-facing NAS deploy polling timeout valos NAS viselkedeshez lett konzervativan kalibralva.
 - NAS deploy snapshot timeout calibration: a rebuild utani verification polling default timeoutja 180 masodperc lett, mert a 120 masodperces elso stabilizalas utan a NAS snapshot valos meresben par masodperccel kesobb valtott at az uj buildre.
