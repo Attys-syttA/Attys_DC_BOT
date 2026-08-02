@@ -43,7 +43,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "Ugyanarra az audit iterationre masodik started repair-run nincs; elobb review, majd `/audit recheck` kell.",
       "`/audit repair-reviewed` a legutobbi started repair executiont jeloli kezzel reviewed allapotra; nem ir fajlt es nem futtat checket.",
       "`/audit recheck` started same-iteration repair execution utan elobb ezt a reviewed jelolest keri.",
-      "`/audit recheck` ugyanennek a flagnek a hatasa alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
+      "`/audit recheck` a `DISCORD_ENABLE_AUDIT_REPAIR=true` flag alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
       "A repair-run sem merge-el, commitol, pushol, deployol, es nem ir a normal source worktree-be.",

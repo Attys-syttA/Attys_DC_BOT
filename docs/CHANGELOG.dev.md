@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit review next-action guidance: `/audit review` mostantol a legutobbi repair execution statusza alapjan mutatja a kovetkezo biztonsagos lepest: `started` utan `/audit repair-reviewed`, `reviewed` utan `/audit recheck`.
+- Version bump: a package verzio `0.1.1-prerelease.54`, mert a user-visible `/audit review` dontesi osszegzes pontosult.
 - Audit recheck reviewed gate: `/audit recheck` mar elutasitja a futast, ha az aktualis iterationben van meg csak `started` repair execution. Ilyenkor elobb `/audit repair-reviewed` kell, majd utana johet a recheck.
 - Version bump: a package verzio `0.1.1-prerelease.53`, mert a user-visible `/audit recheck` guard bovult.
 - Audit repair-reviewed marker: uj `/audit repair-reviewed` subcommand keszult. A legutobbi same-iteration `started` repair executiont `reviewed` allapotra jeloli public-safe ledgerben, majd `/audit recheck` kovetkezhet; nem futtat checket, nem ir fajlt, es nem merge-el.

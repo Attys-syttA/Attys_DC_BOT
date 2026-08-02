@@ -146,6 +146,8 @@ function reviewDecisionLine(job: AuditJobRecord): string {
 
 function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): string {
   const repairWorktree = getAuditRepairWorktree(job.id);
+  const repairExecutions = listAuditRepairExecutions(job.id, 1);
+  const latestRepairExecution = repairExecutions[0];
   const latestStep = steps.at(-1);
   const lines = [
     `job: \`${job.id.slice(0, 8)}...\``,
@@ -167,15 +169,19 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
     lines.push("repair workspace: none");
   }
 
-  const repairExecutions = listAuditRepairExecutions(job.id, 1);
-  if (repairExecutions.length > 0) {
-    lines.push(`latest repair execution: ${renderRepairExecution(repairExecutions[0]).slice(2)}`);
+  if (latestRepairExecution) {
+    lines.push(`latest repair execution: ${renderRepairExecution(latestRepairExecution).slice(2)}`);
   } else {
     lines.push("latest repair execution: none");
   }
 
+  const allowedNextActions = latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration
+    ? "/audit status, /audit review, /audit repair-reviewed"
+    : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
+      ? "/audit status, /audit review, /audit recheck"
+      : "/audit status, /audit repair, /audit recheck";
   lines.push(
-    "allowed next actions: /audit status, /audit repair, /audit recheck",
+    `allowed next actions: ${allowedNextActions}`,
     "blocked actions: automatic merge, commit, push, source worktree write",
   );
   return lines.join("\n");

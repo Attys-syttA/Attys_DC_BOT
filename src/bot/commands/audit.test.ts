@@ -410,6 +410,56 @@ describe("/audit", () => {
     expect(mocks.updateAuditJobProgress).not.toHaveBeenCalled();
   });
 
+  it("shows repair-reviewed as the next review action for a started repair execution", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      iteration: 1,
+    }));
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "started",
+      iteration: 1,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "repair Codex turn started in isolated worktree",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("latest repair execution: started: thread=thread-1 turn=turn-1 summary=repair Codex turn started in isolated worktree");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-reviewed");
+  });
+
+  it("shows recheck as the next review action for a reviewed repair execution", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      iteration: 1,
+    }));
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "reviewed",
+      iteration: 1,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "operator marked repair execution reviewed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("latest repair execution: reviewed: thread=thread-1 turn=turn-1 summary=operator marked repair execution reviewed");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit recheck");
+  });
+
   it("shows a public-safe repair plan contract without starting repair", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({ status: "waiting_manual_review" }));
     mocks.getAuditRepairWorktree.mockReturnValue({
