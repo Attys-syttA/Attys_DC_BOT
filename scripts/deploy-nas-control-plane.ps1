@@ -48,6 +48,38 @@ function Test-NasDeployAlreadyCurrent {
   }
 }
 
+function Wait-NasDeployVerification {
+  param(
+    [string]$TargetRootValue,
+    [int]$TimeoutSec,
+    [int]$PollIntervalSec = 5
+  )
+
+  if ($TimeoutSec -le 0) {
+    return
+  }
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSec)
+  $attempt = 1
+  while ((Get-Date) -lt $deadline) {
+    Write-Host "Waiting for NAS deploy verification (attempt $attempt, timeout ${TimeoutSec}s)..."
+    if (Test-NasDeployAlreadyCurrent -TargetRootValue $TargetRootValue) {
+      Write-Host "NAS deploy verification is ready."
+      return
+    }
+
+    $remainingSec = [Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
+    if ($remainingSec -le 0) {
+      break
+    }
+
+    Start-Sleep -Seconds ([Math]::Min($PollIntervalSec, $remainingSec))
+    $attempt += 1
+  }
+
+  Write-Host "NAS deploy verification was not ready within ${TimeoutSec}s; running final verifier for details."
+}
+
 function Get-CurrentSourceIdentity {
   $sourceCommit = "unknown"
   $packageVersion = "unknown"
@@ -172,8 +204,7 @@ try {
       npm run nas:container:rebuild
     }
     if ($WaitAfterRebuildSec -gt 0 -and -not $SkipVerify) {
-      Write-Host "Waiting $WaitAfterRebuildSec seconds for the NAS control-plane snapshot..."
-      Start-Sleep -Seconds $WaitAfterRebuildSec
+      Wait-NasDeployVerification -TargetRootValue $TargetRoot -TimeoutSec $WaitAfterRebuildSec
     }
   }
 

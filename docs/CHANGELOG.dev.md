@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS deploy snapshot wait: `nas:deploy -- -Apply` kontener rebuild utan mar nem vak fix varakozassal halad tovabb, hanem a `nas:deploy:verify --json` eredmenyet pollolja a megadott timeouton belul. Ha a snapshot hamarabb frissul, a deploy hamarabb verifikal; ha nem, a vegso verifier ad reszleteket.
+- Version bump: a package verzio `0.1.1-prerelease.28`, mert az operator-facing NAS deploy rebuild utani varakozasi viselkedese javult.
 - NAS deploy preflight guard: `nas:deploy -- -Apply` most a NAS share irasa elott lefuttat egy read-only `nas:container:status` restricted SSH preflightot, ha a deploy kontener rebuild utat hasznalna. Igy hianyzo SSH/sudo wrapper vagy elerhetetlen NAS eseten a folyamat koran megall, mielott managed fajlokat irna a share-re.
 - Version bump: a package verzio `0.1.1-prerelease.27`, mert az operator-facing NAS deploy apply sorrend biztonsagosabb lett.
 - NAS container lifecycle helper: uj `scripts/nas-container-lifecycle.ps1`, `npm run nas:container:status` es `npm run nas:container:rebuild` parancsok keszultek. A helper helyi ignored `.env.nas-ssh.local` fajlt vagy explicit parametereket hasznal, OpenSSH kulcsos belepessel hivja a NAS oldali korlatozott sudo wrapper scripteket, es nem tarol NAS jelszot, privat kulcsot, valos hostot vagy tokent tracked fajlban.
