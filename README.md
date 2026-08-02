@@ -310,7 +310,7 @@ Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS 
 | `/mappings` | List project-channel mappings and clean duplicate legacy mappings |
 | `/git-status` | Run read-only `git status --short --branch` for the registered project |
 | `/run-tests` | Run `npm test` in the registered project when enabled |
-| `/audit start/status/stop/repair/recheck/repair-cleanup` | Run fixed read-only audit checks, request explicit repair approval, recheck an isolated repair workspace, and clean up a terminal isolated workspace when enabled |
+| `/audit start/status/stop/repair/recheck/repair-cleanup` | Run fixed read-only audit checks with a bounded iteration budget, request explicit repair approval, recheck an isolated repair workspace, and clean up a terminal isolated workspace when enabled |
 | `/usage` | Show local Codex usage/rate-limit information when available |
 | `/auto-approve` | Toggle approval bypass when explicitly enabled |
 | `/clear-sessions` | Delete local session files when explicitly enabled |
@@ -364,6 +364,7 @@ Optional source-repo parity mode:
 - message prompts require Discord's privileged Message Content intent; slash commands and the explicit `Send to Codex` file handoff can run without normal message prompts
 - command and file-change auto-approval is disabled unless `DISCORD_ENABLE_AUTO_APPROVE=true`
 - read-only audit checks are disabled unless `DISCORD_ENABLE_AUDIT=true`
+- `/audit start` uses a default iteration budget of 2 and accepts at most `max_iterations:3`
 - audit repair approval/worktree preparation is disabled unless `DISCORD_ENABLE_AUDIT_REPAIR=true`
 - audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but only with non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It still does not merge, commit, push, deploy, or write the normal source worktree
 - after reviewing that Codex turn manually, `/audit repair-reviewed note:<optional>` can mark the latest started repair execution as reviewed before `/audit recheck` and may store one sanitized public-safe review note; it only updates the local public-safe ledger and does not run checks or write files

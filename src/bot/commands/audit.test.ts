@@ -82,6 +82,7 @@ function makeInteraction(
   subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "repair-run" | "repair-reviewed" | "repair-cleanup" | "recheck",
   check = "tests",
   stringOptions: Record<string, string | null> = {},
+  integerOptions: Record<string, number | null> = {},
 ) {
   return {
     channelId: "channel-1",
@@ -90,6 +91,10 @@ function makeInteraction(
       getString: vi.fn((name: string) => {
         if (Object.prototype.hasOwnProperty.call(stringOptions, name)) return stringOptions[name];
         return name === "check" ? check : null;
+      }),
+      getInteger: vi.fn((name: string) => {
+        if (Object.prototype.hasOwnProperty.call(integerOptions, name)) return integerOptions[name];
+        return null;
       }),
     },
     editReply: vi.fn(),
@@ -212,6 +217,7 @@ describe("/audit", () => {
       mode: "check-only",
       status: "running_checks",
       currentStep: "tests",
+      maxIterations: 2,
     }));
     expect(mocks.runAuditCheckPipeline).toHaveBeenCalledWith("/projects/app", "tests", {
       signal: expect.any(AbortSignal),
@@ -236,6 +242,32 @@ describe("/audit", () => {
     expect(interaction.followUp).toHaveBeenCalledWith({
       content: expect.stringContaining("**Audit completed**"),
     });
+  });
+
+  it("accepts an explicit bounded audit iteration budget up to three", async () => {
+    const interaction = makeInteraction("start", "tests", {}, { max_iterations: 3 });
+
+    await execute(interaction as never);
+
+    expect(mocks.createAuditJob).toHaveBeenCalledWith(expect.objectContaining({
+      maxIterations: 3,
+    }));
+    expect(mocks.runAuditCheckPipeline).toHaveBeenCalledWith("/projects/app", "tests", {
+      signal: expect.any(AbortSignal),
+      shouldStop: expect.any(Function),
+    });
+  });
+
+  it("rejects an audit iteration budget above the hard maximum", async () => {
+    const interaction = makeInteraction("start", "tests", {}, { max_iterations: 4 });
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Unsupported audit iteration budget: 4. Use 1-3.",
+    });
+    expect(mocks.createAuditJob).not.toHaveBeenCalled();
+    expect(mocks.runAuditCheckPipeline).not.toHaveBeenCalled();
   });
 
   it("blocks a new audit when the same project already has an active job in another channel", async () => {

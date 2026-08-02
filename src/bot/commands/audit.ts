@@ -59,7 +59,13 @@ export const data = new SlashCommandBuilder()
         { name: "tests", value: "tests" },
         { name: "build", value: "build" },
         { name: "full", value: "full" },
-      )))
+      ))
+    .addIntegerOption((option) => option
+      .setName("max_iterations")
+      .setDescription("Bounded audit iteration budget; default 2, hard maximum 3")
+      .setRequired(false)
+      .setMinValue(1)
+      .setMaxValue(3)))
   .addSubcommand((subcommand) => subcommand
     .setName("status")
     .setDescription("Show the latest audit status for this channel"))
@@ -94,6 +100,8 @@ export const data = new SlashCommandBuilder()
     .setDescription("Rerun the original named check in the isolated repair worktree"));
 
 const activeAuditControllers = new Map<string, AbortController>();
+const DEFAULT_AUDIT_MAX_ITERATIONS = 2;
+const HARD_MAX_AUDIT_ITERATIONS = 3;
 
 function renderStep(step: AuditStepRecord): string {
   const exit = step.exit_code === null ? "n/a" : String(step.exit_code);
@@ -261,6 +269,13 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
     await interaction.editReply({ content: `Unsupported audit check: \`${requestedCheck}\`` });
     return;
   }
+  const maxIterations = interaction.options.getInteger("max_iterations") ?? DEFAULT_AUDIT_MAX_ITERATIONS;
+  if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > HARD_MAX_AUDIT_ITERATIONS) {
+    await interaction.editReply({
+      content: `Unsupported audit iteration budget: ${maxIterations}. Use 1-${HARD_MAX_AUDIT_ITERATIONS}.`,
+    });
+    return;
+  }
 
   const now = new Date().toISOString();
   const jobId = randomUUID();
@@ -275,7 +290,7 @@ async function executeStart(interaction: ChatInputCommandInteraction): Promise<v
     requestedCheck: requestedCheck,
     currentStep: requestedCheck,
     iteration: 0,
-    maxIterations: 2,
+    maxIterations,
     stopRequested: false,
     capabilities,
     createdAt: now,

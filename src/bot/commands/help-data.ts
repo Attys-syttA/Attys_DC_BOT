@@ -24,11 +24,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed note:<optional> | /audit recheck | /audit repair-cleanup",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> max_iterations:<1..3 optional> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed note:<optional> | /audit recheck | /audit repair-cleanup",
     short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, izolalt repair turnt indithat, review-readyre jelol, es recheckel.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
+      "`/audit start` iteration budgetje alapbol 2, opcionálisan legfeljebb 3 lehet; ennel nagyobb retry-kor nincs.",
       "Ugyanarra a regisztralt project pathra egyszerre csak egy aktiv audit job indulhat, akkor is, ha masik Discord csatornabol probalod.",
       "A `full` kulon lathato `plans`, `lint`, `typecheck`, `tests`, `build` lepesekre bomlik.",
       "Nem futtat tetszoleges shell parancsot, nem telepit dependencyt, nem javit kodot, es nem ir Gitbe.",
