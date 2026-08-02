@@ -9,7 +9,7 @@ param(
   [switch]$SkipRebuild,
   [switch]$ForceRebuild,
   [switch]$SkipVerify,
-  [int]$WaitAfterRebuildSec = 180
+  [int]$WaitAfterRebuildSec = 300
 )
 
 Set-StrictMode -Version Latest
