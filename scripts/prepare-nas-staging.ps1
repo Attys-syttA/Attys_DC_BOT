@@ -92,6 +92,16 @@ $buildInfo = [ordered]@{
 $buildInfoJson = $buildInfo | ConvertTo-Json -Depth 4
 [System.IO.File]::WriteAllText((Join-Path $appRoot "NAS_BUILD_INFO.json"), $buildInfoJson + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
+$composePath = Join-Path $resolvedTargetRoot "docker-compose.yml"
+if (Test-Path -LiteralPath $composePath) {
+  $composeText = Get-Content -LiteralPath $composePath -Raw
+  $safeSourceCommit = if ($sourceCommit -match "^[A-Za-z0-9._-]{1,80}$") { $sourceCommit } else { "unknown" }
+  $safePackageVersion = if ($packageVersion -match "^[A-Za-z0-9._-]{1,80}$") { $packageVersion } else { "unknown" }
+  $composeText = $composeText.Replace("__ATTYS_NAS_SOURCE_COMMIT__", $safeSourceCommit)
+  $composeText = $composeText.Replace("__ATTYS_NAS_PACKAGE_VERSION__", $safePackageVersion)
+  [System.IO.File]::WriteAllText($composePath, $composeText, [System.Text.UTF8Encoding]::new($false))
+}
+
 foreach ($dir in @("data", "data\handoff", "data\handoff\inbox", "data\handoff\outbox", "data\handoff\archive", "data\handoff\tmp", "logs")) {
   New-Item -ItemType Directory -Force -Path (Join-Path $resolvedTargetRoot $dir) | Out-Null
 }

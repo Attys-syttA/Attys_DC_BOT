@@ -4,6 +4,9 @@ services:
       context: ./app
     image: attys-dc-bot-control-plane:local
     container_name: attys-dc-bot-control-plane
+    labels:
+      attys.dc-bot.source-commit: "__ATTYS_NAS_SOURCE_COMMIT__"
+      attys.dc-bot.package-version: "__ATTYS_NAS_PACKAGE_VERSION__"
     env_file:
       - ./.env.nas
     volumes:

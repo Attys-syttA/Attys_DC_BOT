@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- NAS compose recreate trigger: a NAS staging `docker-compose.yml` most generated source commit es package version labelt kap. Mivel a NAS oldali restricted wrapper csak `docker compose up -d --build` parancsot futtat, a label valtozas biztonsagos compose-config valtozaskent kenyszeriti az uj control-plane kontener letrehozasat `--force-recreate` sudoers bovites nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.35`, mert a NAS deploy staging/rebuild szerzodes stabilabb lett.
 - NAS deploy final verifier retry: a `nas:deploy -- -Apply` vegso `nas:deploy:verify` lepese rovid retry-t kapott, hogy a NAS status snapshot kesoi SMB/control-plane lathatosaga ne pirositsa el a deployt kozvetlenul azelott, hogy ugyanaz a verifier zoldre valtana.
 - Version bump: a package verzio `0.1.1-prerelease.34`, mert az operator-facing NAS deploy vegso verifikacios lepes stabilabb lett.
 - NAS deploy verifier snapshot reread: a `nas:deploy:verify` CLI rovid, celzott snapshot ujraolvasast vegez, ha a control-plane snapshot nem egyezik a staged builddel. Ez az SMB stale-read jellegu atmeneti allapotot kezeli anelkul, hogy a unit tesztek vagy a verifier core alapbol varakozna.
