@@ -221,6 +221,16 @@ function parseJsonObject(output: string): unknown {
     }
   }
 
+  const firstObjectStart = trimmed.indexOf("{");
+  const lastObjectEnd = trimmed.lastIndexOf("}");
+  if (firstObjectStart !== -1 && lastObjectEnd > firstObjectStart) {
+    try {
+      return JSON.parse(trimmed.slice(firstObjectStart, lastObjectEnd + 1));
+    } catch {
+      // Fall back to compact line scanning below.
+    }
+  }
+
   for (const line of trimmed.split(/\r?\n/).reverse()) {
     const candidate = line.trim();
     if (!candidate.startsWith("{")) continue;

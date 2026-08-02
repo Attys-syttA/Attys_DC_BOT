@@ -40,6 +40,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.24`, mert a user-visible NAS status report parsing hibaja javult.
 - NAS doctor partial-report hardening: a `/nas doctor` most akkor is public-safe partial riportot ad, ha a mailbox/request tracking resz nem erheto el, es csak `WARN mailbox consistency: unavailable` sort mutat raw DB/path/error output nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.25`, mert a NAS doctor hibaturenese javult.
+- NAS embedded JSON parsing fix: a Discord NAS report parser most a zajos elotag utan erkezo tobb soros JSON objektumot is felismeri, igy a `nas:sync-share -Json` staging-check elotaggal adott kimenete is helyesen jelenik meg `/nas doctor` es `/nas sync-status` alatt.
+- Version bump: a package verzio `0.1.1-prerelease.26`, mert a user-visible NAS sync/doctor report parsing hibaja javult.
 
 ## 2026-08-01
 

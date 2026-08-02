@@ -968,7 +968,7 @@ describe("/nas", () => {
       exitCode: 0,
       timedOut: false,
       output: [
-        "noise before json token=secret",
+        "NAS staging check passed: E:\\private\\repo",
         JSON.stringify({
           mode: "dry-run",
           stagingSource: {
@@ -979,7 +979,7 @@ describe("/nas", () => {
           skipped: 149,
           protectedSkipped: 6,
           removeBeforeCopy: true,
-        }),
+        }, null, 2),
       ].join("\n"),
     });
 
