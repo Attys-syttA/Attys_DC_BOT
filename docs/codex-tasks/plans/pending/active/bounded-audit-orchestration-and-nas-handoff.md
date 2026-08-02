@@ -101,6 +101,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Audit review command: `/audit review` read-only döntési összefoglalót ad a legutóbbi jobról, legutóbbi stepről, repair workspace-ről, és az engedélyezett/tiltott következő lépésekről, automatikus repair/merge/commit/push nélkül.
 - Audit repair contract preview: `/audit repair-plan` read-only szerződés-előnézetet ad a későbbi izolált Codex repairhez, strukturált `audit-repair-contract/v1` contractból. A nézet public-safe módon mutatja a cél checket, legutóbbi bizonyítékot, repair workspace állapotot, scope-ot, kötelező validációt, prompt readiness állapotot és tiltott műveleteket; tényleges Codex repair turnt továbbra sem indít.
 - Audit repair executor gate: belső fail-closed executor adapter készült a későbbi Codex repair turnhoz. Alapból disabled/rejected, és csak valid contract, valid prompt, izolált worktree path és explicit injektált starter callback mellett adhat `started` eredményt; Discord parancshoz még nincs kötve.
+- Audit repair Codex starter adapter: belső injektálható starter készült, amely a Codex app-serveren izolált repair worktree `cwd` mellett nyit threadet és egy repair prompt turnt indít. Csak a fail-closed executor gate mögött használható; user-visible repair-run parancs még nincs.
 
 ## Nyitott reszek
 
@@ -759,6 +760,7 @@ Elfogadási feltételek:
 - reviewer nem ír és nem indít új kört.
 - **részben kész:** determinisztikus, read-only `/audit repair-plan` contract renderer, strukturált `audit-repair-contract/v1` validátor és prompt readiness check elkészült. Ez még nem planner/executor/validator futtatás, de a későbbi repair prompt biztonsági szerződésének public-safe alapja.
 - **részben kész:** belső fail-closed executor gate elkészült, de nincs élő Codex app-server bekötés, nincs Discord repair-run parancs, és nincs automatikus repair execution.
+- **részben kész:** a Codex app-server starter adapter elkészült tesztelt injektálható callbackként. Ez még nem éles bekötés, mert nincs Discord repair-run parancs és nincs default-on execution.
 
 ### Szelet 7 — NAS handoff gate
 

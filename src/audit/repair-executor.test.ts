@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildAuditRepairContract, type AuditRepairContract } from "./repair-contract.js";
+import { createAuditRepairCodexStarter } from "./repair-codex-starter.js";
 import { startAuditRepairExecution } from "./repair-executor.js";
 import { buildAuditRepairPrompt } from "./repair-prompt.js";
 import type { AuditJobRecord, AuditStepRecord } from "../db/types.js";
@@ -132,5 +133,26 @@ describe("startAuditRepairExecution", () => {
       issues: [],
     });
     expect(startCodexRepair).toHaveBeenCalledWith("C:\\isolated\\worktree", prompt);
+  });
+
+  it("can use the Codex starter adapter as the injected callback", async () => {
+    const contract = makeContract();
+    const prompt = buildAuditRepairPrompt(contract);
+    const client = {
+      startThread: vi.fn(async () => ({ id: "thread-1" })),
+      startTurn: vi.fn(async () => ({ id: "turn-1" })),
+    };
+
+    const result = await startAuditRepairExecution({
+      enabled: true,
+      worktreePath: "C:\\isolated\\worktree",
+      contract,
+      prompt,
+      startCodexRepair: createAuditRepairCodexStarter(client),
+    });
+
+    expect(result.status).toBe("started");
+    expect(client.startThread).toHaveBeenCalledWith("C:\\isolated\\worktree");
+    expect(client.startTurn).toHaveBeenCalledWith("thread-1", prompt);
   });
 });
