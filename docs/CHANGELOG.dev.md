@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-run iteration guard: az `audit_repair_executions` ledger iteration mezot kapott, es `/audit repair-run` mar elutasitja a masodik started repair executiont ugyanarra az audit iterationre. Uj repair-run csak `/audit recheck` utan, kovetkezo iterationben indithato.
+- Version bump: a package verzio `0.1.1-prerelease.48`, mert a user-visible `/audit repair-run` biztonsagi guard bovult.
 - Audit repair-run command gate: uj default-off `/audit repair-run` subcommand es `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=false` env flag keszult. Csak elokeszitett/retained isolated repair worktree es ervenyes repair contract/prompt mellett indithat egyetlen tracked Codex repair turnt; tovabbra sem merge-el, commitol, pushol, deployol, vagy ir a normal source worktree-be.
 - Version bump: a package verzio `0.1.1-prerelease.47`, mert uj user-visible `/audit repair-run` subcommand es env flag jelent meg.
 - Audit repair execution tracking: additive SQLite `audit_repair_executions` ledger es belso tracked-start helper keszult a kesobbi izolalt Codex repair turnhoz. A `/audit status` es `/audit review` public-safe modon mutatja a repair execution allapotot rovid thread/turn prefixekkel es summaryval, path/log/raw prompt nelkul. Tovabbra sincs user-visible repair-run parancs.

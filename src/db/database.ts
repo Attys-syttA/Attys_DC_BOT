@@ -100,6 +100,7 @@ export function initDatabase(): void {
       id TEXT PRIMARY KEY,
       job_id TEXT NOT NULL REFERENCES audit_jobs(id) ON DELETE CASCADE,
       status TEXT NOT NULL,
+      iteration INTEGER NOT NULL DEFAULT 0,
       thread_id TEXT,
       turn_id TEXT,
       result_summary TEXT NOT NULL,
@@ -120,6 +121,7 @@ export function initDatabase(): void {
     );
   `);
   ensureColumn("audit_jobs", "requested_check", "TEXT");
+  ensureColumn("audit_repair_executions", "iteration", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
   normalizeInterruptedAuditJobs();
 }
@@ -417,17 +419,19 @@ export function createAuditRepairExecution(input: AuditRepairExecutionCreateInpu
       id,
       job_id,
       status,
+      iteration,
       thread_id,
       turn_id,
       result_summary,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     sanitizePublicText(input.id, 120),
     input.jobId,
     input.status,
+    input.iteration,
     input.threadId ? sanitizePublicText(input.threadId, 160) : null,
     input.turnId ? sanitizePublicText(input.turnId, 160) : null,
     sanitizePublicText(input.resultSummary, 240) || "(no summary)",

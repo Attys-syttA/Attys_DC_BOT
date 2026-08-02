@@ -95,6 +95,7 @@ export interface AuditRepairExecutionRecord {
   id: string;
   job_id: string;
   status: AuditRepairExecutionStatus;
+  iteration: number;
   thread_id: string | null;
   turn_id: string | null;
   result_summary: string;
@@ -106,6 +107,7 @@ export interface AuditRepairExecutionCreateInput {
   id: string;
   jobId: string;
   status: AuditRepairExecutionStatus;
+  iteration: number;
   threadId: string | null;
   turnId: string | null;
   resultSummary: string;

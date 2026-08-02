@@ -23,6 +23,7 @@ export async function startTrackedAuditRepairExecution(
     id: options.executionId,
     jobId: options.jobId,
     status: "starting",
+    iteration: options.contract.iteration,
     threadId: null,
     turnId: null,
     resultSummary: "audit repair execution requested",

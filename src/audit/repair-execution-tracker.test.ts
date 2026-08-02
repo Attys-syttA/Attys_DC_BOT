@@ -108,6 +108,7 @@ describe("tracked audit repair execution", () => {
     expect(getAuditRepairExecution("repair-exec-1")).toMatchObject({
       job_id: "audit-1",
       status: "started",
+      iteration: 1,
       thread_id: "thread-1",
       turn_id: "turn-1",
       result_summary: "repair Codex turn started in isolated worktree",
@@ -135,6 +136,7 @@ describe("tracked audit repair execution", () => {
     expect(getAuditRepairExecution("repair-exec-1")).toMatchObject({
       job_id: "audit-1",
       status: "failed",
+      iteration: 1,
       thread_id: null,
       turn_id: null,
       result_summary: "audit repair execution disabled",

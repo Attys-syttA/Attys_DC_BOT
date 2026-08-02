@@ -545,6 +545,14 @@ async function executeRepairRun(interaction: ChatInputCommandInteraction): Promi
   }
 
   const steps = listAuditSteps(job.id);
+  const latestRepairExecution = listAuditRepairExecutions(job.id, 1).at(0);
+  if (latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` already has a started repair execution for iteration ${job.iteration}; run /audit recheck before starting another one.`,
+    });
+    return;
+  }
+
   const repairChangeSummary = inspectRepairWorktreeChanges(repairWorktree.worktree_path).summary;
   const contract = buildAuditRepairContract({
     job,

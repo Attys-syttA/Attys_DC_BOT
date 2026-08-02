@@ -361,6 +361,7 @@ describe("/audit", () => {
       id: "repair-exec-1",
       job_id: "audit-job-1",
       status: "started",
+      iteration: 0,
       thread_id: "thread-1234567890abcdef",
       turn_id: "turn-1234567890abcdef",
       result_summary: "repair Codex turn started in <local-path>",
@@ -597,6 +598,48 @@ describe("/audit", () => {
     expect(content).toContain("thread: thread-1");
     expect(content).not.toContain("/projects/app");
     expect(content).not.toContain(".discord-bot-state");
+  });
+
+  it("rejects a second repair-run in the same audit iteration", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      mode: "approved-repair",
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "prepared",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:00.000Z",
+    });
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "started",
+      iteration: 1,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "repair Codex turn started in isolated worktree",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("repair-run");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` already has a started repair execution for iteration 1; run /audit recheck before starting another one.",
+    });
+    expect(mocks.startTrackedAuditRepairExecution).not.toHaveBeenCalled();
   });
 
   it("rechecks the requested check in the isolated repair worktree", async () => {
