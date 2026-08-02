@@ -33,7 +33,7 @@ function Invoke-Step {
 function Invoke-NasDeployVerifier {
   param(
     [string]$TargetRootValue,
-    [int]$RetryCount = 6,
+    [int]$RetryCount = 18,
     [int]$RetryDelaySec = 5
   )
 
