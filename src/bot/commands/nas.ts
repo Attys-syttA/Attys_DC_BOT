@@ -556,7 +556,7 @@ function summaryCount(value: unknown): string {
 }
 
 export async function buildNasSyncStatusReport(repoRoot: string): Promise<string> {
-  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share"], repoRoot, 60_000);
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share", "--", "-Json"], repoRoot, 60_000);
   const parsed = result.exitCode === 0
     ? parseJsonObject(result.output) as NasSyncDryRunResult | null
     : null;
@@ -620,7 +620,7 @@ export async function buildNasDoctorReport(repoRoot: string, channelId: string):
   const [workerHttp, handoffWorker, syncDryRun] = await Promise.all([
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:http:status"], repoRoot, 15_000),
     runLocalCommand(npmCommand(), ["run", "--silent", "worker:handoff:status"], repoRoot, 15_000),
-    runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share"], repoRoot, 60_000),
+    runLocalCommand(npmCommand(), ["run", "--silent", "nas:sync-share", "--", "-Json"], repoRoot, 60_000),
   ]);
 
   const workerHttpStatus = workerHttp.exitCode === 0

@@ -602,7 +602,7 @@ describe("/nas", () => {
 
     expect(mocks.runLocalCommand).toHaveBeenCalledWith(
       "npm.cmd",
-      ["run", "--silent", "nas:sync-share"],
+      ["run", "--silent", "nas:sync-share", "--", "-Json"],
       expect.any(String),
       60_000,
     );
@@ -656,6 +656,13 @@ describe("/nas", () => {
     expect(report).not.toContain("private");
     expect(report).not.toContain("8787");
     expect(report).not.toContain("processIds");
+    expect(mocks.runLocalCommand).toHaveBeenNthCalledWith(
+      3,
+      "npm.cmd",
+      ["run", "--silent", "nas:sync-share", "--", "-Json"],
+      expect.any(String),
+      60_000,
+    );
   });
 
   it("executes NAS doctor report when enabled", async () => {

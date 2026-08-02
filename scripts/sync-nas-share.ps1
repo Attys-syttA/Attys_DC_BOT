@@ -8,7 +8,8 @@ param(
   [switch]$AllowStaleSource,
   [switch]$Apply,
   [switch]$NoRemoveBeforeCopy,
-  [switch]$Detailed
+  [switch]$Detailed,
+  [switch]$Json
 )
 
 Set-StrictMode -Version Latest
@@ -184,4 +185,22 @@ if ($Detailed) {
   $summary.changes = $planned
 }
 
-$summary | ConvertTo-Json -Depth 5
+if ($Json) {
+  $summary | ConvertTo-Json -Depth 5
+} else {
+  $mode = $summary.mode
+  $stagingSourceStatus = $summary.stagingSource.status
+  "NAS share sync: $mode"
+  "staging-source: $stagingSourceStatus"
+  "pending managed changes: $($summary.copiedOrReplaced)"
+  "unchanged managed files: $($summary.skipped)"
+  "protected preserved: $($summary.protectedSkipped)"
+  "delete-before-copy: $(if ($summary.removeBeforeCopy) { "enabled" } else { "disabled" })"
+  "writes: $(if ($Apply) { "enabled" } else { "disabled" })"
+  if ($Detailed) {
+    "changes:"
+    $planned | ForEach-Object { "- $($_.action): $($_.path)" }
+  } else {
+    "details: hidden by default; re-run with -Detailed for managed file actions"
+  }
+}

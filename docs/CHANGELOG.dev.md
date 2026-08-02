@@ -13,6 +13,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.11`, mert a NAS worker target config fail-closed biztonsagi validacioja bovult.
 - NAS container lifecycle output: a `nas:container:rebuild` sikeres futasnal mar csak rovid operatori osszegzest ir ki. A `nas:container:status` rovid status sorai alapbol lathatok maradnak, hiba eseten vagy explicit `-VerboseOutput` kapcsoloval pedig a teljes tavoli output tovabbra is lathato.
 - Version bump: a package verzio `0.1.1-prerelease.12`, mert az operator-facing NAS container lifecycle kimenet kezelhetosege javult.
+- NAS share sync output: a `nas:sync-share` alapertelmezett terminalos kimenete JSON helyett rovid emberi osszegzes lett. A gepi/Discord fogyasztok explicit `-Json` kapcsolot hasznalnak tovabbra is, a `-Detailed` pedig reszletes managed file action listat ad.
+- Version bump: a package verzio `0.1.1-prerelease.13`, mert az operator-facing NAS share sync CLI kimenete valtozott.
 
 ## 2026-08-01
 

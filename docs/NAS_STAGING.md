@@ -324,6 +324,12 @@ npm run nas:sync-share -- -TargetRoot K:\ -Apply
 ```
 
 The sync command is dry-run by default. It writes to the NAS only with `-Apply`.
+The default terminal output is a short human-readable summary. Use `-Json` for scripts, tests, and Discord command integrations that need the structured result:
+
+```powershell
+npm run nas:sync-share -- -TargetRoot K:\ -Json
+```
+
 If the staging source copy is `stale`, `-Apply` refuses to run unless `-AllowStaleSource` is also passed after an explicit review. The normal fix is to regenerate staging with reviewed source first.
 
 Discord-side dry-run sync status:
@@ -332,7 +338,7 @@ Discord-side dry-run sync status:
 DISCORD_ENABLE_NAS_SYNC_STATUS=false
 ```
 
-When this is explicitly enabled on the Windows Discord bot, `/nas sync-status` calls only the repo-local dry-run form of `nas:sync-share`. It never passes `-Apply`, so it does not copy, replace, or delete files on the NAS. The Discord response only shows public-safe counts for pending managed files, unchanged managed files, protected skipped files, whether delete-before-copy would be used by a later manual/apply sync, and the staging source freshness.
+When this is explicitly enabled on the Windows Discord bot, `/nas sync-status` calls only the repo-local dry-run form of `nas:sync-share` with `-Json`. It never passes `-Apply`, so it does not copy, replace, or delete files on the NAS. The Discord response only shows public-safe counts for pending managed files, unchanged managed files, protected skipped files, whether delete-before-copy would be used by a later manual/apply sync, and the staging source freshness.
 
 The `staging-source` field means:
 
