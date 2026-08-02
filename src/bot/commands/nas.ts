@@ -213,6 +213,14 @@ function parseJsonObject(output: string): unknown {
   const trimmed = output.trim();
   if (!trimmed) return null;
 
+  if (trimmed.startsWith("{")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Fall back to line scanning for commands that print preface text before a compact JSON line.
+    }
+  }
+
   for (const line of trimmed.split(/\r?\n/).reverse()) {
     const candidate = line.trim();
     if (!candidate.startsWith("{")) continue;

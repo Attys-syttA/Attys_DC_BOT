@@ -887,7 +887,7 @@ describe("/nas", () => {
           "attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 2 minutes",
           "raw private K:\\secret token=hidden",
         ],
-      }),
+      }, null, 2),
     });
 
     const report = await buildNasContainerStatusReport("E:\\private\\repo");

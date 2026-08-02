@@ -36,6 +36,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.22`, mert a user-visible NAS doctor diagnosztika bovult.
 - NAS deploy no-op skip: `nas:deploy -- -Apply` tiszta checkoutnal mar sync elott ellenorzi, hogy a NAS deploy a jelenlegi Git commit + package version allapottal egyezik-e. Ha igen, kihagyja a NAS share irast es a kontener rebuildet is, majd csak verifiert futtat.
 - Version bump: a package verzio `0.1.1-prerelease.23`, mert az operator-facing NAS deploy orchestration felesleges NAS irasokat kerul el.
+- NAS command JSON parsing fix: a Discord NAS reportok JSON parserje most a teljes tobb soros JSON kimenetet is megprobalja feldolgozni, igy a PowerShell `ConvertTo-Json` alapu `nas:container:status -Json` kimenet is helyesen jelenik meg.
+- Version bump: a package verzio `0.1.1-prerelease.24`, mert a user-visible NAS status report parsing hibaja javult.
 
 ## 2026-08-01
 
