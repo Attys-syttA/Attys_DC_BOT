@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!.env.nas-ssh.example
 !.env.wsl.example
 !deploy/nas/Discord_Codex_BOT/.env.nas.example
 

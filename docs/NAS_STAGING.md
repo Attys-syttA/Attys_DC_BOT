@@ -79,6 +79,24 @@ npm run nas:deploy:verify -- --target-root K:\ --json
 
 The verifier checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, and `logs\nas-control-plane-status.json` together. It fails if the running container snapshot does not match the staged source commit/package version, the snapshot is stale, NAS-side Codex execution is not disabled, the handoff store is not ready, or the configured worker health is not OK. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
 
+Restricted SSH container lifecycle:
+
+```powershell
+npm run nas:container:status
+npm run nas:container:rebuild
+```
+
+These commands use `scripts\nas-container-lifecycle.ps1`, local OpenSSH key auth, and NAS-side restricted sudo wrapper scripts. Put workstation-specific connection values in ignored `.env.nas-ssh.local`, based on `.env.nas-ssh.example`, or pass explicit script parameters. Do not store NAS passwords, private keys, real hostnames, or tokens in tracked source.
+
+The current NAS-side restricted wrapper contract is:
+
+```text
+/usr/local/sbin/attys-dc-bot-status.sh
+/usr/local/sbin/attys-dc-bot-rebuild.sh
+```
+
+The helper does not grant arbitrary NAS shell access from Discord and does not change the bot's default-off NAS feature flags. It is an operator/deploy helper for this repository's validated NAS control-plane container only.
+
 NAS compose startup:
 
 ```powershell

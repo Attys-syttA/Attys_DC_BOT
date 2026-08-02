@@ -1,5 +1,11 @@
 # Development Changelog
 
+## 2026-08-02
+
+- NAS container lifecycle helper: uj `scripts/nas-container-lifecycle.ps1`, `npm run nas:container:status` es `npm run nas:container:rebuild` parancsok keszultek. A helper helyi ignored `.env.nas-ssh.local` fajlt vagy explicit parametereket hasznal, OpenSSH kulcsos belepessel hivja a NAS oldali korlatozott sudo wrapper scripteket, es nem tarol NAS jelszot, privat kulcsot, valos hostot vagy tokent tracked fajlban.
+- NAS container lifecycle smoke: a `npm run nas:container:status` parancs sikeresen elerte a NAS-t es public-safe modon visszaadta, hogy az `attys-dc-bot-control-plane` kontener fut.
+- Version bump: a package verzio `0.1.1-prerelease.8`, mert uj operator-facing NAS container lifecycle parancsok jelentek meg.
+
 ## 2026-08-01
 
 - Audit recheck stagnation/budget: uj public-safe issue fingerprint helper keszult. Az `/audit recheck` tiszteletben tartja a job iteration budgetjet, majd a korabbi failed step public-safe outputjahoz meri az uj failed eredmenyt. Azonos fingerprint eseten `stagnated` allapotban megall, `audit-stagnated` eventtel es retained repair workspace-szel. Tovabbra sincs Codex repair turn, merge, commit vagy push.
