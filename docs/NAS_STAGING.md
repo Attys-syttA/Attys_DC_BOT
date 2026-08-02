@@ -159,9 +159,10 @@ Worker health probe:
 
 ```powershell
 npm run nas:workers:health
+npm run nas:workers:health -- --json
 ```
 
-This probes configured worker `baseUrl` values with `GET /health`. Each worker target must define `sharedSecretEnv`; the value is only an environment-variable name, and the actual secret stays in ignored local/NAS env files. The client uses the historical archive-compatible `x-telecodex-shared-secret` header when that env value exists in the local environment. The output reports only public-safe worker IDs, HTTP status, and compact status summaries.
+This probes configured worker `baseUrl` values with `GET /health`. Each worker target must define `sharedSecretEnv`; the value is only an environment-variable name, and the actual secret stays in ignored local/NAS env files. The client uses the historical archive-compatible `x-telecodex-shared-secret` header when that env value exists in the local environment. The default output reports only public-safe worker IDs, HTTP status, and compact status summaries; use `--json` for structured output.
 
 For NAS control-plane configuration, worker `baseUrl` must point to a real Windows PC worker host reachable from the NAS. Loopback values such as `localhost`, `127.*`, `0.0.0.0`, and `::1` are rejected by default because inside the NAS container they would refer to the NAS/container itself. The only exception is the local `worker:smoke` script, which sets `ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE=true` temporarily for its own loopback test.
 
@@ -273,6 +274,7 @@ Read-only worker repo status:
 
 ```powershell
 npm run nas:workers:repo-status -- --project Attys_DC_BOT
+npm run nas:workers:repo-status -- --project Attys_DC_BOT --json
 ```
 
 This asks each configured worker for `GET /repo-status?project=...`. The PC worker resolves the project under `ATTYS_WORKER_WORKSPACE_ROOT`, rejects path escapes, and returns only a public-safe project label, branch, clean/dirty state, and compact summary. It does not run tests, install dependencies, modify Git state, or send Codex prompts.
@@ -281,6 +283,7 @@ Read-only named checks through the worker:
 
 ```powershell
 npm run nas:workers:check -- --project Attys_DC_BOT --check plans
+npm run nas:workers:check -- --project Attys_DC_BOT --check plans --json
 ```
 
 This calls `POST /checks/<name>?project=...` on the configured PC workers. Supported check names are the fixed audit catalog only: `plans`, `lint`, `typecheck`, `tests`, `build`, and `full`. The worker reuses the local read-only audit runner; it does not accept arbitrary shell commands, does not repair, does not install dependencies, does not write Git state, and does not send Codex prompts.

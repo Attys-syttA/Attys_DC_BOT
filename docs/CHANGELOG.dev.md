@@ -19,6 +19,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.14`, mert a NAS worker target auth config fail-closed validacioja szigorodott.
 - NAS worker HTTP auth guard: a worker HTTP kliens mar nem probal halozati kerest kuldeni, ha a beallitott `sharedSecretEnv` tenyleges env erteke hianyzik. Ilyenkor public-safe hibaeredmenyt ad es nem indul unauthenticated probe.
 - Version bump: a package verzio `0.1.1-prerelease.15`, mert a worker HTTP runtime auth guard fail-closed modon szigorodott.
+- NAS worker CLI output: a `nas:workers:health`, `nas:workers:repo-status` es `nas:workers:check` alapertelmezett kimenete rovid emberi osszegzes lett. A korabbi strukturalt JSON kimenet `--json` kapcsoloval marad elerheto.
+- Version bump: a package verzio `0.1.1-prerelease.16`, mert az operator-facing NAS worker CLI kimenetek valtoztak.
 
 ## 2026-08-01
 

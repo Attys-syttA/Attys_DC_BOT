@@ -11,6 +11,10 @@ function optionValue(name: string): string | undefined {
   return undefined;
 }
 
+function hasFlag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
 const project = optionValue("project") ?? "Attys_DC_BOT";
 const config = parseNasControlPlaneConfig(process.env);
 const repoStatus = [];
@@ -19,8 +23,24 @@ for (const worker of config.workers) {
   repoStatus.push(await new NasWorkerHttpClient({ worker }).getRepoStatus(project));
 }
 
-console.log(JSON.stringify({
+const payload = {
   project,
   configuredWorkers: buildPublicNasWorkerTargets(config.workers),
   repoStatus,
-}, null, 2));
+};
+
+if (hasFlag("json")) {
+  console.log(JSON.stringify(payload, null, 2));
+} else {
+  console.log(`NAS workers repo status: project=${project}`);
+  if (repoStatus.length === 0) {
+    console.log("- INFO no workers configured");
+  }
+  for (const result of repoStatus) {
+    const prefix = result.ok ? "OK" : "FAIL";
+    const branch = result.branch ?? "unknown";
+    const clean = result.clean === null ? "unknown" : String(result.clean);
+    const status = result.statusCode === null ? "no-status" : String(result.statusCode);
+    console.log(`- ${prefix} ${result.workerId}: branch=${branch} clean=${clean} summary=${result.summary} (${status})`);
+  }
+}

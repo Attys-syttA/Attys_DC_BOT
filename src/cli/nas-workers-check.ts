@@ -12,6 +12,10 @@ function optionValue(name: string): string | undefined {
   return undefined;
 }
 
+function hasFlag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
 const project = optionValue("project") ?? "Attys_DC_BOT";
 const check = optionValue("check") ?? "plans";
 if (!isAuditCheckName(check)) {
@@ -25,9 +29,23 @@ for (const worker of config.workers) {
   checks.push(await new NasWorkerHttpClient({ worker }).runNamedCheck(project, check));
 }
 
-console.log(JSON.stringify({
+const payload = {
   project,
   check,
   configuredWorkers: buildPublicNasWorkerTargets(config.workers),
   checks,
-}, null, 2));
+};
+
+if (hasFlag("json")) {
+  console.log(JSON.stringify(payload, null, 2));
+} else {
+  console.log(`NAS workers check: project=${project} check=${check}`);
+  if (checks.length === 0) {
+    console.log("- INFO no workers configured");
+  }
+  for (const result of checks) {
+    const prefix = result.ok ? "OK" : "FAIL";
+    const status = result.statusCode === null ? "no-status" : String(result.statusCode);
+    console.log(`- ${prefix} ${result.workerId}: ${result.summary} (${status})`);
+  }
+}
