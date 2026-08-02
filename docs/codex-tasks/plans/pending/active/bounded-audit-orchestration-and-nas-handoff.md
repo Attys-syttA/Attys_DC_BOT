@@ -61,6 +61,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - NAS worker CLI output: a `nas:workers:health`, `nas:workers:repo-status` és `nas:workers:check` alapból rövid emberi összegzést ad, a gépi JSON kimenet pedig explicit `--json` módban maradt meg.
 - NAS public worker metadata hardening: a public `configuredWorkers` snapshot és JSON kimenet már nem tartalmaz worker `baseUrl` értéket; a URL csak belső klienskonfiguráció marad.
 - NAS deploy verifier public metadata guard: a `nas:deploy:verify` `public-worker-metadata` checkkel fail-closed jelzi, ha a futó NAS snapshot public worker metadata mégis URL mezőt tartalmazna.
+- NAS restricted SSH runbook: a `docs/NAS_STAGING.md` titokmentesen dokumentálja a kulcsos SSH + szűk sudo wrapper setupot, amely a `nas:container:*` és `nas:deploy -- -Apply` parancsokhoz kell.
 - Szelet 0 első fele: audit mode/status/capability contract és fix named-check catalog fókuszált tesztekkel.
 - Szelet 1 előkészítő runner alap: local `npm run audit:check -- <check>` CLI, amely csak catalog-checkeket futtat, public-safe JSON-t ad, hiányzó scriptnél `unsupported` állapotot jelez, és nem végez repairt vagy Git write-ot.
 - Szelet 2 előkészítő store alap: additive SQLite `audit_jobs` és `audit_steps` táblák, public-safe job/step helper függvényekkel.

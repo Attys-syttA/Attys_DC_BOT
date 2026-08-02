@@ -110,6 +110,23 @@ The current NAS-side restricted wrapper contract is:
 /usr/local/sbin/attys-dc-bot-rebuild.sh
 ```
 
+NAS-side setup summary:
+
+- create or reuse a dedicated NAS user for Codex deployment automation;
+- allow SSH/SFTP for that user and install only the workstation public key in the user's `authorized_keys`;
+- do not store the NAS account password in this repository or in `.env.nas-ssh.local`;
+- create the two root-owned wrapper scripts above, each limited to `/volume1/Discord_Codex_BOT` and Docker Compose status/rebuild for this project;
+- grant passwordless sudo only for those exact wrapper paths through a dedicated `/etc/sudoers.d/...` entry;
+- test from Windows with `npm run nas:container:status` before allowing `npm run nas:deploy -- -Apply` to rebuild the container.
+
+The wrapper scripts should keep the NAS-side command surface narrow:
+
+```sh
+cd /volume1/Discord_Codex_BOT
+docker compose ps
+docker compose up -d --build
+```
+
 The helper does not grant arbitrary NAS shell access from Discord and does not change the bot's default-off NAS feature flags. It is an operator/deploy helper for this repository's validated NAS control-plane container only.
 
 NAS compose startup:

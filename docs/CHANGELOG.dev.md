@@ -25,6 +25,7 @@
 - Version bump: a package verzio `0.1.1-prerelease.17`, mert a NAS public worker metadata kimenet szukebb lett.
 - NAS deploy verifier hardening: a `nas:deploy:verify` uj `public-worker-metadata` checket futtat, amely fail-closed jelez, ha a futó NAS snapshot public worker metadata URL mezot tartalmazna.
 - Version bump: a package verzio `0.1.1-prerelease.18`, mert a NAS deploy verifier uj public metadata guardra bovult.
+- NAS runbook: a `docs/NAS_STAGING.md` kiegeszult a korlatozott SSH/sudo container lifecycle setup rovid, titokmentes NAS-oldali osszefoglalojaval. Docs-only, nincs verzio bump.
 
 ## 2026-08-01
 
