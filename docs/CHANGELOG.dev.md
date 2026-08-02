@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit review budget guidance: `/audit review` most explicit `iteration budget` sort mutat, es kimerult budgetnel mar nem ajanl uj repair/recheck lepest; a mar started repair execution manualis `/audit repair-reviewed` jelolese tovabbra is megmarad.
+- Version bump: a package verzio `0.1.1-prerelease.62`, mert a user-visible audit review next-action guidance pontosult.
 - Audit repair-plan prompt readiness hardening: `/audit repair-plan` mar csak prepared/retained repair workspace es nem-passed audit evidence mellett mutat `repair prompt: ready` allapotot; hianyos elofeltetelnel read-only `blocked` elonezetet ad parancshiba vagy repair inditas nelkul.
 - Version bump: a package verzio `0.1.1-prerelease.61`, mert a user-visible audit repair contract elonezet fail-closed guardot kapott.
 - Audit removed workspace visibility: `/audit status`, `/audit review` es `/audit repair-plan` removed repair workspace eseten mar `changes: removed` jelzest hasznal, es nem probal torolt worktree pathot ujraolvasni.

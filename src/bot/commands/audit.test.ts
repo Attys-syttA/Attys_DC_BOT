@@ -500,6 +500,51 @@ describe("/audit", () => {
     expect(content).toContain("allowed next actions: /audit status, /audit review, /audit recheck");
   });
 
+  it("does not suggest repair or recheck when the review budget is exhausted", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 2,
+      max_iterations: 2,
+    }));
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("iteration budget: 2/2 (exhausted)");
+    expect(content).toContain("allowed next actions: /audit status, /audit review");
+    expect(content).not.toContain("allowed next actions: /audit status, /audit repair, /audit recheck");
+  });
+
+  it("does not suggest recheck after reviewed repair execution when the budget is exhausted", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 2,
+      max_iterations: 2,
+    }));
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "reviewed",
+      iteration: 2,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "operator marked repair execution reviewed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("latest repair execution: reviewed: thread=thread-1 turn=turn-1 summary=operator marked repair execution reviewed");
+    expect(content).toContain("allowed next actions: /audit status, /audit review");
+    expect(content).not.toContain("allowed next actions: /audit status, /audit review, /audit recheck");
+  });
+
   it("shows repair-cleanup as the next review action for terminal jobs with a retained repair workspace", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "stagnated",

@@ -158,6 +158,14 @@ function reviewDecisionLine(job: AuditJobRecord): string {
   return `decision: active ${job.status}`;
 }
 
+function iterationBudgetLine(job: AuditJobRecord): string {
+  const remainingIterations = Math.max(job.max_iterations - job.iteration, 0);
+  const suffix = remainingIterations === 0
+    ? "exhausted"
+    : `${remainingIterations} recheck(s) left`;
+  return `iteration budget: ${job.iteration}/${job.max_iterations} (${suffix})`;
+}
+
 function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): string {
   const repairWorktree = getAuditRepairWorktree(job.id);
   const repairExecutions = listAuditRepairExecutions(job.id, 1);
@@ -169,6 +177,7 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
     `status: ${job.status}`,
     `requested check: ${job.requested_check ?? "unknown"}`,
     `latest step: ${latestStep ? `${latestStep.step_name}:${latestStep.status}` : "none"}`,
+    iterationBudgetLine(job),
     reviewDecisionLine(job),
   ];
 
@@ -196,7 +205,9 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
       : "/audit status, /audit review"
     : latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration
       ? "/audit status, /audit review, /audit repair-reviewed"
-      : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
+      : job.iteration >= job.max_iterations
+        ? "/audit status, /audit review"
+        : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
         ? "/audit status, /audit review, /audit recheck"
         : "/audit status, /audit repair, /audit recheck";
   lines.push(
