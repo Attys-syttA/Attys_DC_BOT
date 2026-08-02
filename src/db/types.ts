@@ -89,7 +89,7 @@ export interface AuditRepairWorktreeCreateInput {
   updatedAt: string;
 }
 
-export type AuditRepairExecutionStatus = "starting" | "started" | "failed";
+export type AuditRepairExecutionStatus = "starting" | "started" | "reviewed" | "failed";
 
 export interface AuditRepairExecutionRecord {
   id: string;

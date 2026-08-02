@@ -32,6 +32,7 @@ import {
   listAuditRepairExecutions,
   listAuditSteps,
   requestAuditJobStop,
+  updateAuditRepairExecutionResult,
   updateAuditRepairWorktreeStatus,
   updateAuditJobProgress,
 } from "../../db/database.js";
@@ -77,6 +78,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("repair-run")
     .setDescription("Start one explicitly enabled isolated repair Codex turn"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("repair-reviewed")
+    .setDescription("Mark the latest isolated repair Codex turn as manually reviewed"))
   .addSubcommand((subcommand) => subcommand
     .setName("recheck")
     .setDescription("Rerun the original named check in the isolated repair worktree"));
@@ -558,10 +562,13 @@ async function executeRepairRun(interaction: ChatInputCommandInteraction): Promi
     return;
   }
 
-  const latestRepairExecution = listAuditRepairExecutions(job.id, 1).at(0);
-  if (latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration) {
+  const repairExecutions = listAuditRepairExecutions(job.id, 5);
+  const sameIterationExecution = repairExecutions.find((execution) =>
+    execution.iteration === job.iteration && (execution.status === "started" || execution.status === "reviewed")
+  );
+  if (sameIterationExecution) {
     await interaction.editReply({
-      content: `Audit job \`${job.id.slice(0, 8)}...\` already has a started repair execution for iteration ${job.iteration}; run /audit recheck before starting another one.`,
+      content: `Audit job \`${job.id.slice(0, 8)}...\` already has a ${sameIterationExecution.status} repair execution for iteration ${job.iteration}; run /audit recheck before starting another one.`,
     });
     return;
   }
@@ -625,6 +632,52 @@ async function executeRepairRun(interaction: ChatInputCommandInteraction): Promi
   }
 }
 
+async function executeRepairReviewed(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit repair-reviewed` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` first.",
+    });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+  if (job.status !== "waiting_manual_review") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not waiting for manual repair review.`,
+    });
+    return;
+  }
+
+  const latestRepairExecution = listAuditRepairExecutions(job.id, 1).at(0);
+  if (!latestRepairExecution || latestRepairExecution.status !== "started" || latestRepairExecution.iteration !== job.iteration) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no started repair execution for iteration ${job.iteration} to mark reviewed.`,
+    });
+    return;
+  }
+
+  updateAuditRepairExecutionResult(
+    latestRepairExecution.id,
+    "reviewed",
+    "operator marked repair execution reviewed",
+    new Date().toISOString(),
+    latestRepairExecution.thread_id,
+    latestRepairExecution.turn_id,
+  );
+  recordOperatorEvent({ kind: "task", status: "audit-repair-reviewed", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: [
+      `Audit job \`${job.id.slice(0, 8)}...\` repair execution was marked reviewed.`,
+      "Next: run `/audit recheck` to validate the isolated repair workspace.",
+    ].join("\n"),
+  });
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -655,6 +708,10 @@ export async function execute(
   }
   if (subcommand === "repair-run") {
     await executeRepairRun(interaction);
+    return;
+  }
+  if (subcommand === "repair-reviewed") {
+    await executeRepairReviewed(interaction);
     return;
   }
   if (subcommand === "recheck") {

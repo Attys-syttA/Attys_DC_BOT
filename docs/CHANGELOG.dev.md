@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-reviewed marker: uj `/audit repair-reviewed` subcommand keszult. A legutobbi same-iteration `started` repair executiont `reviewed` allapotra jeloli public-safe ledgerben, majd `/audit recheck` kovetkezhet; nem futtat checket, nem ir fajlt, es nem merge-el.
+- Version bump: a package verzio `0.1.1-prerelease.52`, mert uj user-visible `/audit repair-reviewed` subcommand jelent meg.
 - Audit repair-run help/docs alignment: a `/audit` reszletes sugo, README, SETUP es aktiv terv most mar egyertelmuen jelzi, hogy a repair-run letezik, de default-off es csak workspace/evidence/budget/iteration guardok mellett indulhat.
 - Version bump: a package verzio `0.1.1-prerelease.51`, mert a user-visible `/audit` sugo es operatori dokumentacio pontosult.
 - Audit repair-run budget guard: `/audit repair-run` mar elutasitja az inditast, ha a job elerte a repair iteration budgetet. Igy kimeritett audit kor utan nem indul uj Codex repair turn.
