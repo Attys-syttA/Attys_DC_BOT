@@ -14,7 +14,7 @@ import { startTrackedAuditRepairExecution } from "../../audit/repair-execution-t
 import { renderAuditRepairPlan } from "../../audit/repair-plan.js";
 import { buildAuditRepairPrompt } from "../../audit/repair-prompt.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
-import { inspectRepairWorktreeChanges } from "../../audit/worktree-manager.js";
+import { inspectRepairWorktreeChanges, removeRepairWorktree } from "../../audit/worktree-manager.js";
 import {
   assertAuditModeAllowsCapabilities,
   defaultAuditCapabilities,
@@ -86,6 +86,9 @@ export const data = new SlashCommandBuilder()
       .setDescription("Optional public-safe review note")
       .setRequired(false)
       .setMaxLength(300)))
+  .addSubcommand((subcommand) => subcommand
+    .setName("repair-cleanup")
+    .setDescription("Remove a terminal audit job's clean isolated repair worktree"))
   .addSubcommand((subcommand) => subcommand
     .setName("recheck")
     .setDescription("Rerun the original named check in the isolated repair worktree"));
@@ -708,6 +711,69 @@ async function executeRepairReviewed(interaction: ChatInputCommandInteraction): 
   });
 }
 
+async function executeRepairCleanup(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit repair-cleanup` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` first.",
+    });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+  if (!isTerminalAuditStatus(job.status)) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not terminal; cleanup is only allowed after completed, failed, stagnated, or stopped.`,
+    });
+    return;
+  }
+
+  const project = getProject(interaction.channelId);
+  if (!project) {
+    await interaction.editReply({ content: "This channel is not registered to any project." });
+    return;
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  if (!repairWorktree || repairWorktree.status === "removed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no cleanup-ready repair workspace.`,
+    });
+    return;
+  }
+
+  const startedRepairExecution = listAuditRepairExecutions(job.id, 3).find((execution) => execution.status === "started");
+  if (startedRepairExecution) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` still has a started repair execution; mark it reviewed and recheck before cleanup.`,
+    });
+    return;
+  }
+
+  try {
+    const result = await removeRepairWorktree({
+      sourceRoot: project.project_path,
+      jobId: job.id,
+      worktreePath: repairWorktree.worktree_path,
+    });
+    updateAuditRepairWorktreeStatus(job.id, "removed", new Date().toISOString());
+    recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup", channelId: interaction.channelId });
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup: ${result.summary}.`,
+    });
+  } catch {
+    updateAuditRepairWorktreeStatus(job.id, "cleanup_failed", new Date().toISOString());
+    recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup-failed", channelId: interaction.channelId });
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup failed; workspace retained for manual review.`,
+    });
+  }
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -742,6 +808,10 @@ export async function execute(
   }
   if (subcommand === "repair-reviewed") {
     await executeRepairReviewed(interaction);
+    return;
+  }
+  if (subcommand === "repair-cleanup") {
+    await executeRepairCleanup(interaction);
     return;
   }
   if (subcommand === "recheck") {

@@ -40,6 +40,19 @@ export interface RepairWorktreeChangeSummary {
   untracked: number;
 }
 
+export interface RemoveRepairWorktreeOptions {
+  sourceRoot: string;
+  jobId: string;
+  worktreePath: string;
+  baseDir?: string;
+  runGit?: GitCommandRunner;
+}
+
+export interface RemoveRepairWorktreeResult {
+  removed: boolean;
+  summary: "removed" | "already removed";
+}
+
 async function defaultRunGit(args: string[], options: { cwd: string }): Promise<GitCommandResult> {
   const result = await execFileAsync("git", args, {
     cwd: options.cwd,
@@ -150,6 +163,30 @@ export async function prepareRepairWorktree(
     branchName,
     headCommit,
   };
+}
+
+export async function removeRepairWorktree(
+  options: RemoveRepairWorktreeOptions,
+): Promise<RemoveRepairWorktreeResult> {
+  assertSafeId(options.jobId, "jobId");
+  const runGit = options.runGit ?? defaultRunGit;
+  const sourceRoot = await ensureGitRoot(path.resolve(options.sourceRoot), runGit);
+  const baseDir = path.resolve(options.baseDir ?? path.join(sourceRoot, ".discord-bot-state", "audit-worktrees"));
+  const expectedWorktreePath = path.resolve(baseDir, options.jobId);
+  const worktreePath = path.resolve(options.worktreePath);
+  assertPathInside(baseDir, worktreePath);
+  assertNoReparseRisk(baseDir);
+
+  if (worktreePath !== expectedWorktreePath) {
+    throw new Error("repair worktree path does not match the audit job cleanup boundary");
+  }
+
+  if (!fs.existsSync(worktreePath)) {
+    return { removed: false, summary: "already removed" };
+  }
+
+  await runGit(["worktree", "remove", worktreePath], { cwd: sourceRoot });
+  return { removed: true, summary: "removed" };
 }
 
 export function inspectRepairWorktreeChanges(worktreePath: string): RepairWorktreeChangeSummary {

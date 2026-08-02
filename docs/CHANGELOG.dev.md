@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-cleanup command: uj `/audit repair-cleanup` subcommand keszult a repair flag alatt. Csak terminal audit jobhoz tartozo, matching izolalt repair worktree-t probal eltavolitani non-force `git worktree remove` utvonalon; dirty vagy unsafe cleanup eseten `cleanup_failed` marad, normal source worktree merge/commit/push/deploy/reset/delete nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.58`, mert uj user-visible audit cleanup parancs jelent meg.
 - Audit repair-reviewed note: a `/audit repair-reviewed` opcionalis `note` mezot kapott. A megjegyzes public-safe sanitizer utan kerul a repair execution ledgerbe es a Discord valaszba, igy kezi atvetelnel rovid, path/IP/secret-mentes review osszegzes rogzitheto.
 - Version bump: a package verzio `0.1.1-prerelease.57`, mert a user-visible `/audit repair-reviewed` parancs es ledger kimenet bovult.
 - NAS deploy verifier retry output: `nas:deploy -- -Apply` koztes verifier retryjai most JSON/silent modban futnak, es csak rovid not-ready sort irnak a bukott check neveivel. A teljes checklist megmarad a vegso sikeres vagy diagnosztikai verifiernel.

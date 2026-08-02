@@ -3,7 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inspectRepairWorktreeChanges, prepareRepairWorktree, type GitCommandRunner } from "./worktree-manager.js";
+import {
+  inspectRepairWorktreeChanges,
+  prepareRepairWorktree,
+  removeRepairWorktree,
+  type GitCommandRunner,
+} from "./worktree-manager.js";
 
 const tempRoots: string[] = [];
 
@@ -42,6 +47,9 @@ function makeGitRunner(repoRoot: string, options: { dirty?: boolean } = {}): Git
       return { stdout: "0123456789abcdef0123456789abcdef01234567\n", stderr: "" };
     }
     if (args[0] === "worktree" && args[1] === "add") {
+      return { stdout: "", stderr: "" };
+    }
+    if (args[0] === "worktree" && args[1] === "remove") {
       return { stdout: "", stderr: "" };
     }
     throw new Error(`unexpected git command: ${command}`);
@@ -132,6 +140,57 @@ describe("prepareRepairWorktree", () => {
       baseDir: linkedBase,
       runGit: makeGitRunner(repoRoot),
     })).rejects.toThrow("symlink");
+  });
+});
+
+describe("removeRepairWorktree", () => {
+  it("removes only the matching isolated repair worktree without force", async () => {
+    const repoRoot = makeTempRepo();
+    const realRepoRoot = fs.realpathSync.native(repoRoot);
+    const worktreePath = path.join(realRepoRoot, ".discord-bot-state", "audit-worktrees", "audit-job-1");
+    fs.mkdirSync(worktreePath, { recursive: true });
+    const runGit = makeGitRunner(repoRoot);
+
+    const result = await removeRepairWorktree({
+      sourceRoot: repoRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      runGit,
+    });
+
+    expect(result).toEqual({ removed: true, summary: "removed" });
+    expect(runGit).toHaveBeenCalledWith(
+      ["worktree", "remove", path.resolve(worktreePath)],
+      { cwd: realRepoRoot },
+    );
+  });
+
+  it("treats a missing matching repair worktree as already removed", async () => {
+    const repoRoot = makeTempRepo();
+    const worktreePath = path.join(fs.realpathSync.native(repoRoot), ".discord-bot-state", "audit-worktrees", "audit-job-1");
+    const runGit = makeGitRunner(repoRoot);
+
+    const result = await removeRepairWorktree({
+      sourceRoot: repoRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      runGit,
+    });
+
+    expect(result).toEqual({ removed: false, summary: "already removed" });
+    expect(runGit).not.toHaveBeenCalledWith(expect.arrayContaining(["worktree", "remove"]), expect.anything());
+  });
+
+  it("rejects cleanup paths outside the audit job boundary", async () => {
+    const repoRoot = makeTempRepo();
+    const realRepoRoot = fs.realpathSync.native(repoRoot);
+
+    await expect(removeRepairWorktree({
+      sourceRoot: repoRoot,
+      jobId: "audit-job-1",
+      worktreePath: path.join(realRepoRoot, ".discord-bot-state", "audit-worktrees", "other-job"),
+      runGit: makeGitRunner(repoRoot),
+    })).rejects.toThrow("cleanup boundary");
   });
 });
 

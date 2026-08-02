@@ -375,6 +375,7 @@ Optional local commands:
 - `/audit repair-run` is additionally disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` is set in `.env`; when enabled it can start one tracked Codex repair turn in the isolated repair worktree only when there is non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It does not merge, commit, push, deploy, or write the normal source worktree.
 - `/audit repair-reviewed note:<optional>` marks the latest started repair execution as manually reviewed before `/audit recheck` and may store one sanitized public-safe review note; it only updates the local public-safe ledger and does not run checks, merge, commit, push, deploy, or write files.
 - `/audit recheck` refuses to run while the current iteration has a repair execution that is still only `started`; mark it with `/audit repair-reviewed` first.
+- `/audit repair-cleanup` is available only after the audit job is terminal. It removes only the matching isolated repair worktree with non-force `git worktree remove`; if Git refuses because the workspace is dirty or otherwise unsafe, the workspace remains and the record becomes `cleanup_failed`.
 
 ## 9. Troubleshooting
 

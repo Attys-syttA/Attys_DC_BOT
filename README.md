@@ -310,7 +310,7 @@ Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS 
 | `/mappings` | List project-channel mappings and clean duplicate legacy mappings |
 | `/git-status` | Run read-only `git status --short --branch` for the registered project |
 | `/run-tests` | Run `npm test` in the registered project when enabled |
-| `/audit start/status/stop/repair/recheck` | Run fixed read-only audit checks, request explicit repair approval, and recheck an isolated repair workspace when enabled |
+| `/audit start/status/stop/repair/recheck/repair-cleanup` | Run fixed read-only audit checks, request explicit repair approval, recheck an isolated repair workspace, and clean up a terminal isolated workspace when enabled |
 | `/usage` | Show local Codex usage/rate-limit information when available |
 | `/auto-approve` | Toggle approval bypass when explicitly enabled |
 | `/clear-sessions` | Delete local session files when explicitly enabled |
@@ -368,6 +368,7 @@ Optional source-repo parity mode:
 - audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but only with non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It still does not merge, commit, push, deploy, or write the normal source worktree
 - after reviewing that Codex turn manually, `/audit repair-reviewed note:<optional>` can mark the latest started repair execution as reviewed before `/audit recheck` and may store one sanitized public-safe review note; it only updates the local public-safe ledger and does not run checks or write files
 - `/audit recheck` can rerun the original named check in the isolated repair workspace while respecting the job iteration budget; after a started repair execution it requires `/audit repair-reviewed` first, and repeated matching public-safe failures stop as `stagnated`
+- `/audit repair-cleanup` can remove only a terminal job's matching isolated repair worktree with non-force `git worktree remove`; dirty cleanup failures are recorded as `cleanup_failed`, and the normal source worktree is not merged, committed, pushed, deployed, reset, or deleted
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/logs`, `/events`, `/health`, `/doctor`, and `/dashboard` avoid tokens, raw Discord IDs, private paths, and config values
