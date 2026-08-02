@@ -38,6 +38,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.23`, mert az operator-facing NAS deploy orchestration felesleges NAS irasokat kerul el.
 - NAS command JSON parsing fix: a Discord NAS reportok JSON parserje most a teljes tobb soros JSON kimenetet is megprobalja feldolgozni, igy a PowerShell `ConvertTo-Json` alapu `nas:container:status -Json` kimenet is helyesen jelenik meg.
 - Version bump: a package verzio `0.1.1-prerelease.24`, mert a user-visible NAS status report parsing hibaja javult.
+- NAS doctor partial-report hardening: a `/nas doctor` most akkor is public-safe partial riportot ad, ha a mailbox/request tracking resz nem erheto el, es csak `WARN mailbox consistency: unavailable` sort mutat raw DB/path/error output nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.25`, mert a NAS doctor hibaturenese javult.
 
 ## 2026-08-01
 

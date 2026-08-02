@@ -684,9 +684,13 @@ function syncDryRunLine(result: Awaited<ReturnType<typeof runLocalCommand>>): st
 }
 
 function mailboxStatusLines(repoRoot: string, channelId: string): string[] {
-  return buildNasMailboxStatusReport(repoRoot, channelId)
-    .split(/\r?\n/)
-    .filter((line) => line && line !== "**NAS Handoff Mailbox Status**" && line !== "```");
+  try {
+    return buildNasMailboxStatusReport(repoRoot, channelId)
+      .split(/\r?\n/)
+      .filter((line) => line && line !== "**NAS Handoff Mailbox Status**" && line !== "```");
+  } catch {
+    return ["WARN mailbox consistency: unavailable"];
+  }
 }
 
 export async function buildNasDoctorReport(repoRoot: string, channelId: string): Promise<string> {

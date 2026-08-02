@@ -687,6 +687,47 @@ describe("/nas", () => {
     );
   });
 
+  it("keeps NAS doctor public-safe when mailbox consistency lookup fails", async () => {
+    mocks.runLocalCommand.mockReset()
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"listening\":true,\"processCount\":1}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"running\":true,\"processCount\":1,\"handoffRootReachable\":true}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: "{\"mode\":\"dry-run\",\"stagingSource\":{\"status\":\"fresh\"},\"copiedOrReplaced\":0,\"skipped\":160,\"protectedSkipped\":6}",
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        timedOut: false,
+        output: JSON.stringify({
+          ok: true,
+          durationSec: 0.3,
+          output: ["attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 3 minutes"],
+        }),
+      });
+    mocks.countNasHandoffRequestsByStatus.mockImplementationOnce(() => {
+      throw new Error("private K:\\secret token=hidden");
+    });
+
+    const report = await buildNasDoctorReport("E:\\private\\repo", "channel-1");
+
+    expect(report).toContain("NAS Doctor");
+    expect(report).toContain("overall=attention");
+    expect(report).toContain("WARN mailbox consistency: unavailable");
+    expect(report).toContain("writes=disabled");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("token");
+  });
+
   it("executes NAS doctor report when enabled", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
     mocks.runLocalCommand.mockReset()
