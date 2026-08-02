@@ -30,6 +30,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.19`, mert az operator-facing NAS deploy orchestration viselkedese bovult.
 - NAS deploy verifier clock-skew guard: a `nas:deploy:verify` snapshot freshness check most fail-closed jelez akkor is, ha a NAS control-plane snapshot timestampje tul messze a jovoben van a PC oldali ellenorzeshez kepest.
 - Version bump: a package verzio `0.1.1-prerelease.20`, mert a NAS deploy verifier biztonsagi/uzemeltetesi guardja szigorodott.
+- NAS container status Discord command: uj read-only `/nas container-status` alparancs keszult a meglévo `DISCORD_ENABLE_NAS_STATUS=true` flag alatt. A restricted SSH status wrappert hivja, de csak public-safe elerhetoseg/futas/duration sorokat mutat, raw Docker/SSH output, NAS path, token vagy write muvelet nelkul.
+- Version bump: a package verzio `0.1.1-prerelease.21`, mert uj user-visible NAS status alparancs jelent meg.
 
 ## 2026-08-01
 

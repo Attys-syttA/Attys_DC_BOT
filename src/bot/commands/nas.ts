@@ -74,6 +74,14 @@ interface NasSyncDryRunResult {
   protectedPathsPreserved?: unknown;
 }
 
+interface NasContainerLifecycleResult {
+  ok?: unknown;
+  action?: unknown;
+  durationSec?: unknown;
+  exitCode?: unknown;
+  output?: unknown;
+}
+
 interface NasControlPlaneStatusSnapshot {
   buildInfo?: {
     sourceCommit?: unknown;
@@ -186,7 +194,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Dry-run check whether NAS staging differs from the NAS share"))
   .addSubcommand((subcommand) => subcommand
     .setName("deploy-status")
-    .setDescription("Verify NAS deployed files against the running control-plane snapshot"));
+    .setDescription("Verify NAS deployed files against the running control-plane snapshot"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("container-status")
+    .setDescription("Show read-only NAS control-plane container status"));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -365,6 +376,51 @@ export function buildNasDeployStatusReport(repoRoot: string): string {
     `build=${smokeField(result.sourceCommit, "unknown", 40)} version=${smokeField(result.packageVersion, "unknown", 40)}`,
     `checks=${passed}/${total}`,
     ...rows,
+    "```",
+  ].join("\n");
+}
+
+function expectedNasContainerRunning(parsed: NasContainerLifecycleResult | null): boolean {
+  if (!parsed || parsed.ok !== true || !Array.isArray(parsed.output)) return false;
+  return parsed.output.some((entry) => {
+    if (typeof entry !== "string") return false;
+    return /^\s*attys-dc-bot-control-plane\s/.test(entry) && /\bUp\b/i.test(entry);
+  });
+}
+
+function nasContainerDuration(parsed: NasContainerLifecycleResult | null): string {
+  return typeof parsed?.durationSec === "number" && Number.isFinite(parsed.durationSec) && parsed.durationSec >= 0
+    ? `${Math.round(parsed.durationSec * 10) / 10}s`
+    : "unknown";
+}
+
+function nasContainerOutputCount(parsed: NasContainerLifecycleResult | null): string {
+  return Array.isArray(parsed?.output)
+    ? String(parsed.output.filter((entry) => typeof entry === "string").length)
+    : "unknown";
+}
+
+export async function buildNasContainerStatusReport(repoRoot: string): Promise<string> {
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:container:status", "--", "-Json"], repoRoot, 30_000);
+  const parsed = result.exitCode === 0
+    ? parseJsonObject(result.output) as NasContainerLifecycleResult | null
+    : null;
+  const running = expectedNasContainerRunning(parsed);
+  const statusLine = result.exitCode !== 0
+    ? "FAIL NAS container status unavailable"
+    : running
+      ? "OK NAS container: control-plane service is up"
+      : "WARN NAS container: control-plane service not confirmed up";
+
+  return [
+    "**NAS Container Status**",
+    "```text",
+    statusLine,
+    `reachable=${result.exitCode === 0 ? "yes" : "no"}`,
+    `duration=${nasContainerDuration(parsed)}`,
+    `remote-output-lines=${nasContainerOutputCount(parsed)}`,
+    "raw-output=hidden",
+    "writes=disabled",
     "```",
   ].join("\n");
 }
@@ -1064,6 +1120,20 @@ export async function execute(
 
     await interaction.editReply({
       content: buildNasDeployStatusReport(process.cwd()),
+    });
+    return;
+  }
+
+  if (subcommand === "container-status") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas container-status` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas container-status` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: await buildNasContainerStatusReport(process.cwd()),
     });
     return;
   }

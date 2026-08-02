@@ -76,6 +76,7 @@ vi.mock("../operator-events.js", () => ({
 import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
+  buildNasContainerStatusReport,
   buildNasDeployStatusReport,
   buildNasDoctorReport,
   buildNasMailboxReport,
@@ -839,6 +840,56 @@ describe("/nas", () => {
     expect(report).toContain("checks=11/11");
     expect(report).not.toContain("K:\\");
     expect(report).not.toContain("private");
+  });
+
+  it("builds a public-safe NAS container status report", async () => {
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: JSON.stringify({
+        ok: true,
+        action: "status",
+        target: "<nas-ssh>",
+        durationSec: 0.2,
+        exitCode: 0,
+        output: [
+          "NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS",
+          "attys-dc-bot-control-plane image command attys-dc-bot-control-plane now Up 2 minutes",
+          "raw private K:\\secret token=hidden",
+        ],
+      }),
+    });
+
+    const report = await buildNasContainerStatusReport("E:\\private\\repo");
+
+    expect(report).toContain("NAS Container Status");
+    expect(report).toContain("OK NAS container: control-plane service is up");
+    expect(report).toContain("reachable=yes");
+    expect(report).toContain("duration=0.2s");
+    expect(report).toContain("remote-output-lines=3");
+    expect(report).toContain("raw-output=hidden");
+    expect(report).toContain("writes=disabled");
+    expect(report).not.toContain("K:\\");
+    expect(report).not.toContain("secret");
+    expect(report).not.toContain("token");
+  });
+
+  it("reports NAS container status failure without raw output", async () => {
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 1,
+      timedOut: false,
+      output: "permission denied K:\\private token=secret",
+    });
+
+    const report = await buildNasContainerStatusReport("E:\\private\\repo");
+
+    expect(report).toContain("NAS Container Status");
+    expect(report).toContain("FAIL NAS container status unavailable");
+    expect(report).toContain("reachable=no");
+    expect(report).toContain("raw-output=hidden");
+    expect(report).not.toContain("permission denied");
+    expect(report).not.toContain("private");
+    expect(report).not.toContain("secret");
   });
 
   it("reports NAS sync dry-run staging source freshness", async () => {

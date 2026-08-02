@@ -180,12 +180,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas doctor | /nas deploy-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas doctor | /nas deploy-status | /nas container-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
       "`/nas doctor` ugyanilyen read-only status flag alatt egyetlen public-safe diagnosztikai osszkepet ad a NAS bridge/deploy/sync/mailbox allapotrol.",
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
+      "`/nas container-status` ugyanilyen read-only status flag alatt a restricted SSH status wrapperbol csak public-safe kontener elerhetoseg/futas/duration sorokat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas request` a helyi audit store-ban is nyit egy `waiting_nas_result` jobot, igy `/audit status` alatt is kovetheto.",
       "`/nas request` nem indul el, ha ugyanarra a project pathra mar van aktiv audit job barmelyik csatornaban.",

@@ -91,6 +91,7 @@ describe("/help and /sugo", () => {
     expect(fullContent).toContain("/nas results");
     expect(fullContent).toContain("/nas smoke");
     expect(fullContent).toContain("/nas sync-status");
+    expect(fullContent).toContain("/nas container-status");
     expect(fullContent).toContain("DISCORD_ENABLE_NAS_STATUS=true");
     expect(fullContent).toContain("DISCORD_ENABLE_NAS_HANDOFF=true");
     expect(fullContent).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
@@ -122,6 +123,7 @@ describe("/help and /sugo", () => {
     expect(fullContent).toContain("/nas status");
     expect(fullContent).toContain("/nas request");
     expect(fullContent).toContain("/nas deploy-status");
+    expect(fullContent).toContain("/nas container-status");
     expect(fullContent).toContain("/nas doctor");
     expect(fullContent).toContain("DISCORD_ENABLE_NAS_STATUS=true");
     expect(fullContent).toContain("DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE=true");
