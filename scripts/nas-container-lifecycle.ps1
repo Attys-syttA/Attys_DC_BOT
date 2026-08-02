@@ -6,7 +6,8 @@ param(
   [string]$User = $(if ($env:ATTYS_NAS_SSH_USER) { $env:ATTYS_NAS_SSH_USER } else { "Codex" }),
   [string]$KeyPath = $(if ($env:ATTYS_NAS_SSH_KEY_PATH) { $env:ATTYS_NAS_SSH_KEY_PATH } else { Join-Path $env:USERPROFILE ".ssh\attys_nas_codex_ed25519" }),
   [int]$ConnectTimeoutSec = 10,
-  [switch]$Json
+  [switch]$Json,
+  [switch]$VerboseOutput
 )
 
 Set-StrictMode -Version Latest
@@ -86,6 +87,7 @@ $outputLines = @(& $ssh.Source @sshArgs 2>&1 | ForEach-Object { $_.ToString() })
 $exitCode = $LASTEXITCODE
 $finishedAt = Get-Date
 $ok = $exitCode -eq 0
+$durationSec = [Math]::Round(($finishedAt - $startedAt).TotalSeconds, 1)
 
 $summary = [ordered]@{
   ok = $ok
@@ -94,6 +96,7 @@ $summary = [ordered]@{
   user = $User
   startedAt = $startedAt.ToUniversalTime().ToString("o")
   finishedAt = $finishedAt.ToUniversalTime().ToString("o")
+  durationSec = $durationSec
   exitCode = $exitCode
   output = $outputLines
 }
@@ -102,13 +105,17 @@ if ($Json) {
   $summary | ConvertTo-Json -Depth 4
 } else {
   if ($ok) {
-    "OK NAS container $Action completed"
+    "OK NAS container $Action completed in ${durationSec}s"
   } else {
     "FAIL NAS container $Action failed with exit code $exitCode"
   }
-  if ($outputLines.Count -gt 0) {
+
+  $shouldShowOutput = $VerboseOutput -or -not $ok -or $Action -eq "status"
+  if ($outputLines.Count -gt 0 -and $shouldShowOutput) {
     "output:"
     $outputLines | ForEach-Object { "- $_" }
+  } elseif ($outputLines.Count -gt 0) {
+    "output: hidden on success ($($outputLines.Count) line(s)); re-run with -VerboseOutput for full remote output"
   }
 }
 

@@ -11,6 +11,8 @@
 - Version bump: a package verzio `0.1.1-prerelease.10`, mert uj operator-facing NAS deploy orchestration parancs jelent meg.
 - NAS worker URL hardening: az `ATTYS_NAS_WORKERS_JSON` NAS control-plane config most alapbol elutasitja a `localhost`, `127.*`, `0.0.0.0` es `::1` worker `baseUrl` ertekeket, mert NAS kontenerbol ezek nem a Windows PC workert jelentik. A lokalis `worker:smoke` explicit `ATTYS_NAS_ALLOW_LOOPBACK_WORKERS_FOR_SMOKE=true` ideiglenes kapcsolot hasznal, igy a smoke teszt tovabbra is loopbacken fut.
 - Version bump: a package verzio `0.1.1-prerelease.11`, mert a NAS worker target config fail-closed biztonsagi validacioja bovult.
+- NAS container lifecycle output: a `nas:container:rebuild` sikeres futasnal mar csak rovid operatori osszegzest ir ki. A `nas:container:status` rovid status sorai alapbol lathatok maradnak, hiba eseten vagy explicit `-VerboseOutput` kapcsoloval pedig a teljes tavoli output tovabbra is lathato.
+- Version bump: a package verzio `0.1.1-prerelease.12`, mert az operator-facing NAS container lifecycle kimenet kezelhetosege javult.
 
 ## 2026-08-01
 

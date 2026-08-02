@@ -97,6 +97,12 @@ npm run nas:container:rebuild
 
 These commands use `scripts\nas-container-lifecycle.ps1`, local OpenSSH key auth, and NAS-side restricted sudo wrapper scripts. Put workstation-specific connection values in ignored `.env.nas-ssh.local`, based on `.env.nas-ssh.example`, or pass explicit script parameters. Do not store NAS passwords, private keys, real hostnames, or tokens in tracked source.
 
+The `status` command keeps its short Compose status output visible by default. Successful `rebuild` runs hide the verbose Docker build output and print a compact summary instead. If the full remote Docker or Compose output is needed for diagnosis, call the helper script directly with `-VerboseOutput`:
+
+```powershell
+pwsh -NoProfile -File scripts\nas-container-lifecycle.ps1 -Action rebuild -VerboseOutput
+```
+
 The current NAS-side restricted wrapper contract is:
 
 ```text
