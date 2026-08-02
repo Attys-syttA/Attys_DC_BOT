@@ -632,6 +632,30 @@ describe("/audit", () => {
     expect(mocks.startTrackedAuditRepairExecution).not.toHaveBeenCalled();
   });
 
+  it("rejects repair-run when the iteration budget is exhausted", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      mode: "approved-repair",
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 2,
+      max_iterations: 2,
+    }));
+    const interaction = makeInteraction("repair-run");
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` has reached its repair-run budget (2/2).",
+    });
+    expect(mocks.getAuditRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.startTrackedAuditRepairExecution).not.toHaveBeenCalled();
+  });
+
   it("rejects a second repair-run in the same audit iteration", async () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_ENABLE_AUDIT: true,

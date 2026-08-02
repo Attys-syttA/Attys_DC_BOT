@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit repair-run budget guard: `/audit repair-run` mar elutasitja az inditast, ha a job elerte a repair iteration budgetet. Igy kimeritett audit kor utan nem indul uj Codex repair turn.
+- Version bump: a package verzio `0.1.1-prerelease.50`, mert a user-visible `/audit repair-run` biztonsagi guard bovult.
 - Audit repair-run evidence guard: `/audit repair-run` mar elutasitja az inditast, ha a jobban nincs nem-passed audit evidence. Igy nem indul repair prompt sikeres vagy ures audit bizonyitek alapjan.
 - Version bump: a package verzio `0.1.1-prerelease.49`, mert a user-visible `/audit repair-run` biztonsagi guard bovult.
 - Audit repair-run iteration guard: az `audit_repair_executions` ledger iteration mezot kapott, es `/audit repair-run` mar elutasitja a masodik started repair executiont ugyanarra az audit iterationre. Uj repair-run csak `/audit recheck` utan, kovetkezo iterationben indithato.

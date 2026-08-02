@@ -535,6 +535,12 @@ async function executeRepairRun(interaction: ChatInputCommandInteraction): Promi
     });
     return;
   }
+  if (job.iteration >= job.max_iterations) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has reached its repair-run budget (${job.iteration}/${job.max_iterations}).`,
+    });
+    return;
+  }
 
   const repairWorktree = getAuditRepairWorktree(job.id);
   if (!repairWorktree || (repairWorktree.status !== "prepared" && repairWorktree.status !== "retained")) {
