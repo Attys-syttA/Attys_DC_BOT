@@ -361,11 +361,14 @@ async function executeStop(interaction: ChatInputCommandInteraction): Promise<vo
   requestAuditJobStop(job.id, new Date().toISOString());
   const controller = activeAuditControllers.get(job.id);
   controller?.abort();
+  if (!controller) {
+    updateAuditJobProgress(job.id, "stopped", null, job.iteration, new Date().toISOString());
+  }
   recordOperatorEvent({ kind: "task", status: "audit-stop-requested", channelId: interaction.channelId });
   await interaction.editReply({
     content: controller
       ? `Stop requested for audit job \`${job.id.slice(0, 8)}...\`; running process abort requested.`
-      : `Stop requested for audit job \`${job.id.slice(0, 8)}...\`.`,
+      : `Stop requested for audit job \`${job.id.slice(0, 8)}...\`; job marked stopped.`,
   });
 }
 

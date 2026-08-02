@@ -499,8 +499,39 @@ describe("/audit", () => {
     await execute(interaction as never);
 
     expect(mocks.requestAuditJobStop).toHaveBeenCalledWith("audit-job-1", expect.any(String));
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "stopped",
+      null,
+      0,
+      expect.any(String),
+    );
     expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Stop requested for audit job `audit-jo...`.",
+      content: "Stop requested for audit job `audit-jo...`; job marked stopped.",
+    });
+  });
+
+  it("marks a waiting manual-review audit job stopped without running repair cleanup", async () => {
+    mocks.getActiveAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      current_step: null,
+      iteration: 1,
+    }));
+    const interaction = makeInteraction("stop");
+
+    await execute(interaction as never);
+
+    expect(mocks.requestAuditJobStop).toHaveBeenCalledWith("audit-job-1", expect.any(String));
+    expect(mocks.updateAuditJobProgress).toHaveBeenCalledWith(
+      "audit-job-1",
+      "stopped",
+      null,
+      1,
+      expect.any(String),
+    );
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Stop requested for audit job `audit-jo...`; job marked stopped.",
     });
   });
 

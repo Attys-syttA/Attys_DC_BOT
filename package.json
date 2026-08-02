@@ -1,6 +1,6 @@
 {
   "name": "attys-dc-bot",
-  "version": "0.1.1-prerelease.54",
+  "version": "0.1.1-prerelease.55",
   "description": "Local-first Windows Discord control surface for Codex CLI",
   "type": "module",
   "main": "dist/index.js",

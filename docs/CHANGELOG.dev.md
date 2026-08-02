@@ -2,6 +2,8 @@
 
 ## 2026-08-02
 
+- Audit stop terminalization: `/audit stop` mostantol controller nelkuli aktiv audit jobnal `stopped` terminal allapotot allit. Igy manual-review/repair-review fazisban nincs felig aktiv stop-requested job, es nincs repair workspace cleanup vagy source write.
+- Version bump: a package verzio `0.1.1-prerelease.55`, mert a user-visible `/audit stop` viselkedes pontosult.
 - Audit review next-action guidance: `/audit review` mostantol a legutobbi repair execution statusza alapjan mutatja a kovetkezo biztonsagos lepest: `started` utan `/audit repair-reviewed`, `reviewed` utan `/audit recheck`.
 - Version bump: a package verzio `0.1.1-prerelease.54`, mert a user-visible `/audit review` dontesi osszegzes pontosult.
 - Audit recheck reviewed gate: `/audit recheck` mar elutasitja a futast, ha az aktualis iterationben van meg csak `started` repair execution. Ilyenkor elobb `/audit repair-reviewed` kell, majd utana johet a recheck.
