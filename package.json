@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
-    "discord.js": "^14.19.3",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.2.4",
     "zod": "^4.0.0"
   },
