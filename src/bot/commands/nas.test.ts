@@ -1541,9 +1541,9 @@ describe("/nas", () => {
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
-    expect(content).toContain("OK NAS repository plan");
+    expect(content).toContain("OK unified NAS/BotOps plan");
     expect(content).toContain("OK remote boundary approval");
-    expect(content).toContain("approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart");
+    expect(content).toContain("approval-gated actions: NAS source/share writes, remote execution changes, deploy, rebuild, restart");
   });
 
   it("keeps the NAS handoff gate behind the NAS status flag", async () => {

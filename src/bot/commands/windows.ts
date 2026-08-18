@@ -12,6 +12,10 @@ const helperCapabilities: Record<string, BotOpsCapability> = {
   restart: "service.restart",
 };
 
+export function resolveWindowsHelperCapability(helper: string): BotOpsCapability | undefined {
+  return helperCapabilities[helper];
+}
+
 export const data = new SlashCommandBuilder()
   .setName("windows")
   .setDescription("Create staged Windows execution-plane requests")
@@ -59,7 +63,14 @@ export async function execute(
   }
 
   const helper = interaction.options.getString("helper", true);
-  const capability = helperCapabilities[helper];
+  const capability = resolveWindowsHelperCapability(helper);
+  if (!capability) {
+    await interaction.editReply({
+      content: "`/windows helper-run` rejected an unsupported helper. Allowed helpers: `status`, `check`, `restart`.",
+    });
+    return;
+  }
+
   const { job, created } = createOrGetBotOpsJob({
     job_id: interaction.options.getString("job_id") ?? undefined,
     requested_by: interaction.user.id,

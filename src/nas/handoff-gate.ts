@@ -48,13 +48,13 @@ export const DEFAULT_NAS_HANDOFF_GATE_CRITERIA: NasHandoffGateCriterion[] = [
     id: "nas-scope-split",
     label: "shared vs NAS-specific split",
     status: "ok",
-    summary: "local/shared responsibilities stay in this repo; NAS-specific implementation needs its own repo plan",
+    summary: "local/shared and NAS-specific BotOps runtime responsibilities are consolidated in this repo",
   },
   {
-    id: "nas-repo-plan",
-    label: "NAS repository plan",
+    id: "unified-nas-plan",
+    label: "unified NAS/BotOps plan",
     status: "ok",
-    summary: "Attys_DC_BOT_NAS has its own AGENTS, STATE, active BotOps plan, and published control-plane baseline",
+    summary: "Attys_DC_BOT is the source-of-truth; Attys_DC_BOT_NAS is reference-only and must not run a parallel BotOps runtime",
   },
   {
     id: "remote-boundary-approval",
@@ -88,7 +88,7 @@ export function renderNasHandoffGateReport(report = evaluateNasHandoffGate()): s
       `- ${criterion.status.toUpperCase()} ${criterion.label}: ${criterion.summary}`
     ),
     "",
-    "approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart",
+    "approval-gated actions: NAS source/share writes, remote execution changes, deploy, rebuild, restart",
   ];
   return lines.join("\n");
 }

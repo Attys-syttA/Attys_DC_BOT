@@ -6,7 +6,7 @@ import {
 } from "./handoff-gate.js";
 
 describe("NAS handoff gate", () => {
-  it("is ready after the approved NAS repository and remote-boundary checkpoints", () => {
+  it("is ready after the unified NAS plan and remote-boundary checkpoints", () => {
     const report = evaluateNasHandoffGate();
 
     expect(report.status).toBe("ready");
@@ -44,9 +44,9 @@ describe("NAS handoff gate", () => {
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
-    expect(content).toContain("OK NAS repository plan");
+    expect(content).toContain("OK unified NAS/BotOps plan");
     expect(content).toContain("OK remote boundary approval");
-    expect(content).toContain("approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart");
+    expect(content).toContain("approval-gated actions: NAS source/share writes, remote execution changes, deploy, rebuild, restart");
     expect(content).not.toContain("E:\\");
     expect(content).not.toContain("token");
   });

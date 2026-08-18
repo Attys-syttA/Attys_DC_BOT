@@ -2,6 +2,9 @@
 
 ## 2026-08-18
 
+- NAS/BotOps source-of-truth cleanup: `/nas handoff-gate` now reports the unified NAS/BotOps plan in `Attys_DC_BOT` instead of treating `Attys_DC_BOT_NAS` as an active repository prerequisite. The reference NAS repo remains superseded/reference-only, and the approval-gated action list now says NAS source/share writes instead of NAS repo source writes.
+- Windows helper fail-closed guard: `/windows helper-run` now rejects unsupported helper payloads before creating a BotOps job. Allowed helpers remain `status`, `check`, and `restart`; no arbitrary shell path was added.
+- Version bump: a package verzio `0.1.1-prerelease.78`, mert a user-visible `/nas handoff-gate` szoveg es a `/windows helper-run` invalid-helper hibakezeles pontosult.
 - BotOps worker visibility: `/ops workers` now reports read-only NAS and Windows worker supervisor status with public-safe log names. It explicitly leaves start/stop/restart from Discord disabled and performs no worker execution, approval, service restart, deploy, commit, push, cleanup, or service install.
 - Version bump: a package verzio `0.1.1-prerelease.77`, mert uj user-visible read-only `/ops workers` supervisor status nezet jelent meg.
 - Live BotOps worker visibility publication: after commit `30b3f0c`, `win-start.bat --restart` restarted the live Windows bot as `CodexBot.exe` PID `41972`; `bot.err.log` stayed empty and startup logged `Registered 29 application commands`. The top-level count did not change because `/ops workers` is a subcommand; local slash schema verification returned `OK /ops workers subcommand present`. `npm run doctor:local` passed and both BotOps worker supervisor status commands reported `stopped`, so no worker loop was started by publication.

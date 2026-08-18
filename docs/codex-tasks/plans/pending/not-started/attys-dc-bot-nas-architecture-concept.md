@@ -1,5 +1,7 @@
 # Attys_DC_BOT_NAS – fejlesztési koncepció és architekturális átadás
 
+> 2026-08-18 superseded note: ezt a tervet ne indítsd külön `Attys_DC_BOT_NAS` source-of-truth irányként. A jelenlegi döntés szerint az `Attys_DC_BOT` az egyetlen aktív repo a Discord bothoz, BotOps contracthoz, NAS handoff/control-plane helperhez és korlátozott Windows/NAS worker execution réteghez. Ez a dokumentum történeti/reference anyag marad; belőle csak kontrolláltan átvett ötletek kerülhetnek az aktív `Attys_DC_BOT` tervbe.
+
 ## 1. Kiinduló helyzet
 
 Két kapcsolódó repository létezik:
