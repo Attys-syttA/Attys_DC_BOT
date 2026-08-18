@@ -138,6 +138,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - BotOps worker consolidation: a fix NAS worker, fix Windows worker, PID/log worker supervisor és CLI wrapper réteg a fő `Attys_DC_BOT` repóba került `botops:*` npm scriptnevek alatt. Ez megszünteti a kétrepo-s BotOps runtime irányt; a NAS repo továbbiakban referencia/superseded forrás, nem önálló futtatási truth.
 - BotOps worker visibility: `/ops workers` read-only supervisor státuszt ad a NAS és Windows worker loopokról, public-safe lognevekkel. Ez nem indít worker folyamatot, nem állít le semmit, és nem ad restart/deploy/commit/push/cleanup képességet Discordból.
 - BotOps lease expiry hardening: lejárt `Running` worker lease után a job fail-closed `WaitingWorker` állapotba kerül public-safe `worker lease expired` eredménnyel, és a lejárt lease tulajdonosa már nem küldhet elfogadott heartbeatet vagy completiont.
+- BotOps lease visibility: `/ops logs` részletes nézete mutatja a `lease expires` mezőt, a `/ops jobs` pedig `WaitingWorker` sorban a public-safe resultot, így a recovery állapot operátori oldalról érthető.
 - Live NAS update checkpoint: a NAS control-plane deploy frissült a publikált Windows oldali source commitra, a verifier, bridge státusz és synthetic bridge smoke zöld; ez deploy-bizonyíték, nem általános automatikus NAS write/deploy engedély.
 - NAS bridge live smoke refresh: 2026-08-18-án a Windows bridge indítása után a read-only deploy verifier zöld lett (`worker-health` 1/1), és a synthetic `nas:bridge:smoke` `plans` request `passed`, `summary=1/1 passed` eredménnyel zárt, NAS konténer rebuild nélkül.
 
@@ -957,6 +958,7 @@ Repair/worktree szeletnél ezen felül:
 - A BotOps worker visibility miatt a package verzió `0.1.1-prerelease.77`, mert `/ops workers` read-only worker supervisor státusz nézet jelent meg.
 - A NAS/BotOps source-of-truth cleanup miatt a package verzió `0.1.1-prerelease.78`, mert a user-visible `/nas handoff-gate` kimenet az egységes `Attys_DC_BOT` irányt mutatja, és `/windows helper-run` fail-closed módon visszautasítja az unsupported helper payloadot.
 - A BotOps lease expiry hardening miatt a package verzió `0.1.1-prerelease.79`, mert a worker lifecycle lejárt lease esetén fail-closed `WaitingWorker` állapotot és késői heartbeat/completion elutasítást kapott.
+- A BotOps lease visibility miatt a package verzió `0.1.1-prerelease.80`, mert a user-visible `/ops logs` és `/ops jobs` kimenet érthetőbb lease/recovery állapotot mutat.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

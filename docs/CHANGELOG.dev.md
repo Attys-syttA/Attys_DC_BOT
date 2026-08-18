@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps lease visibility: `/ops logs` job details now show `lease expires`, and `/ops jobs` compact rows show the public-safe result for `WaitingWorker` jobs, so expired-lease recovery states are understandable without raw logs.
+- Version bump: a package verzio `0.1.1-prerelease.80`, mert a user-visible BotOps job/lease observability bovult.
 - BotOps lease expiry hardening: expired `Running` worker leases now move to `WaitingWorker` with a public-safe `worker lease expired` result and audit event. Late heartbeats or completions from the expired lease owner are rejected, so a worker cannot continue blindly after its lease window.
 - Version bump: a package verzio `0.1.1-prerelease.79`, mert a BotOps worker lifecycle fail-closed lease expiry kezelest kapott.
 - NAS/BotOps source-of-truth cleanup: `/nas handoff-gate` now reports the unified NAS/BotOps plan in `Attys_DC_BOT` instead of treating `Attys_DC_BOT_NAS` as an active repository prerequisite. The reference NAS repo remains superseded/reference-only, and the approval-gated action list now says NAS source/share writes instead of NAS repo source writes.

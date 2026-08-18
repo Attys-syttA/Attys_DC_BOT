@@ -3,7 +3,8 @@ import type { BotOpsJob } from "./contract.js";
 
 export function formatBotOpsJobLine(job: BotOpsJob): string {
   const approval = job.approval_state === "not_required" ? "" : ` approval=${job.approval_state}`;
-  return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}`;
+  const result = job.status === "WaitingWorker" && job.result ? ` result=${job.result}` : "";
+  return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}${result}`;
 }
 
 export function formatBotOpsJobDetails(job: BotOpsJob): string {
@@ -16,6 +17,7 @@ export function formatBotOpsJobDetails(job: BotOpsJob): string {
     `approval expires: ${job.approval_expires_at ?? "none"}`,
     `summary: ${job.summary}`,
     `lease: ${job.lease_owner ?? "none"}`,
+    `lease expires: ${job.lease_expires_at ?? "none"}`,
     `heartbeat: ${job.heartbeat_at ?? "none"}`,
     `result: ${job.result || "none"}`,
   ].join("\n");
