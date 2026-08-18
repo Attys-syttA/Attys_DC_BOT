@@ -566,6 +566,76 @@ export function markExpiredBotOpsLeases(now = new Date()): number {
   return changed.changes;
 }
 
+export type BotOpsRecoveryResult =
+  | { recovered: true; reason: "recovered"; job: BotOpsJob }
+  | { recovered: false; reason: "not_found" | "not_waiting_worker" | "not_lease_expired" | "approval_missing" | "approval_stale"; job?: BotOpsJob };
+
+export function recoverBotOpsWaitingWorkerJob(
+  jobId: string,
+  recoveredBy: string,
+  now = new Date(),
+): BotOpsRecoveryResult {
+  const job = getBotOpsJob(jobId);
+  if (!job) return { recovered: false, reason: "not_found" };
+  if (job.status !== "WaitingWorker") {
+    return { recovered: false, reason: "not_waiting_worker", job };
+  }
+  if (job.result !== "worker lease expired" || job.lease_owner || job.lease_expires_at) {
+    return { recovered: false, reason: "not_lease_expired", job };
+  }
+
+  const timestamp = now.toISOString();
+  const safeRecoveredBy = sanitizePublicText(recoveredBy, 80);
+  if (job.approval_state === "approved") {
+    if (!job.approval_expires_at) {
+      recordBotOpsEvent(jobId, "worker.recovery_blocked", safeRecoveredBy, "approval missing expiry", now);
+      return { recovered: false, reason: "approval_missing", job };
+    }
+    if (Date.parse(job.approval_expires_at) <= now.getTime()) {
+      db.prepare(`
+        UPDATE botops_jobs
+        SET approval_state = 'stale',
+          status = 'WaitingApproval',
+          result = 'approval expired during recovery',
+          updated_at = ?
+        WHERE job_id = ?
+          AND status = 'WaitingWorker'
+      `).run(timestamp, sanitizePublicText(jobId, 120));
+      recordBotOpsEvent(jobId, "approval.stale", safeRecoveredBy, "approval expired during recovery", now);
+      const staleJob = getBotOpsJob(jobId) ?? job;
+      return { recovered: false, reason: "approval_stale", job: staleJob };
+    }
+  } else if (job.approval_state !== "not_required") {
+    recordBotOpsEvent(jobId, "worker.recovery_blocked", safeRecoveredBy, `approval ${job.approval_state}`, now);
+    return { recovered: false, reason: "approval_missing", job };
+  }
+
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET status = 'Requested',
+      heartbeat_at = NULL,
+      logs = ?,
+      result = ?,
+      updated_at = ?
+    WHERE job_id = ?
+      AND status = 'WaitingWorker'
+      AND result = 'worker lease expired'
+      AND lease_owner IS NULL
+      AND lease_expires_at IS NULL
+  `).run(
+    `recovered by ${safeRecoveredBy}`,
+    "requeued after worker lease expiry",
+    timestamp,
+    sanitizePublicText(jobId, 120),
+  );
+  if (changed.changes !== 1) {
+    return { recovered: false, reason: "not_lease_expired", job: getBotOpsJob(jobId) ?? job };
+  }
+
+  recordBotOpsEvent(jobId, "worker.recovered", safeRecoveredBy, "requeued after worker lease expiry", now);
+  return { recovered: true, reason: "recovered", job: getBotOpsJob(jobId) ?? job };
+}
+
 export function acquireNextBotOpsJob(
   workerId: string,
   target: BotOpsTarget,

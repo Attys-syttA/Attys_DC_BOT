@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { ApplicationCommandOptionType } from "discord.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildBotOpsWorkersReply } from "./ops.js";
+import { buildBotOpsWorkersReply, data } from "./ops.js";
 import { workerSupervisorPaths } from "../../botops/worker-supervisor.js";
 
 const tempDirs: string[] = [];
@@ -38,5 +39,21 @@ describe("/ops workers", () => {
     expect(reply).toContain("log: nas.out.log");
     expect(reply).not.toContain(repo);
     expect(reply).not.toContain(":\\");
+  });
+});
+
+describe("/ops command surface", () => {
+  it("registers recover as an explicit operator action", () => {
+    const json = data.toJSON();
+    const recover = json.options?.find((option) => option.name === "recover");
+
+    expect(recover).toBeDefined();
+    expect(recover?.type).toBe(ApplicationCommandOptionType.Subcommand);
+    if (recover?.type !== ApplicationCommandOptionType.Subcommand) return;
+    expect(recover?.description).toContain("lease-expired");
+    expect(recover?.options?.[0]).toMatchObject({
+      name: "job_id",
+      required: true,
+    });
   });
 });

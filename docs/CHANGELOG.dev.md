@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps WaitingWorker recovery: `/ops recover job_id:<id>` now requeues only lease-expired `WaitingWorker` jobs and never starts execution directly. Approval-gated jobs are recovered only while the existing approval is still fresh; stale approvals fail closed back to `WaitingApproval`.
+- Version bump: a package verzio `0.1.1-prerelease.83`, mert user-visible `/ops recover` operatori recovery parancs jelent meg.
 - BotOps worker heartbeat freshness: worker heartbeat lists now label each heartbeat as `fresh` or `stale`, making `/windows status` and `/nas worker-status` easier to interpret when a worker is offline or delayed.
 - Version bump: a package verzio `0.1.1-prerelease.82`, mert a user-visible BotOps worker heartbeat status friss/stale jelzest kapott.
 - BotOps worker supervisor PID metadata guard: worker start now writes target/command metadata next to the PID file, `/ops workers` shows whether the PID is verified, and local stop/restart helpers fail closed instead of terminating a running PID without matching metadata.

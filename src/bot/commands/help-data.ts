@@ -231,7 +231,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "ops",
     category: "ops",
-    usage: "/ops status | /ops workers | /ops jobs limit:<1-25> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops logs job_id:<id>",
+    usage: "/ops status | /ops workers | /ops jobs limit:<1-25> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops recover job_id:<id> | /ops logs job_id:<id>",
     short: "A staged BotOps jobok allapotat, jovahagyasat es public-safe reszleteit kezeli.",
     details: [
       "`/ops status` osszesitett staged approval allapotot mutat.",
@@ -239,6 +239,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/ops jobs` a legutobbi BotOps jobokat listazza.",
       "`/ops approve` csak a job approval allapotat rogziti, de nem indit vegrehajtast.",
       "`/ops cancel` statuszt valt es audit trailt hagy, nem torli a jobot.",
+      "`/ops recover` csak lease-expired WaitingWorker jobot tesz vissza a sorba; lejart approvalnal uj jovahagyast ker.",
       "`/ops logs` public-safe job reszleteket es event historyt mutat.",
       "Nem futtat shellt, nem ad altalanos jogosultsagot, es mas capabilityre adott approvalt nem hasznal ujra.",
     ],

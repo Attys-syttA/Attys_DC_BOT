@@ -55,6 +55,7 @@ import {
   acquireNextBotOpsJob,
   markExpiredBotOpsApprovals,
   markExpiredBotOpsLeases,
+  recoverBotOpsWaitingWorkerJob,
   recordBotOpsHeartbeat,
   completeBotOpsJob,
   updateBotOpsJobStatus,
@@ -387,6 +388,105 @@ describe("database", () => {
         event_type: "worker.lease_expired",
         actor: "nas-worker-1",
         detail: "worker lease expired",
+      });
+    });
+
+    it("recovers only lease-expired WaitingWorker jobs without starting execution", () => {
+      createOrGetBotOpsJob({
+        job_id: "recover-1",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+      acquireNextBotOpsJob(
+        "nas-worker-1",
+        "nas",
+        ["nas.worker.check"],
+        1_000,
+        new Date("2026-08-18T10:00:00.000Z"),
+      );
+      markExpiredBotOpsLeases(new Date("2026-08-18T10:00:02.000Z"));
+
+      const recovery = recoverBotOpsWaitingWorkerJob(
+        "recover-1",
+        "operator",
+        new Date("2026-08-18T10:00:03.000Z"),
+      );
+
+      expect(recovery).toMatchObject({ recovered: true, reason: "recovered" });
+      expect(getBotOpsJob("recover-1")).toMatchObject({
+        status: "Requested",
+        result: "requeued after worker lease expiry",
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+      });
+      expect(listBotOpsJobEvents("recover-1")[0]).toMatchObject({
+        event_type: "worker.recovered",
+        actor: "operator",
+        detail: "requeued after worker lease expiry",
+      });
+    });
+
+    it("does not recover non-expired WaitingWorker jobs", () => {
+      createOrGetBotOpsJob({
+        job_id: "recover-wrong-result",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+      updateBotOpsJobStatus("recover-wrong-result", "WaitingWorker", "waiting for worker");
+
+      const recovery = recoverBotOpsWaitingWorkerJob("recover-wrong-result", "operator");
+
+      expect(recovery).toMatchObject({ recovered: false, reason: "not_lease_expired" });
+      expect(getBotOpsJob("recover-wrong-result")).toMatchObject({
+        status: "WaitingWorker",
+        result: "waiting for worker",
+      });
+    });
+
+    it("requires a fresh approval when recovering an approval-gated expired lease", () => {
+      createOrGetBotOpsJob({
+        job_id: "recover-stale-approval",
+        requested_by: "operator",
+        target: "windows",
+        capability: "service.restart",
+        summary: "restart",
+      });
+      approveBotOpsJob(
+        "recover-stale-approval",
+        "operator",
+        new Date("2026-08-18T10:00:00.000Z"),
+        1_000,
+      );
+      acquireNextBotOpsJob(
+        "windows-worker-1",
+        "windows",
+        ["service.restart"],
+        1_000,
+        new Date("2026-08-18T10:00:00.500Z"),
+      );
+      markExpiredBotOpsLeases(new Date("2026-08-18T10:00:02.000Z"));
+
+      const recovery = recoverBotOpsWaitingWorkerJob(
+        "recover-stale-approval",
+        "operator",
+        new Date("2026-08-18T10:00:02.000Z"),
+      );
+
+      expect(recovery).toMatchObject({ recovered: false, reason: "approval_stale" });
+      expect(getBotOpsJob("recover-stale-approval")).toMatchObject({
+        status: "WaitingApproval",
+        approval_state: "stale",
+        result: "approval expired during recovery",
+      });
+      expect(listBotOpsJobEvents("recover-stale-approval")[0]).toMatchObject({
+        event_type: "approval.stale",
+        actor: "operator",
+        detail: "approval expired during recovery",
       });
     });
 

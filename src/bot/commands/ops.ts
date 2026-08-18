@@ -7,6 +7,7 @@ import {
   getBotOpsJob,
   listBotOpsJobEvents,
   listBotOpsJobs,
+  recoverBotOpsWaitingWorkerJob,
   updateBotOpsJobStatus,
 } from "../../db/database.js";
 import {
@@ -66,6 +67,13 @@ export const data = new SlashCommandBuilder()
       .setDescription("BotOps job id")
       .setRequired(true)))
   .addSubcommand((subcommand) => subcommand
+    .setName("recover")
+    .setDescription("Requeue one lease-expired WaitingWorker BotOps job")
+    .addStringOption((option) => option
+      .setName("job_id")
+      .setDescription("BotOps job id")
+      .setRequired(true)))
+  .addSubcommand((subcommand) => subcommand
     .setName("logs")
     .setDescription("Show public-safe details for one BotOps job")
     .addStringOption((option) => option
@@ -110,6 +118,23 @@ export async function execute(
     await interaction.editReply({
       content: cancelled
         ? `BotOps job \`${jobId}\` cancelled.`
+        : `BotOps job \`${jobId}\` was not found.`,
+    });
+    return;
+  }
+
+  if (action === "recover") {
+    const recovery = recoverBotOpsWaitingWorkerJob(jobId, interaction.user.id);
+    if (recovery.recovered) {
+      await interaction.editReply({
+        content: `**BotOps recovery requested**\n\`\`\`text\n${formatBotOpsJobDetails(recovery.job)}\n\`\`\`\nNo execution was started by this recovery command.`,
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: recovery.job
+        ? `BotOps job \`${jobId}\` was not recovered: ${recovery.reason}.\n\`\`\`text\n${formatBotOpsJobDetails(recovery.job)}\n\`\`\``
         : `BotOps job \`${jobId}\` was not found.`,
     });
     return;
