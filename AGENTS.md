@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-This repository is `Attys_DC_BOT`, a local-first Discord bot for controlling Codex CLI on the same Windows machine.
+This repository is `Attys_DC_BOT`, the primary source-of-truth Discord bot and BotOps control surface for the Codex workflow.
 
 Target GitHub repository:
 
@@ -15,20 +15,27 @@ Target direction:
 ```text
 Discord
   -> discord.js bot
+  -> BotOps request / approval contract
   -> local Codex session manager / app-server client
   -> local Codex CLI login state
   -> local project folders under BASE_PROJECT_DIR
   -> local SQLite mapping state
+  -> NAS handoff/control-plane helpers and limited worker execution
 ```
 
-Explicitly out of scope:
+Source-of-truth rule:
 
-- remote execution bridge
+- NAS-related BotOps runtime, contracts, command surface, worker helpers, and operator documentation belong in this repository.
+- `Attys_DC_BOT_NAS` is historical/reference material unless a later explicit migration plan says otherwise.
+- Do not run two competing BotOps implementations from both repositories.
+
+Explicitly out of scope without a separate approved plan:
+
 - custom HTTP execution agent
-- multi-machine state sharing
-- network-share based workflow
 - portable-drive workflow
 - OpenAI API key requirement for normal use
+- arbitrary shell execution from Discord
+- unattended NAS-side source write, rebuild, deploy, service restart, commit, push, or cleanup
 
 ## 3. Startup and Safety
 

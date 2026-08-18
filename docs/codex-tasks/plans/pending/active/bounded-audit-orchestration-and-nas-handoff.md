@@ -8,7 +8,7 @@ Kapcsolódó jelenlegi helyzet:
 - Nem váltja le és nem keveri össze az `external-platform-acceptance.md` tervet. A két terv egymástól függetlenül követhető.
 - A jelenlegi bot már rendelkezik project-channel mappinggel, egy aktív Codex turnnel csatornánként, queue-val, approval és user-input flow-val, `/run-tests`, `/dashboard`, `/events`, `/logs`, `/health`, `/doctor` és Stop vezérléssel.
 - A ForgeLab nyilvános dokumentációja és marketingoldala csak mintaforrás. A motor zárt forrású, ezért a leírt belső megvalósítás és biztonsági állítások nem tekinthetők auditált referenciakódnak.
-- Az `Attys_DC_BOT_NAS` külön repository és külön kockázati felület. Ebben a tervben csak handoff-feltételek szerepelnek; a NAS repo módosítása külön, explicit feladat lesz.
+- 2026-08-18 korrekció: az `Attys_DC_BOT` marad az egyetlen aktív source-of-truth a Discord bothoz, BotOps contracthoz, NAS handoff/control-plane helperhez és a korlátozott worker execution réteghez. Az `Attys_DC_BOT_NAS` történeti/reference repo; hasznos worker-szeletei csak kontrollált átvétellel kerülhetnek ide, nem futtathat párhuzamos aktív BotOps rendszert.
 
 ## 2026-08-01 prioritásváltás
 
@@ -135,6 +135,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - Audit repair retry guidance: `/audit review` prepared/retained repair worktree és megmaradt iteration budget mellett explicit `/audit repair-plan`, `/audit repair-run`, `/audit recheck` next-action sort mutat, így sikertelen, nem stagnált recheck után látszik a következő kézi retry kör.
 - NAS handoff gate: `/nas handoff-gate` read-only előfeltétel-riportot ad. A source publication, security review, shared-vs-NAS scope split, külön NAS repo plan és explicit remote-boundary approval checkpoint lezárt, ezért a gate `ready`; NAS/source write, remote execution change, deploy, rebuild, restart, commit, push és cleanup továbbra is külön parancsra és jóváhagyással történhet.
 - BotOps production command surface: a live Windows bot additive BotOps SQLite job/event/heartbeat storage-ot kapott, valamint `/ops status|jobs|approve|cancel|logs`, `/windows status|helper-run` és `/nas worker-status` parancsokat. Ezek csak staged job requestet, approval/cancel állapotot vagy public-safe státuszt kezelnek; közvetlen shell, worker start, service restart, source write, commit, push, deploy, rebuild vagy cleanup nincs.
+- BotOps worker consolidation: a fix NAS worker, fix Windows worker, PID/log worker supervisor és CLI wrapper réteg a fő `Attys_DC_BOT` repóba került `botops:*` npm scriptnevek alatt. Ez megszünteti a kétrepo-s BotOps runtime irányt; a NAS repo továbbiakban referencia/superseded forrás, nem önálló futtatási truth.
 - Live NAS update checkpoint: a NAS control-plane deploy frissült a publikált Windows oldali source commitra, a verifier, bridge státusz és synthetic bridge smoke zöld; ez deploy-bizonyíték, nem általános automatikus NAS write/deploy engedély.
 - NAS bridge live smoke refresh: 2026-08-18-án a Windows bridge indítása után a read-only deploy verifier zöld lett (`worker-health` 1/1), és a synthetic `nas:bridge:smoke` `plans` request `passed`, `summary=1/1 passed` eredménnyel zárt, NAS konténer rebuild nélkül.
 
@@ -143,7 +144,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - NAS control-plane és Windows worker transport/auth kapcsolatának további keményítése a mostani file-backed handoff mailbox, PC worker HTTP, restricted SSH container lifecycle helper és jóváhagyott staged-autonomy checkpoint után.
 - Repair eredményének utókezelése: apply után a normál source worktree szándékosan dirty marad, ezért commit/push vagy visszaállítás továbbra is külön emberi/operátori döntés.
 - Semleges planner/executor/validator szerepek opcionális bevezetése, kezdetben egy Codex threaden belül.
-- Külön NAS architecture plan létrehozása és explicit remote-boundary approval a NAS repo source write / remote execution változtatások előtt.
+- A korábbi külön NAS repo source-of-truth irány lezárása dokumentációban és Git állapotban; új NAS write/deploy/rebuild runtime csak innen, külön approval gate mögött indulhat.
 
 ## 1. Forrásalap és bizonyítéki határ
 

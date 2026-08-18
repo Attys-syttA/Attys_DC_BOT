@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps worker consolidation correction: `Attys_DC_BOT` is now explicitly documented as the single source-of-truth for the live Discord bot, BotOps command surface, NAS handoff/control-plane helpers, and limited worker execution. The fixed NAS worker, fixed Windows worker, PID/log worker supervisor, CLI wrappers, and focused worker tests were ported from the reference NAS repo into this repo under `botops:*` scripts. No worker loop, restart, deploy, commit, push, cleanup, or service install was started by this port.
+- Version bump: a package verzio `0.1.1-prerelease.76`, mert operator-facing BotOps worker/supervisor scripts es tesztelt execution helper layer kerult at a fo repoba.
 - BotOps production command surface: added additive BotOps SQLite job/event/heartbeat storage to the live Windows Discord bot, plus `/ops status|jobs|approve|cancel|logs`, `/windows status|helper-run`, and `/nas worker-status`. These routes create staged requests or show public-safe state only; they do not run shell, start workers, restart services, write source, commit, push, deploy, rebuild, or cleanup automatically.
 - Live BotOps command registration: after publication, `win-start.bat` restarted the live Windows bot, `bot.err.log` stayed empty, the startup log showed `Registered 29 application commands`, and a direct command-surface REST parity probe returned `OK application command registration 29/29`.
 - Version bump: a package verzio `0.1.1-prerelease.75`, mert uj user-visible BotOps command surface jelent meg.
