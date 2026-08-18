@@ -3,6 +3,7 @@
 ## 2026-08-18
 
 - BotOps production command surface: added additive BotOps SQLite job/event/heartbeat storage to the live Windows Discord bot, plus `/ops status|jobs|approve|cancel|logs`, `/windows status|helper-run`, and `/nas worker-status`. These routes create staged requests or show public-safe state only; they do not run shell, start workers, restart services, write source, commit, push, deploy, rebuild, or cleanup automatically.
+- Live BotOps command registration: after publication, `win-start.bat` restarted the live Windows bot, `bot.err.log` stayed empty, the startup log showed `Registered 29 application commands`, and a direct command-surface REST parity probe returned `OK application command registration 29/29`.
 - Version bump: a package verzio `0.1.1-prerelease.75`, mert uj user-visible BotOps command surface jelent meg.
 - NAS remote-boundary approval checkpoint: operator approval after the NAS control-plane plan and live NAS update moved `/nas handoff-gate` from `blocked` to `ready`. The report now explicitly lists remaining command-by-command approval gates for NAS repo source writes, remote execution changes, deploy, rebuild, and restart.
 - Live NAS update checkpoint: `npm run nas:deploy -- -Apply` refreshed the NAS control-plane to source commit `6f04af51dd0d` and package version `0.1.1-prerelease.73`; deploy verification, bridge status, and synthetic `nas:bridge:smoke` passed with `worker-health` 1/1.
