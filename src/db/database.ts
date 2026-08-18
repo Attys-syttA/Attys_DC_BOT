@@ -531,6 +531,41 @@ export function markExpiredBotOpsApprovals(now = new Date()): number {
   return changed.changes;
 }
 
+export function markExpiredBotOpsLeases(now = new Date()): number {
+  const timestamp = now.toISOString();
+  const expiredJobs = db.prepare(`
+    SELECT job_id, lease_owner
+    FROM botops_jobs
+    WHERE status = 'Running'
+      AND lease_expires_at IS NOT NULL
+      AND lease_expires_at <= ?
+  `).all(timestamp) as { job_id: string; lease_owner: string | null }[];
+
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET status = 'WaitingWorker',
+      result = 'worker lease expired',
+      lease_owner = NULL,
+      lease_expires_at = NULL,
+      updated_at = ?
+    WHERE status = 'Running'
+      AND lease_expires_at IS NOT NULL
+      AND lease_expires_at <= ?
+  `).run(timestamp, timestamp);
+
+  for (const job of expiredJobs) {
+    recordBotOpsEvent(
+      job.job_id,
+      "worker.lease_expired",
+      job.lease_owner ?? "system",
+      "worker lease expired",
+      now,
+    );
+  }
+
+  return changed.changes;
+}
+
 export function acquireNextBotOpsJob(
   workerId: string,
   target: BotOpsTarget,
@@ -541,6 +576,7 @@ export function acquireNextBotOpsJob(
   const uniqueCapabilities = [...new Set(capabilities)];
   if (uniqueCapabilities.length === 0) return undefined;
   markExpiredBotOpsApprovals(now);
+  markExpiredBotOpsLeases(now);
 
   const placeholders = uniqueCapabilities.map(() => "?").join(", ");
   const record = db.prepare(`
@@ -587,7 +623,14 @@ export function recordBotOpsHeartbeat(
     WHERE job_id = ?
       AND lease_owner = ?
       AND status = 'Running'
-  `).run(timestamp, timestamp, sanitizePublicText(jobId, 120), sanitizePublicText(workerId, 120));
+      AND lease_expires_at > ?
+  `).run(
+    timestamp,
+    timestamp,
+    sanitizePublicText(jobId, 120),
+    sanitizePublicText(workerId, 120),
+    timestamp,
+  );
   return changed.changes === 1;
 }
 
@@ -609,12 +652,14 @@ export function completeBotOpsJob(
     WHERE job_id = ?
       AND lease_owner = ?
       AND status = 'Running'
+      AND lease_expires_at > ?
   `).run(
     status,
     sanitizePublicText(result, 2_000),
     updated,
     sanitizePublicText(jobId, 120),
     sanitizePublicText(workerId, 120),
+    updated,
   );
   if (changed.changes === 1) {
     recordBotOpsEvent(jobId, `worker.${status}`, workerId, result, now);

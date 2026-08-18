@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps lease expiry hardening: expired `Running` worker leases now move to `WaitingWorker` with a public-safe `worker lease expired` result and audit event. Late heartbeats or completions from the expired lease owner are rejected, so a worker cannot continue blindly after its lease window.
+- Version bump: a package verzio `0.1.1-prerelease.79`, mert a BotOps worker lifecycle fail-closed lease expiry kezelest kapott.
 - NAS/BotOps source-of-truth cleanup: `/nas handoff-gate` now reports the unified NAS/BotOps plan in `Attys_DC_BOT` instead of treating `Attys_DC_BOT_NAS` as an active repository prerequisite. The reference NAS repo remains superseded/reference-only, and the approval-gated action list now says NAS source/share writes instead of NAS repo source writes.
 - Windows helper fail-closed guard: `/windows helper-run` now rejects unsupported helper payloads before creating a BotOps job. Allowed helpers remain `status`, `check`, and `restart`; no arbitrary shell path was added.
 - Version bump: a package verzio `0.1.1-prerelease.78`, mert a user-visible `/nas handoff-gate` szoveg es a `/windows helper-run` invalid-helper hibakezeles pontosult.

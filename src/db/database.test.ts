@@ -54,6 +54,7 @@ import {
   approveBotOpsJob,
   acquireNextBotOpsJob,
   markExpiredBotOpsApprovals,
+  markExpiredBotOpsLeases,
   recordBotOpsHeartbeat,
   completeBotOpsJob,
   updateBotOpsJobStatus,
@@ -345,6 +346,48 @@ describe("database", () => {
         "worker.acquired",
         "job.created",
       ]);
+    });
+
+    it("fails closed after a worker lease expires", () => {
+      createOrGetBotOpsJob({
+        job_id: "lease-expired-1",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+      acquireNextBotOpsJob(
+        "nas-worker-1",
+        "nas",
+        ["nas.worker.check"],
+        1_000,
+        new Date("2026-08-18T10:00:00.000Z"),
+      );
+
+      expect(recordBotOpsHeartbeat(
+        "lease-expired-1",
+        "nas-worker-1",
+        new Date("2026-08-18T10:00:02.000Z"),
+      )).toBe(false);
+      expect(completeBotOpsJob(
+        "lease-expired-1",
+        "nas-worker-1",
+        "Completed",
+        "late completion",
+        new Date("2026-08-18T10:00:02.000Z"),
+      )).toBe(false);
+
+      expect(markExpiredBotOpsLeases(new Date("2026-08-18T10:00:02.000Z"))).toBe(1);
+      const job = getBotOpsJob("lease-expired-1");
+      expect(job?.status).toBe("WaitingWorker");
+      expect(job?.result).toBe("worker lease expired");
+      expect(job?.lease_owner).toBeNull();
+      expect(job?.lease_expires_at).toBeNull();
+      expect(listBotOpsJobEvents("lease-expired-1")[0]).toMatchObject({
+        event_type: "worker.lease_expired",
+        actor: "nas-worker-1",
+        detail: "worker lease expired",
+      });
     });
 
     it("records worker heartbeat snapshots by worker id", () => {
