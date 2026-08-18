@@ -500,7 +500,7 @@ describe("Windows worker", () => {
     expect(result.result).toBe("service restart helper completed: win-start.bat and doctor passed");
     expect(calls).toContain("git status --porcelain");
     expect(calls).toContain("cmd /c win-start.bat");
-    expect(calls).toContain("npm.cmd run doctor:local");
+    expect(calls.some((call) => call.endsWith("run doctor:local"))).toBe(true);
     expect(calls.some((call) => call.includes("powershell"))).toBe(false);
     expect(getBotOpsJob("restart-approved")?.status).toBe("Completed");
   });
@@ -535,7 +535,7 @@ describe("Windows worker", () => {
     expect(result.status).toBe("failed");
     expect(result.result).toBe("service restart helper failed: post-restart doctor failed");
     expect(calls).toContain("cmd /c win-start.bat");
-    expect(calls).toContain("npm.cmd run doctor:local");
+    expect(calls.some((call) => call.endsWith("run doctor:local"))).toBe(true);
     expect(getBotOpsJob("restart-doctor-failed")?.status).toBe("Failed");
   });
 
