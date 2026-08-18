@@ -2,6 +2,9 @@
 
 ## 2026-08-18
 
+- NAS remote-boundary approval checkpoint: operator approval after the NAS control-plane plan and live NAS update moved `/nas handoff-gate` from `blocked` to `ready`. The report now explicitly lists remaining command-by-command approval gates for NAS repo source writes, remote execution changes, deploy, rebuild, and restart.
+- Live NAS update checkpoint: `npm run nas:deploy -- -Apply` refreshed the NAS control-plane to source commit `6f04af51dd0d` and package version `0.1.1-prerelease.73`; deploy verification, bridge status, and synthetic `nas:bridge:smoke` passed with `worker-health` 1/1.
+- Version bump: a package verzio `0.1.1-prerelease.74`, mert a user-visible `/nas handoff-gate` kimenet a jovahagyott staged-autonomy checkpointot mar `ready` allapotkent mutatja, mikozben a tovabbi veszelyes muveletek command-by-command approval gate mogott maradnak.
 - NAS repo plan checkpoint: a publikalt `Attys_DC_BOT_NAS` BotOps control-plane baseline utan a `/nas handoff-gate` a NAS repository plan kriteriumot `OK`-kent jelzi, de az osszallapot tovabbra is `blocked` az explicit remote-boundary approval hianya miatt. NAS source write, remote execution architecture change, deploy vagy container rebuild nem tortenik.
 - Version bump: a package verzio `0.1.1-prerelease.73`, mert a user-visible `/nas handoff-gate` kimenet pontosult.
 - NAS handoff gate review closeout: a `docs/NAS_HANDOFF_SECURITY_BOUNDARY_REVIEW.md` rogziti a local auth/path/command/secret/log boundary reviewt es a shared-vs-NAS scope splitet. A `/nas handoff-gate` most `OK`-kent jelzi a source publication, security review es scope split pontokat, de tovabbra is `blocked` marad a NAS repository plan es explicit remote-boundary approval hianya miatt.

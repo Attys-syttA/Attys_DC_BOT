@@ -6,12 +6,12 @@ import {
 } from "./handoff-gate.js";
 
 describe("NAS handoff gate", () => {
-  it("fails closed while boundary decisions remain unresolved", () => {
+  it("is ready after the approved NAS repository and remote-boundary checkpoints", () => {
     const report = evaluateNasHandoffGate();
 
-    expect(report.status).toBe("blocked");
-    expect(report.criteria.some((criterion) => criterion.status === "blocked")).toBe(true);
-    expect(report.nextAction).toBe("resolve remote boundary approval");
+    expect(report.status).toBe("ready");
+    expect(report.criteria.every((criterion) => criterion.status === "ok")).toBe(true);
+    expect(report.nextAction).toBe("NAS handoff may proceed under command-by-command approval gates");
   });
 
   it("can render a ready report only when every criterion is ok", () => {
@@ -33,20 +33,20 @@ describe("NAS handoff gate", () => {
     const report = evaluateNasHandoffGate(criteria);
 
     expect(report.status).toBe("ready");
-    expect(report.nextAction).toBe("NAS handoff may proceed to the dedicated architecture plan");
+    expect(report.nextAction).toBe("NAS handoff may proceed under command-by-command approval gates");
   });
 
   it("renders a public-safe operator report without local paths or secrets", () => {
     const content = renderNasHandoffGateReport();
 
     expect(content).toContain("NAS handoff gate");
-    expect(content).toContain("status: blocked");
+    expect(content).toContain("status: ready");
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
     expect(content).toContain("OK NAS repository plan");
-    expect(content).toContain("BLOCKED remote boundary approval");
-    expect(content).toContain("blocked actions: NAS repo source writes, remote execution architecture changes, deploy");
+    expect(content).toContain("OK remote boundary approval");
+    expect(content).toContain("approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart");
     expect(content).not.toContain("E:\\");
     expect(content).not.toContain("token");
   });

@@ -1537,13 +1537,13 @@ describe("/nas", () => {
 
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("**NAS Handoff Gate**");
-    expect(content).toContain("status: blocked");
+    expect(content).toContain("status: ready");
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
     expect(content).toContain("OK NAS repository plan");
-    expect(content).toContain("BLOCKED remote boundary approval");
-    expect(content).toContain("blocked actions: NAS repo source writes, remote execution architecture changes, deploy");
+    expect(content).toContain("OK remote boundary approval");
+    expect(content).toContain("approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart");
   });
 
   it("keeps the NAS handoff gate behind the NAS status flag", async () => {

@@ -59,8 +59,8 @@ export const DEFAULT_NAS_HANDOFF_GATE_CRITERIA: NasHandoffGateCriterion[] = [
   {
     id: "remote-boundary-approval",
     label: "remote boundary approval",
-    status: "blocked",
-    summary: "multi-machine execution boundary change requires explicit operator approval",
+    status: "ok",
+    summary: "operator approved NAS update and persistent worker direction; future writes/restarts/deploys remain command-gated",
   },
 ];
 
@@ -72,7 +72,7 @@ export function evaluateNasHandoffGate(
     status: blocked.length === 0 ? "ready" : "blocked",
     criteria: criteria.map((criterion) => ({ ...criterion })),
     nextAction: blocked.length === 0
-      ? "NAS handoff may proceed to the dedicated architecture plan"
+      ? "NAS handoff may proceed under command-by-command approval gates"
       : `resolve ${blocked[0].label}`,
   };
 }
@@ -88,7 +88,7 @@ export function renderNasHandoffGateReport(report = evaluateNasHandoffGate()): s
       `- ${criterion.status.toUpperCase()} ${criterion.label}: ${criterion.summary}`
     ),
     "",
-    "blocked actions: NAS repo source writes, remote execution architecture changes, deploy",
+    "approval-gated actions: NAS repo source writes, remote execution changes, deploy, rebuild, restart",
   ];
   return lines.join("\n");
 }
