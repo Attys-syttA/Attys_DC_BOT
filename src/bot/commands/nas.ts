@@ -207,7 +207,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Show read-only NAS control-plane container status"))
   .addSubcommand((subcommand) => subcommand
     .setName("worker-status")
-    .setDescription("Queue a fixed NAS worker health check"));
+    .setDescription("Queue a fixed NAS worker health check"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("worker-deploy-verify")
+    .setDescription("Queue an approval-gated NAS deploy verifier worker job"));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -1128,6 +1131,29 @@ export async function execute(
         formatBotOpsWorkerHeartbeats(heartbeats),
         "```",
         "No NAS shell or deploy action was executed directly from Discord.",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  if (subcommand === "worker-deploy-verify") {
+    const { job, created } = createOrGetBotOpsJob({
+      requested_by: interaction.user.id,
+      target: "nas",
+      capability: "nas.deploy.verify",
+      summary: "NAS fixed deploy verifier request",
+    });
+    const heartbeats = listBotOpsWorkerHeartbeats("nas");
+
+    await interaction.editReply({
+      content: [
+        created ? "**NAS deploy verifier job queued**" : "**NAS deploy verifier job already exists**",
+        "```text",
+        formatBotOpsJobDetails(job),
+        "",
+        formatBotOpsWorkerHeartbeats(heartbeats),
+        "```",
+        "No verifier was executed directly from Discord. Approval is required before the worker can run it.",
       ].join("\n"),
     });
     return;

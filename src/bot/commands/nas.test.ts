@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   listNasHandoffRequestsByStatus: vi.fn(),
   updateAuditJobProgress: vi.fn(),
   updateNasHandoffRequestResult: vi.fn(),
+  createOrGetBotOpsJob: vi.fn(),
+  listBotOpsWorkerHeartbeats: vi.fn(),
   writeHandoffEnvelope: vi.fn(),
   runLocalCommand: vi.fn(),
   recordOperatorEvent: vi.fn(),
@@ -62,6 +64,8 @@ vi.mock("../../db/database.js", () => ({
   listNasHandoffRequestsByStatus: mocks.listNasHandoffRequestsByStatus,
   updateAuditJobProgress: mocks.updateAuditJobProgress,
   updateNasHandoffRequestResult: mocks.updateNasHandoffRequestResult,
+  createOrGetBotOpsJob: mocks.createOrGetBotOpsJob,
+  listBotOpsWorkerHeartbeats: mocks.listBotOpsWorkerHeartbeats,
 }));
 
 vi.mock("./local-command.js", () => ({
@@ -136,6 +140,29 @@ describe("/nas", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:00.000Z",
     });
+    mocks.createOrGetBotOpsJob.mockReturnValue({
+      created: true,
+      job: {
+        job_id: "job-1",
+        requested_by: "operator-1",
+        target: "nas",
+        capability: "nas.worker.check",
+        status: "Requested",
+        approval_state: "not_required",
+        approved_by: null,
+        approval_expires_at: null,
+        summary: "NAS fixed worker health check",
+        payload_json: "",
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        created_at: "2026-08-18T10:00:00.000Z",
+        updated_at: "2026-08-18T10:00:00.000Z",
+      },
+    });
+    mocks.listBotOpsWorkerHeartbeats.mockReturnValue([]);
     mocks.listNasHandoffRequests.mockReturnValue([
       {
         id: "request-one",
@@ -1544,6 +1571,53 @@ describe("/nas", () => {
     expect(content).toContain("OK unified NAS/BotOps plan");
     expect(content).toContain("OK remote boundary approval");
     expect(content).toContain("approval-gated actions: NAS source/share writes, remote execution changes, deploy, rebuild, restart");
+  });
+
+  it("queues an approval-gated NAS deploy verifier worker job", async () => {
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({
+      created: true,
+      job: {
+        job_id: "nas-deploy-verify-1",
+        requested_by: "operator-1",
+        target: "nas",
+        capability: "nas.deploy.verify",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        summary: "NAS fixed deploy verifier request",
+        payload_json: "",
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        created_at: "2026-08-18T10:00:00.000Z",
+        updated_at: "2026-08-18T10:00:00.000Z",
+      },
+    });
+    const interaction = {
+      user: {
+        id: "operator-1",
+      },
+      options: {
+        getSubcommand: vi.fn(() => "worker-deploy-verify"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      requested_by: "operator-1",
+      target: "nas",
+      capability: "nas.deploy.verify",
+      summary: "NAS fixed deploy verifier request",
+    }));
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS deploy verifier job queued");
+    expect(content).toContain("approval: required");
+    expect(content).toContain("No verifier was executed directly from Discord");
   });
 
   it("keeps the NAS handoff gate behind the NAS status flag", async () => {

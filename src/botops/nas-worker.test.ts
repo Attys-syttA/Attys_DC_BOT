@@ -11,6 +11,7 @@ vi.mock("better-sqlite3", async () => {
 });
 
 import {
+  approveBotOpsJob,
   createOrGetBotOpsJob,
   getBotOpsJob,
   initDatabase,
@@ -18,6 +19,7 @@ import {
 } from "../db/database.js";
 import {
   buildNasWorkerStatusSnapshot,
+  type FixedNasCommandRunner,
   formatNasWorkerStatus,
   recordNasWorkerStatus,
   runNasWorkerOnce,
@@ -71,6 +73,63 @@ describe("NAS worker", () => {
     expect(getBotOpsJob("windows-status-1")?.status).toBe("Requested");
   });
 
+  it("does not pick NAS deploy verify jobs without approval", () => {
+    createOrGetBotOpsJob({
+      job_id: "nas-verify-1",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.deploy.verify",
+      summary: "deploy verify",
+    });
+
+    expect(runNasWorkerOnce("worker-1").status).toBe("idle");
+    expect(getBotOpsJob("nas-verify-1")?.status).toBe("WaitingApproval");
+  });
+
+  it("runs only the fixed NAS deploy verifier after approval", () => {
+    const calls: string[] = [];
+    const runner: FixedNasCommandRunner = (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      if ((command === "npm" || command === "npm.cmd") && args.join(" ") === "run nas:deploy:verify") {
+        return { code: 0, output: "passed" };
+      }
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "nas-verify-approved",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.deploy.verify",
+      summary: "deploy verify",
+    });
+    approveBotOpsJob("nas-verify-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runNasWorkerOnce("worker-1", new Date("2026-08-18T10:01:00.000Z"), runner);
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("NAS deploy verify helper completed: verifier passed");
+    expect(calls.some((call) => call.endsWith("run nas:deploy:verify"))).toBe(true);
+    expect(getBotOpsJob("nas-verify-approved")?.status).toBe("Completed");
+  });
+
+  it("records failed NAS deploy verifier results without fallback deploy", () => {
+    const runner: FixedNasCommandRunner = () => ({ code: 1, output: "failed" });
+    createOrGetBotOpsJob({
+      job_id: "nas-verify-failed",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.deploy.verify",
+      summary: "deploy verify",
+    });
+    approveBotOpsJob("nas-verify-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runNasWorkerOnce("worker-1", new Date("2026-08-18T10:01:00.000Z"), runner);
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("NAS deploy verify helper failed: verifier failed");
+    expect(getBotOpsJob("nas-verify-failed")?.status).toBe("Failed");
+  });
+
   it("formats public-safe worker status", () => {
     createOrGetBotOpsJob({
       job_id: "nas-check-2",
@@ -83,7 +142,7 @@ describe("NAS worker", () => {
     const formatted = formatNasWorkerStatus(buildNasWorkerStatusSnapshot("worker-1"));
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: nas.worker.check");
+    expect(formatted).toContain("capabilities: nas.worker.check, nas.deploy.verify");
     expect(formatted).toContain("queued jobs: 1");
     expect(formatted).not.toContain(":\\");
   });
@@ -92,7 +151,7 @@ describe("NAS worker", () => {
     const snapshot = buildNasWorkerStatusSnapshot("worker-1");
     recordNasWorkerStatus(snapshot, "status", "manual status check", new Date("2026-08-18T10:00:00.000Z"));
 
-    expect(snapshot.capabilities).toEqual(["nas.worker.check"]);
+    expect(snapshot.capabilities).toEqual(["nas.worker.check", "nas.deploy.verify"]);
     expect(listBotOpsWorkerHeartbeats("nas")[0]).toMatchObject({
       worker_id: "worker-1",
       status: "status",

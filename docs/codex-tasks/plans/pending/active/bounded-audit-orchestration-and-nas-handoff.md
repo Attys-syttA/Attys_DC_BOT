@@ -146,6 +146,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - BotOps job payload contract: a `botops_jobs.payload_json` additive mező kis strukturált helper payloadot tárolhat, például commit message-et; régi jobok üres payloaddal kompatibilisek.
 - BotOps Windows git commit helper: `/windows helper-run helper:commit message:<...>` approval-gated `git.commit` jobot hoz létre. A Windows worker csak már staged változásokat commitol, staged diff-check és secret scan után; unstaged/untracked változás, invalid message, diff-check hiba vagy secret scan hiba fail-closed blokkol.
 - BotOps Windows git push helper: `/windows helper-run helper:push` approval-gated `git.push` jobot hoz létre. A Windows worker csak fix Git push útvonalat futtat, tiszta worktree, upstream meglét és not-behind ahead/behind preflight után; commit, deploy, restart vagy arbitrary shell nincs hozzáadva.
+- BotOps NAS deploy verifier worker: `/nas worker-deploy-verify` approval-gated `nas.deploy.verify` jobot hoz létre. A NAS worker ehhez csak a meglévő read-only `npm run nas:deploy:verify` helpert futtatja; NAS deploy, rebuild, share write, restart, cleanup vagy arbitrary shell nincs hozzáadva.
 - Live BotOps worker-loop smoke: a helyi NAS és Windows worker supervisor futó/verified állapotban indult, majd egy-egy safe `nas.worker.check` és `status.read` jobot completed státuszra vitt, üres worker error logok mellett.
 - Live NAS update checkpoint: a NAS control-plane deploy frissült a publikált Windows oldali source commitra, a verifier, bridge státusz és synthetic bridge smoke zöld; ez deploy-bizonyíték, nem általános automatikus NAS write/deploy engedély.
 - NAS bridge live smoke refresh: 2026-08-18-án a Windows bridge indítása után a read-only deploy verifier zöld lett (`worker-health` 1/1), és a synthetic `nas:bridge:smoke` `plans` request `passed`, `summary=1/1 passed` eredménnyel zárt, NAS konténer rebuild nélkül.
@@ -973,6 +974,7 @@ Repair/worktree szeletnél ezen felül:
 - A BotOps aggregate worker heartbeat visibility miatt a package verzió `0.1.1-prerelease.84`, mert a user-visible `/ops status` összkép worker heartbeat lathatóságot kapott.
 - A BotOps Windows git push helper miatt a package verzió `0.1.1-prerelease.85`, mert a user-visible `/windows helper-run helper:push` approval-gated `git.push` worker utat kapott.
 - A BotOps Windows git commit helper miatt a package verzió `0.1.1-prerelease.86`, mert a user-visible `/windows helper-run helper:commit` staged-only, approval-gated commit worker utat és additive payload contractot kapott.
+- A BotOps NAS deploy verifier worker miatt a package verzió `0.1.1-prerelease.87`, mert a user-visible `/nas worker-deploy-verify` approval-gated read-only verifier worker job megjelent.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

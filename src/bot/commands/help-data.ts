@@ -192,11 +192,12 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas doctor | /nas worker-status | /nas handoff-gate | /nas deploy-status | /nas container-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas doctor | /nas worker-status | /nas worker-deploy-verify | /nas handoff-gate | /nas deploy-status | /nas container-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
       "`/nas worker-status` BotOps `nas.worker.check` jobot hoz letre, de nem futtat NAS shellt, deployt vagy rebuildet.",
+      "`/nas worker-deploy-verify` BotOps `nas.deploy.verify` jobot hoz letre; approval utan is csak a read-only deploy verifiert futtatja.",
       "`/nas doctor` ugyanilyen read-only status flag alatt egyetlen public-safe diagnosztikai osszkepet ad a NAS bridge/deploy/sync/mailbox allapotrol.",
       "`/nas handoff-gate` ugyanilyen read-only status flag alatt mutatja, hogy a NAS architecture handoff meg blokkolt-e.",
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",

@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps NAS deploy verifier worker: `/nas worker-deploy-verify` now creates an approval-gated `nas.deploy.verify` job. The NAS worker can run only the fixed read-only `npm run nas:deploy:verify` helper for that capability; no NAS deploy, rebuild, share write, restart, cleanup, or arbitrary shell path was added.
+- Version bump: a package verzio `0.1.1-prerelease.87`, mert uj user-visible `/nas worker-deploy-verify` subcommand es NAS worker `nas.deploy.verify` capability jelent meg.
 - BotOps Windows git commit helper: `/windows helper-run helper:commit message:<...>` now creates an approval-gated `git.commit` Windows job. The worker commits only already staged changes, rejects missing/invalid messages, unstaged/untracked changes, staged diff-check failures, and secret-scan failures; it never stages files, deploys, pushes, restarts, or runs arbitrary shell.
 - BotOps job payload contract: additive `botops_jobs.payload_json` stores small structured helper payloads such as the commit message, while existing jobs default to an empty payload.
 - Version bump: a package verzio `0.1.1-prerelease.86`, mert a user-visible staged-only commit helper es BotOps payload contract megjelent.
