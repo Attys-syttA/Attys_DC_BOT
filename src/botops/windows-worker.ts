@@ -45,6 +45,7 @@ export interface WindowsWorkerStatusSnapshot {
 export const WINDOWS_WORKER_CAPABILITIES = [
   "status.read",
   "audit.check",
+  "git.commit",
   "git.push",
   "service.restart",
 ] as const satisfies readonly BotOpsCapability[];
@@ -264,6 +265,100 @@ function runServiceRestartHelper(
   };
 }
 
+function parseGitStatusPorcelain(output: string): {
+  staged: number;
+  unstaged: number;
+  untracked: number;
+} {
+  const lines = output.split(/\r?\n/).filter((line) => line.trim());
+  let staged = 0;
+  let unstaged = 0;
+  let untracked = 0;
+  for (const line of lines) {
+    const indexStatus = line[0] ?? " ";
+    const worktreeStatus = line[1] ?? " ";
+    if (indexStatus === "?" && worktreeStatus === "?") {
+      untracked += 1;
+      continue;
+    }
+    if (indexStatus !== " ") staged += 1;
+    if (worktreeStatus !== " ") unstaged += 1;
+  }
+  return { staged, unstaged, untracked };
+}
+
+function readCommitMessage(job: BotOpsJob): string | undefined {
+  if (!job.payload_json.trim()) return undefined;
+  try {
+    const parsed = JSON.parse(job.payload_json) as { message?: unknown };
+    const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
+    if (!message || message.length > 180 || /[\r\n]/.test(message)) return undefined;
+    return message;
+  } catch {
+    return undefined;
+  }
+}
+
+function runGitCommitHelper(
+  repoRoot: string,
+  job: BotOpsJob,
+  runner: FixedCommandRunner,
+): { ok: boolean; result: string } {
+  const message = readCommitMessage(job);
+  if (!message) {
+    return {
+      ok: false,
+      result: "git commit blocked: valid commit message missing",
+    };
+  }
+
+  const status = runner("git", ["status", "--porcelain"], repoRoot, 10_000);
+  if (status.code !== 0) {
+    return {
+      ok: false,
+      result: "git commit blocked: worktree unknown",
+    };
+  }
+
+  const parsed = parseGitStatusPorcelain(status.output);
+  if (parsed.staged === 0) {
+    return {
+      ok: false,
+      result: "git commit blocked: no staged changes",
+    };
+  }
+  if (parsed.unstaged > 0 || parsed.untracked > 0) {
+    return {
+      ok: false,
+      result: `git commit blocked: unstaged=${parsed.unstaged} untracked=${parsed.untracked}`,
+    };
+  }
+
+  const whitespace = runner("git", ["diff", "--check", "--cached"], repoRoot, 30_000);
+  if (whitespace.code !== 0) {
+    return {
+      ok: false,
+      result: "git commit blocked: staged diff check failed",
+    };
+  }
+
+  const secrets = runner("ggshield", ["secret", "scan", "path", "--recursive", "--yes", "--use-gitignore", "."], repoRoot, 120_000);
+  if (secrets.code !== 0) {
+    return {
+      ok: false,
+      result: "git commit blocked: secret scan failed",
+    };
+  }
+
+  const commit = runner("git", ["commit", "-m", message], repoRoot, 120_000);
+  return {
+    ok: commit.code === 0,
+    result: commit.code === 0
+      ? "git commit helper completed: staged changes committed"
+      : "git commit helper failed: git commit returned failure",
+  };
+}
+
 function parseAheadBehind(output: string): { ahead: number; behind: number } | undefined {
   const [aheadText, behindText] = output.trim().split(/\s+/);
   const ahead = Number.parseInt(aheadText ?? "", 10);
@@ -358,11 +453,13 @@ export function runWindowsWorkerOnce(
     ? runStatusHelper(repoRoot, workerId, runner)
     : job.capability === "audit.check"
       ? runCheckHelper(repoRoot, workerId, runner)
-      : job.capability === "git.push"
-        ? runGitPushHelper(repoRoot, workerId, runner)
-        : job.capability === "service.restart"
-          ? runServiceRestartHelper(repoRoot, workerId, runner)
-          : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
+      : job.capability === "git.commit"
+        ? runGitCommitHelper(repoRoot, job, runner)
+        : job.capability === "git.push"
+          ? runGitPushHelper(repoRoot, workerId, runner)
+          : job.capability === "service.restart"
+            ? runServiceRestartHelper(repoRoot, workerId, runner)
+            : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
 
   completeBotOpsJob(
     job.job_id,

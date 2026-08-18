@@ -53,6 +53,15 @@ function makeRunner(gitStatusOutput: string, npmCode = 0, cmdCode = 0): FixedCom
     if (command === "git" && args.join(" ") === "push") {
       return { code: 0, output: "pushed" };
     }
+    if (command === "git" && args.join(" ") === "diff --check --cached") {
+      return { code: 0, output: "" };
+    }
+    if (command === "git" && args[0] === "commit") {
+      return { code: 0, output: "committed" };
+    }
+    if (command === "ggshield") {
+      return { code: 0, output: "No secrets have been found" };
+    }
     if (command === "npm" || command === "npm.cmd") {
       return { code: npmCode, output: npmCode === 0 ? "ok" : "failed" };
     }
@@ -184,6 +193,166 @@ describe("Windows worker", () => {
 
     expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("")).status).toBe("idle");
     expect(getBotOpsJob("push-1")?.status).toBe("WaitingApproval");
+  });
+
+  it("does not pick git commit jobs without approval", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "commit-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+
+    expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts")).status).toBe("idle");
+    expect(getBotOpsJob("commit-1")?.status).toBe("WaitingApproval");
+  });
+
+  it("blocks approved git commit jobs without a valid message payload", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "commit-no-message",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+    });
+    approveBotOpsJob("commit-no-message", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts"), new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git commit blocked: valid commit message missing");
+    expect(getBotOpsJob("commit-no-message")?.status).toBe("Failed");
+  });
+
+  it("blocks approved git commit jobs without staged changes", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "commit-empty",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+    approveBotOpsJob("commit-empty", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git commit blocked: no staged changes");
+    expect(getBotOpsJob("commit-empty")?.status).toBe("Failed");
+  });
+
+  it("blocks approved git commit jobs with unstaged or untracked changes", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "commit-dirty",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+    approveBotOpsJob("commit-dirty", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(
+      repo,
+      "worker-1",
+      makeRunner("M  src/file.ts\n M src/other.ts\n?? tmp.txt"),
+      new Date("2026-08-18T10:01:00.000Z"),
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git commit blocked: unstaged=1 untracked=1");
+    expect(getBotOpsJob("commit-dirty")?.status).toBe("Failed");
+  });
+
+  it("blocks approved git commit jobs when staged diff check fails", () => {
+    const repo = makeTempDir();
+    const runner: FixedCommandRunner = (command, args) => {
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "M  src/file.ts" };
+      if (command === "git" && args.join(" ") === "diff --check --cached") return { code: 1, output: "whitespace" };
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "commit-whitespace",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+    approveBotOpsJob("commit-whitespace", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git commit blocked: staged diff check failed");
+    expect(getBotOpsJob("commit-whitespace")?.status).toBe("Failed");
+  });
+
+  it("blocks approved git commit jobs when the secret scan fails", () => {
+    const repo = makeTempDir();
+    const runner: FixedCommandRunner = (command, args) => {
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "M  src/file.ts" };
+      if (command === "git" && args.join(" ") === "diff --check --cached") return { code: 0, output: "" };
+      if (command === "ggshield") return { code: 1, output: "secret found" };
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "commit-secret",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+    approveBotOpsJob("commit-secret", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git commit blocked: secret scan failed");
+    expect(getBotOpsJob("commit-secret")?.status).toBe("Failed");
+  });
+
+  it("runs only fixed git commit commands after exact approval", () => {
+    const repo = makeTempDir();
+    const calls: string[] = [];
+    const runner: FixedCommandRunner = (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "M  src/file.ts" };
+      if (command === "git" && args.join(" ") === "diff --check --cached") return { code: 0, output: "" };
+      if (command === "git" && args.join(" ") === "commit -m feat: staged change") return { code: 0, output: "committed" };
+      if (command === "ggshield") return { code: 0, output: "No secrets have been found" };
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "commit-approved",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.commit",
+      summary: "commit",
+      payload_json: JSON.stringify({ message: "feat: staged change" }),
+    });
+    approveBotOpsJob("commit-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("git commit helper completed: staged changes committed");
+    expect(calls).toEqual([
+      "git status --porcelain",
+      "git diff --check --cached",
+      "ggshield secret scan path --recursive --yes --use-gitignore .",
+      "git commit -m feat: staged change",
+      "git status --porcelain",
+    ]);
+    expect(getBotOpsJob("commit-approved")?.status).toBe("Completed");
   });
 
   it("blocks approved git push jobs on a dirty worktree", () => {
@@ -379,7 +548,7 @@ describe("Windows worker", () => {
     );
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: status.read, audit.check, git.push, service.restart");
+    expect(formatted).toContain("capabilities: status.read, audit.check, git.commit, git.push, service.restart");
     expect(formatted).toContain("worktree: clean");
     expect(formatted).not.toContain(":\\");
   });
@@ -392,7 +561,7 @@ describe("Windows worker", () => {
     expect(listBotOpsWorkerHeartbeats("windows")[0]).toMatchObject({
       worker_id: "worker-1",
       target: "windows",
-      capabilities: "status.read, audit.check, git.push, service.restart",
+      capabilities: "status.read, audit.check, git.commit, git.push, service.restart",
       status: "status",
       detail: "manual status check",
       heartbeat_at: "2026-08-18T10:00:00.000Z",

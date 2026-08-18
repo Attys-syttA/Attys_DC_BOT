@@ -141,6 +141,7 @@ export function initDatabase(): void {
       approved_by TEXT,
       approval_expires_at TEXT,
       summary TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '',
       lease_owner TEXT,
       lease_expires_at TEXT,
       heartbeat_at TEXT,
@@ -174,6 +175,7 @@ export function initDatabase(): void {
   ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
   ensureColumn("botops_jobs", "approved_by", "TEXT");
   ensureColumn("botops_jobs", "approval_expires_at", "TEXT");
+  ensureColumn("botops_jobs", "payload_json", "TEXT NOT NULL DEFAULT ''");
   normalizeInterruptedAuditJobs();
 }
 
@@ -289,6 +291,7 @@ function botOpsJobFromRecord(record: BotOpsJobRecord): BotOpsJob {
     approved_by: record.approved_by,
     approval_expires_at: record.approval_expires_at,
     summary: record.summary,
+    payload_json: record.payload_json,
     lease_owner: record.lease_owner,
     lease_expires_at: record.lease_expires_at,
     heartbeat_at: record.heartbeat_at,
@@ -400,6 +403,7 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
       approved_by,
       approval_expires_at,
       summary,
+      payload_json,
       lease_owner,
       lease_expires_at,
       heartbeat_at,
@@ -408,7 +412,7 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = insert.run(
     job.job_id,
@@ -420,6 +424,7 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
     job.approved_by,
     job.approval_expires_at,
     sanitizePublicText(job.summary, 300),
+    sanitizePublicText(job.payload_json, 2_000),
     job.lease_owner,
     job.lease_expires_at,
     job.heartbeat_at,

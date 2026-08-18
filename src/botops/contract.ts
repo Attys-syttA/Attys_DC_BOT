@@ -63,12 +63,14 @@ export const botOpsJobRequestSchema = z.object({
   target: z.enum(BOTOPS_TARGETS),
   capability: z.enum(BOTOPS_CAPABILITIES),
   summary: z.string().trim().min(1).max(300),
+  payload_json: z.string().trim().max(2_000).optional(),
   created_at: z.string().datetime().optional(),
 });
 
 export const botOpsJobSchema = botOpsJobRequestSchema.extend({
   job_id: z.string().trim().min(1).max(80).regex(/^[A-Za-z0-9._:-]+$/),
   created_at: z.string().datetime(),
+  payload_json: z.string().trim().max(2_000),
   status: z.enum(BOTOPS_JOB_STATUSES),
   approval_state: z.enum(BOTOPS_APPROVAL_STATES),
   approved_by: z.string().trim().max(80).nullable(),
@@ -117,6 +119,7 @@ export function createBotOpsJob(
     ...parsed,
     job_id: parsed.job_id ?? `job-${randomUUID()}`,
     created_at: createdAt,
+    payload_json: parsed.payload_json ?? "",
     status: approvalRequired ? "WaitingApproval" : "Requested",
     approval_state: approvalRequired ? "required" : "not_required",
     approved_by: null,

@@ -15,6 +15,7 @@ function makeJob(overrides: Partial<BotOpsJob> = {}): BotOpsJob {
     target: "nas",
     capability: "nas.worker.check",
     summary: "worker check",
+    payload_json: "",
     created_at: "2026-08-18T10:00:00.000Z",
     status: "Requested",
     approval_state: "not_required",

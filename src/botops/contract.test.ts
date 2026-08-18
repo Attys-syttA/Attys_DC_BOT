@@ -33,6 +33,7 @@ describe("BotOps contract", () => {
 
     expect(job.status).toBe("Requested");
     expect(job.approval_state).toBe("not_required");
+    expect(job.payload_json).toBe("");
     expect(job.created_at).toBe("2026-08-18T10:00:00.000Z");
   });
 
