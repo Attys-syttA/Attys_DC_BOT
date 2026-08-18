@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBotOpsStatusReply,
+  formatBotOpsNextDecision,
   formatBotOpsJobDetails,
   formatBotOpsJobLine,
   formatBotOpsWorkerHeartbeats,
@@ -56,6 +57,16 @@ describe("BotOps renderer", () => {
     expect(content).toContain("WaitingWorker nas/nas.worker.check result=worker lease expired");
   });
 
+  it("labels waiting approval jobs as dangerous on compact job lines", () => {
+    const content = formatBotOpsJobLine(makeJob({
+      status: "WaitingApproval",
+      approval_state: "required",
+      capability: "nas.deploy.apply",
+    }));
+
+    expect(content).toContain("WaitingApproval nas/nas.deploy.apply approval=required dangerous=yes");
+  });
+
   it("labels worker heartbeats as fresh or stale", () => {
     const heartbeats: BotOpsWorkerHeartbeatRecord[] = [
       {
@@ -105,5 +116,30 @@ describe("BotOps renderer", () => {
     expect(content).toContain("waiting worker: 1");
     expect(content).toContain("worker heartbeats:");
     expect(content).toContain("windows-worker-1: idle");
+  });
+
+  it("shows the next operator decision for waiting approval jobs", () => {
+    const content = buildBotOpsStatusReply([
+      makeJob({
+        job_id: "nas-deploy-apply-1",
+        capability: "nas.deploy.apply",
+        status: "WaitingApproval",
+        approval_state: "required",
+      }),
+    ]);
+
+    expect(content).toContain("next decision: review /ops preview job_id:nas-deploy-apply-1, then /ops approve or /ops cancel");
+  });
+
+  it("prioritizes worker recovery hints after approval gates", () => {
+    expect(formatBotOpsNextDecision([
+      makeJob({ job_id: "expired-lease-1", status: "WaitingWorker", result: "worker lease expired" }),
+    ])).toBe("next decision: check worker, then /ops recover job_id:expired-lease-1 if the lease expired");
+  });
+
+  it("shows no pending decision when jobs are completed", () => {
+    expect(formatBotOpsNextDecision([
+      makeJob({ status: "Completed", result: "done" }),
+    ])).toBe("next decision: none");
   });
 });

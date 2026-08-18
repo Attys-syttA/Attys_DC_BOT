@@ -206,6 +206,9 @@ export const data = new SlashCommandBuilder()
     .setName("deploy-apply")
     .setDescription("Queue an approval-gated NAS deploy apply worker job"))
   .addSubcommand((subcommand) => subcommand
+    .setName("rollback-plan")
+    .setDescription("Preview NAS rollback requirements without applying rollback"))
+  .addSubcommand((subcommand) => subcommand
     .setName("handoff-gate")
     .setDescription("Show the read-only NAS architecture handoff gate"))
   .addSubcommand((subcommand) => subcommand
@@ -429,6 +432,22 @@ function safeOutputLines(output: string, maxLines = 8): string[] {
     .slice(0, maxLines);
 }
 
+function nasDeployPlanRebuildLine(repoRoot: string): string {
+  const shareRoot = nasShareRoot(repoRoot);
+  if (!shareRoot || !fs.existsSync(shareRoot)) {
+    return "will-rebuild=unknown reason=deploy-verifier-unavailable";
+  }
+
+  try {
+    const result = verifyNasDeploy(shareRoot);
+    return result.ok
+      ? "will-rebuild=no reason=current-deploy-verified"
+      : "will-rebuild=yes reason=current-deploy-not-verified";
+  } catch {
+    return "will-rebuild=unknown reason=deploy-verifier-unreadable";
+  }
+}
+
 export async function buildNasDeployPlanReport(repoRoot: string): Promise<string> {
   const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:deploy"], repoRoot, 90_000);
   const outputLines = safeOutputLines(result.output);
@@ -439,6 +458,9 @@ export async function buildNasDeployPlanReport(repoRoot: string): Promise<string
     result.exitCode === 0 ? "OK deploy dry-run completed" : "FAIL deploy dry-run failed",
     "mode=dry-run",
     "apply=disabled",
+    "apply-preview=approval-required",
+    nasDeployPlanRebuildLine(repoRoot),
+    "force-rebuild=disabled",
     "nas-share-write=disabled",
     "container-rebuild=disabled-from-this-command",
     "restart=disabled",
@@ -446,6 +468,36 @@ export async function buildNasDeployPlanReport(repoRoot: string): Promise<string
     ...outputLines.map((line) => `- ${line}`),
     "```",
   ].join("\n");
+}
+
+export function buildNasRollbackPlanReport(repoRoot: string): string {
+  const shareRoot = nasShareRoot(repoRoot);
+  const lines = [
+    "**NAS Rollback Plan**",
+    "```text",
+    "mode=read-only",
+    "rollback-apply=disabled",
+    "rollback-source=not-selected",
+    "required-approval=future rollback capability approval",
+  ];
+
+  if (!shareRoot || !fs.existsSync(shareRoot)) {
+    lines.push("current-deploy=unknown reason=deploy-verifier-unavailable");
+  } else {
+    try {
+      const result = verifyNasDeploy(shareRoot);
+      const passed = result.checks.filter((check) => check.ok).length;
+      const total = result.checks.length;
+      lines.push(result.ok ? "current-deploy=verified" : "current-deploy=not-verified");
+      lines.push(`current-build=${smokeField(result.sourceCommit, "unknown", 40)} version=${smokeField(result.packageVersion, "unknown", 40)} checks=${passed}/${total}`);
+    } catch {
+      lines.push("current-deploy=unknown reason=deploy-verifier-unreadable");
+    }
+  }
+
+  lines.push("next=choose rollback source and approval rules before any apply command");
+  lines.push("```");
+  return lines.join("\n");
 }
 
 function expectedNasContainerRunning(parsed: NasContainerLifecycleResult | null): boolean {
@@ -1305,6 +1357,20 @@ export async function execute(
 
     await interaction.editReply({
       content: await buildNasDeployPlanReport(process.cwd()),
+    });
+    return;
+  }
+
+  if (subcommand === "rollback-plan") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas rollback-plan` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas rollback-plan` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: buildNasRollbackPlanReport(process.cwd()),
     });
     return;
   }

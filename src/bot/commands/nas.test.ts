@@ -86,6 +86,7 @@ import {
   buildNasDoctorReport,
   buildNasMailboxReport,
   buildNasMailboxStatusReport,
+  buildNasRollbackPlanReport,
   buildNasRequestStatusReport,
   buildNasRequestsReport,
   buildNasResultsReport,
@@ -978,6 +979,9 @@ describe("/nas", () => {
     expect(report).toContain("OK deploy dry-run completed");
     expect(report).toContain("mode=dry-run");
     expect(report).toContain("apply=disabled");
+    expect(report).toContain("apply-preview=approval-required");
+    expect(report).toContain("will-rebuild=no reason=current-deploy-verified");
+    expect(report).toContain("force-rebuild=disabled");
     expect(report).toContain("nas-share-write=disabled");
     expect(report).toContain("container-rebuild=disabled-from-this-command");
     expect(report).not.toContain("-Apply");
@@ -1011,7 +1015,22 @@ describe("/nas", () => {
     expect(content).toContain("NAS Deploy Plan");
     expect(content).toContain("mode=dry-run");
     expect(content).toContain("apply=disabled");
+    expect(content).toContain("will-rebuild=no reason=current-deploy-verified");
     expect(content).not.toContain("-Apply");
+  });
+
+  it("marks NAS deploy plan rebuild decision unknown when the verifier is unavailable", async () => {
+    mocks.existsSync.mockReturnValue(false);
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: "==> dry-run NAS share sync\nDry-run complete.",
+    });
+
+    const report = await buildNasDeployPlanReport("E:\\private\\repo");
+
+    expect(report).toContain("will-rebuild=unknown reason=deploy-verifier-unavailable");
+    expect(report).not.toContain("E:\\");
   });
 
   it("keeps the NAS deploy plan behind the NAS status flag", async () => {
@@ -1028,6 +1047,52 @@ describe("/nas", () => {
     expect(mocks.runLocalCommand).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "`/nas deploy-plan` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+  });
+
+  it("builds a read-only NAS rollback plan without choosing a rollback source", () => {
+    const report = buildNasRollbackPlanReport("E:\\private\\repo");
+
+    expect(report).toContain("NAS Rollback Plan");
+    expect(report).toContain("mode=read-only");
+    expect(report).toContain("rollback-apply=disabled");
+    expect(report).toContain("rollback-source=not-selected");
+    expect(report).toContain("current-deploy=verified");
+    expect(report).toContain("current-build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=14/14");
+    expect(report).not.toContain("E:\\");
+    expect(report).not.toContain("K:\\");
+  });
+
+  it("executes NAS rollback plan as a read-only report only", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "rollback-plan"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Rollback Plan");
+    expect(content).toContain("rollback-apply=disabled");
+  });
+
+  it("keeps the NAS rollback plan behind the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "rollback-plan"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas rollback-plan` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
     });
   });
 

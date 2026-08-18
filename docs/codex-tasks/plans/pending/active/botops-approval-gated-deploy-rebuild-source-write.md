@@ -40,6 +40,22 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - a NAS worker csak approval utan veheti fel;
   - a worker fixed helper lancot futtat: `npm run nas:deploy -- -Apply`, majd kotelezo `npm run nas:deploy:verify`;
   - deploy apply hiba eseten nincs fallback rebuild/restart; post-verify hiba eseten a job `Failed`.
+- 2026-08-18 harmadik UX/preview slice:
+  - `/nas deploy-plan` explicit `will-rebuild=no|yes|unknown` sort mutat a jelenlegi deploy verifier alapjan;
+  - `/ops status` `next decision` sort mutat approval, worker recovery, running vagy failed job eseten.
+- 2026-08-18 restart validation slice:
+  - Windows `service.restart` worker helper csak akkor zar `Completed` allapotban, ha a `win-start.bat` utan a `npm run doctor:local` is sikeres;
+  - post-restart doctor hiba eseten a job `Failed`, nincs tovabbi fallback.
+- 2026-08-18 rollback preview slice:
+  - `/nas rollback-plan` read-only preview keszult;
+  - rollback apply tovabbra is tiltott, rollback source nincs kivalasztva;
+  - rollback vegrehajtasi capability meg nem letezik.
+- 2026-08-18 jobs visibility slice:
+  - `/ops jobs` compact sorban a `WaitingApproval` + `approval=required` jobok `dangerous=yes` jelzest kapnak.
+- 2026-08-18 rollback operatori dontes:
+  - rollback apply csak ketlepcsos approval modellel tervezheto;
+  - rollback verify bukas eseten a vegallapot `WaitingManualReview` legyen;
+  - rollback source meg nincs kivalasztva, ezert rollback apply runtime capability meg nem keszulhet.
 - BotOps job/eveny/heartbeat SQLite alap es public-safe Discord status/log nezetek.
 - Lease alapu worker futtatas, stale/expired allapotokkal.
 - Explicit approval modell, ahol a worker nem kozvetlenul a Discord parancsbol futtat muveletet.
@@ -436,8 +452,9 @@ Feladatok:
 Kotelezo dontes implementacio elott:
 
 - A rollback legyen-e kulon parancsra indithato a botbol?
-- Kell-e ketlepcsos approval rollbackhez?
-- Mi legyen, ha rollback verify is bukik?
+- Kell-e ketlepcsos approval rollbackhez? Dontes: igen.
+- Mi legyen, ha rollback verify is bukik? Dontes: `WaitingManualReview`.
+- Mi legyen a rollback forrasa? Nyitott: elozo Git commit, elozo NAS build identity, elozo Docker image tag vagy megorzott staging snapshot kozul meg valasztani kell.
 
 ## Hibas ágak es fail-closed viselkedes
 

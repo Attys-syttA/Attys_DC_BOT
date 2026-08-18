@@ -257,11 +257,19 @@ function runServiceRestartHelper(
   }
 
   const result = runner("cmd", ["/c", "win-start.bat"], repoRoot, 120_000);
+  if (result.code !== 0) {
+    return {
+      ok: false,
+      result: "service restart helper failed: win-start.bat returned failure",
+    };
+  }
+
+  const health = runner(npmCommand(), ["run", "doctor:local"], repoRoot, 120_000);
   return {
-    ok: result.code === 0,
-    result: result.code === 0
-      ? "service restart helper completed: win-start.bat returned success"
-      : "service restart helper failed: win-start.bat returned failure",
+    ok: health.code === 0,
+    result: health.code === 0
+      ? "service restart helper completed: win-start.bat and doctor passed"
+      : "service restart helper failed: post-restart doctor failed",
   };
 }
 

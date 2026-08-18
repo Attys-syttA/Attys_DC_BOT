@@ -2,6 +2,15 @@
 
 ## 2026-08-18
 
+- BotOps dangerous approval visibility: `/ops jobs` compact rows now label waiting approval jobs as `dangerous=yes`, making consequential deploy/restart/push/apply gates visible without opening full logs.
+- Version bump: a package verzio `0.1.1-prerelease.93`, mert a user-visible BotOps jobs approval-risk jelzes bovult.
+- Rollback decision checkpoint: recorded that future rollback apply must use two-step approval and must enter `WaitingManualReview` if rollback verification fails. Rollback source remains undecided, so no rollback apply runtime capability was added.
+- BotOps NAS rollback preview: `/nas rollback-plan` now shows a read-only rollback planning view with current deploy identity, no selected rollback source, and rollback apply explicitly disabled.
+- Version bump: a package verzio `0.1.1-prerelease.92`, mert uj user-visible read-only `/nas rollback-plan` subcommand jelent meg.
+- BotOps service restart post-check: the Windows worker `service.restart` helper now treats `win-start.bat` success as insufficient by itself and requires a successful `npm run doctor:local` post-restart check before completing the job.
+- Version bump: a package verzio `0.1.1-prerelease.91`, mert a BotOps Windows restart helper user-visible validacios kapuja szigorodott.
+- BotOps deploy preview/UX hardening: `/nas deploy-plan` now shows an explicit read-only rebuild expectation line (`will-rebuild=no|yes|unknown`) based on the current deploy verifier state, and `/ops status` now includes a `next decision` hint for approval, worker recovery, running, or failed jobs.
+- Version bump: a package verzio `0.1.1-prerelease.90`, mert a user-visible NAS deploy preview es BotOps status dontesi segitseg bovult.
 - BotOps NAS deploy apply capability: `/nas deploy-apply` now creates an approval-gated `nas.deploy.apply` job. The NAS worker can run only the fixed `npm run nas:deploy -- -Apply` helper for that capability, followed by a mandatory `npm run nas:deploy:verify` post-check; Discord command execution itself still starts no deploy.
 - Version bump: a package verzio `0.1.1-prerelease.89`, mert uj approval-gated `/nas deploy-apply` subcommand es NAS worker `nas.deploy.apply` capability jelent meg.
 - BotOps approval-preview safe slice: `botops_jobs` now stores `expected_action` and `validation_condition`, approval matching checks those exact fields when present, and `/ops preview job_id:<id>` shows the approval scope without starting worker execution.

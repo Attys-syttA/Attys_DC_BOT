@@ -469,7 +469,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("restart-dirty")?.status).toBe("Failed");
   });
 
-  it("runs only the fixed win-start restart helper after exact approval", () => {
+  it("runs only the fixed win-start restart helper and post-restart doctor after exact approval", () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
     fs.writeFileSync(path.join(repo, "win-start.bat"), "@echo off\n");
@@ -479,6 +479,9 @@ describe("Windows worker", () => {
       if (command === "git") return { code: 0, output: "" };
       if (command === "cmd" && args.join(" ") === "/c win-start.bat") {
         return { code: 0, output: "restarted" };
+      }
+      if ((command === "npm" || command === "npm.cmd") && args.join(" ") === "run doctor:local") {
+        return { code: 0, output: "doctor passed" };
       }
       return { code: 1, output: "unexpected" };
     };
@@ -494,11 +497,46 @@ describe("Windows worker", () => {
     const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("completed");
-    expect(result.result).toBe("service restart helper completed: win-start.bat returned success");
+    expect(result.result).toBe("service restart helper completed: win-start.bat and doctor passed");
     expect(calls).toContain("git status --porcelain");
     expect(calls).toContain("cmd /c win-start.bat");
+    expect(calls).toContain("npm.cmd run doctor:local");
     expect(calls.some((call) => call.includes("powershell"))).toBe(false);
     expect(getBotOpsJob("restart-approved")?.status).toBe("Completed");
+  });
+
+  it("fails service restart when the post-restart doctor fails", () => {
+    const repo = makeTempDir();
+    fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
+    fs.writeFileSync(path.join(repo, "win-start.bat"), "@echo off\n");
+    const calls: string[] = [];
+    const runner: FixedCommandRunner = (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      if (command === "git") return { code: 0, output: "" };
+      if (command === "cmd" && args.join(" ") === "/c win-start.bat") {
+        return { code: 0, output: "restarted" };
+      }
+      if ((command === "npm" || command === "npm.cmd") && args.join(" ") === "run doctor:local") {
+        return { code: 1, output: "doctor failed" };
+      }
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "restart-doctor-failed",
+      requested_by: "operator",
+      target: "windows",
+      capability: "service.restart",
+      summary: "restart",
+    });
+    approveBotOpsJob("restart-doctor-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("service restart helper failed: post-restart doctor failed");
+    expect(calls).toContain("cmd /c win-start.bat");
+    expect(calls).toContain("npm.cmd run doctor:local");
+    expect(getBotOpsJob("restart-doctor-failed")?.status).toBe("Failed");
   });
 
   it("requires real worker config instead of treating the database path as bot config", () => {

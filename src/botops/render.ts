@@ -3,8 +3,9 @@ import type { BotOpsJob } from "./contract.js";
 
 export function formatBotOpsJobLine(job: BotOpsJob): string {
   const approval = job.approval_state === "not_required" ? "" : ` approval=${job.approval_state}`;
+  const risk = job.status === "WaitingApproval" && job.approval_state === "required" ? " dangerous=yes" : "";
   const result = job.status === "WaitingWorker" && job.result ? ` result=${job.result}` : "";
-  return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}${result}`;
+  return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}${risk}${result}`;
 }
 
 export function formatBotOpsJobDetails(job: BotOpsJob): string {
@@ -80,6 +81,30 @@ export function formatBotOpsWorkerHeartbeats(
   ].join("\n");
 }
 
+export function formatBotOpsNextDecision(jobs: BotOpsJob[]): string {
+  const waitingApproval = jobs.find((job) => job.status === "WaitingApproval");
+  if (waitingApproval) {
+    return `next decision: review /ops preview job_id:${waitingApproval.job_id}, then /ops approve or /ops cancel`;
+  }
+
+  const waitingWorker = jobs.find((job) => job.status === "WaitingWorker");
+  if (waitingWorker) {
+    return `next decision: check worker, then /ops recover job_id:${waitingWorker.job_id} if the lease expired`;
+  }
+
+  const running = jobs.find((job) => job.status === "Running");
+  if (running) {
+    return `next decision: wait for worker heartbeat or inspect /ops logs job_id:${running.job_id}`;
+  }
+
+  const failed = jobs.find((job) => job.status === "Failed" || job.status === "FailedDuplicateWorker");
+  if (failed) {
+    return `next decision: inspect /ops logs job_id:${failed.job_id}`;
+  }
+
+  return "next decision: none";
+}
+
 export function buildBotOpsStatusReply(
   jobs: BotOpsJob[],
   heartbeats: BotOpsWorkerHeartbeatRecord[] = [],
@@ -100,6 +125,7 @@ export function buildBotOpsStatusReply(
     `waiting approval: ${waitingApproval}`,
     `waiting worker: ${waitingWorker}`,
     `failed: ${failed}`,
+    formatBotOpsNextDecision(jobs),
     "",
     formatBotOpsWorkerHeartbeats(heartbeats),
     "```",
