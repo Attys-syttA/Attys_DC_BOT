@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- NAS repo plan checkpoint: a publikalt `Attys_DC_BOT_NAS` BotOps control-plane baseline utan a `/nas handoff-gate` a NAS repository plan kriteriumot `OK`-kent jelzi, de az osszallapot tovabbra is `blocked` az explicit remote-boundary approval hianya miatt. NAS source write, remote execution architecture change, deploy vagy container rebuild nem tortenik.
+- Version bump: a package verzio `0.1.1-prerelease.73`, mert a user-visible `/nas handoff-gate` kimenet pontosult.
 - NAS handoff gate review closeout: a `docs/NAS_HANDOFF_SECURITY_BOUNDARY_REVIEW.md` rogziti a local auth/path/command/secret/log boundary reviewt es a shared-vs-NAS scope splitet. A `/nas handoff-gate` most `OK`-kent jelzi a source publication, security review es scope split pontokat, de tovabbra is `blocked` marad a NAS repository plan es explicit remote-boundary approval hianya miatt.
 - Version bump: a package verzio `0.1.1-prerelease.72`, mert a user-visible `/nas handoff-gate` kimenet pontosult.
 - NAS handoff gate: uj read-only `/nas handoff-gate` subcommand es `src/nas/handoff-gate.ts` contract keszult. A report fail-closed `blocked` allapotot ad, amig source publication, security review, shared-vs-NAS scope split, NAS repo plan es explicit remote-boundary approval nincs lezarva; NAS repo source write, remote execution architecture change vagy deploy nem tortenik.

@@ -53,8 +53,8 @@ export const DEFAULT_NAS_HANDOFF_GATE_CRITERIA: NasHandoffGateCriterion[] = [
   {
     id: "nas-repo-plan",
     label: "NAS repository plan",
-    status: "blocked",
-    summary: "Attys_DC_BOT_NAS needs its own AGENTS, STATE, and active architecture plan before source changes",
+    status: "ok",
+    summary: "Attys_DC_BOT_NAS has its own AGENTS, STATE, active BotOps plan, and published control-plane baseline",
   },
   {
     id: "remote-boundary-approval",

@@ -1541,7 +1541,8 @@ describe("/nas", () => {
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
-    expect(content).toContain("BLOCKED NAS repository plan");
+    expect(content).toContain("OK NAS repository plan");
+    expect(content).toContain("BLOCKED remote boundary approval");
     expect(content).toContain("blocked actions: NAS repo source writes, remote execution architecture changes, deploy");
   });
 

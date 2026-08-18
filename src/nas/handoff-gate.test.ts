@@ -11,7 +11,7 @@ describe("NAS handoff gate", () => {
 
     expect(report.status).toBe("blocked");
     expect(report.criteria.some((criterion) => criterion.status === "blocked")).toBe(true);
-    expect(report.nextAction).toBe("resolve NAS repository plan");
+    expect(report.nextAction).toBe("resolve remote boundary approval");
   });
 
   it("can render a ready report only when every criterion is ok", () => {
@@ -44,7 +44,8 @@ describe("NAS handoff gate", () => {
     expect(content).toContain("OK source publication checkpoint");
     expect(content).toContain("OK security boundary review");
     expect(content).toContain("OK shared vs NAS-specific split");
-    expect(content).toContain("BLOCKED NAS repository plan");
+    expect(content).toContain("OK NAS repository plan");
+    expect(content).toContain("BLOCKED remote boundary approval");
     expect(content).toContain("blocked actions: NAS repo source writes, remote execution architecture changes, deploy");
     expect(content).not.toContain("E:\\");
     expect(content).not.toContain("token");
