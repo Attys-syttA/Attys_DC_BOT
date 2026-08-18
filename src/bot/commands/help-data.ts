@@ -220,7 +220,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "A status a NAS mailboxot darabszam szinten mutatja, a mailbox nezet pedig rovid public-safe uzenetsorokat ad.",
       "Ha elerheto, a NAS control-plane latest snapshotbol rovid build/handoff/status sort is mutat.",
       "A status mutatja a result notifier allapotat, a stale timeoutot es az aktualis channel tracked request darabszamait is.",
-      "A handoff-gate nem ir NAS repo source-t, nem indit remote executiont, es nem ad deploy jogot.",
+      "A handoff-gate nem ir NAS source/share adatot, nem indit remote executiont, es nem ad deploy jogot.",
       "A request csak source-controlled named checket tehet a NAS inboxba, tetszoleges parancsot nem.",
       "A smoke csak a repo-lokalis `nas:bridge:smoke` helpert hivja, es egy synthetic `plans` request eredmenyet foglalja ossze.",
       "A sync-status csak a repo-lokalis `nas:sync-share` dry-run modjat hivja, ezert nem masol es nem torol fajlt.",
