@@ -23,6 +23,17 @@ function makeTempDir(): string {
   return dir;
 }
 
+function writeMetadata(repo: string, target: "nas" | "windows", processId: number): void {
+  const paths = workerSupervisorPaths(repo, target);
+  const command = buildWorkerSupervisorCommand(target);
+  fs.writeFileSync(paths.metadataFile, `${JSON.stringify({
+    pid: processId,
+    target,
+    command: command.command,
+    args: command.args,
+  }, null, 2)}\n`, "utf8");
+}
+
 describe("worker supervisor", () => {
   afterEach(() => {
     for (const dir of tempDirs.splice(0)) {
@@ -52,6 +63,7 @@ describe("worker supervisor", () => {
       target: "nas",
       state: "stopped",
       pid: null,
+      verified: false,
       log_name: "nas.out.log",
       error_log_name: "nas.err.log",
     });
@@ -72,10 +84,12 @@ describe("worker supervisor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.status.state).toBe("running");
+    expect(result.status.verified).toBe(true);
     expect(result.message).toBe("worker start requested");
     expect(starts).toHaveLength(1);
     expect(starts[0]).toContain("src/cli/botops-nas-worker.ts --loop");
     expect(fs.readFileSync(workerSupervisorPaths(repo, "nas").pidFile, "utf8")).toBe("12345\n");
+    expect(fs.existsSync(workerSupervisorPaths(repo, "nas").metadataFile)).toBe(true);
   });
 
   it("does not start a duplicate worker when the pid is already running", () => {
@@ -119,6 +133,7 @@ describe("worker supervisor", () => {
     const paths = workerSupervisorPaths(repo, "nas");
     fs.mkdirSync(paths.dir, { recursive: true });
     fs.writeFileSync(paths.pidFile, "444\n", "utf8");
+    writeMetadata(repo, "nas", 444);
     let running = true;
 
     const result = stopWorkerSupervisor(
@@ -135,6 +150,31 @@ describe("worker supervisor", () => {
     expect(result.message).toBe("worker stopped");
     expect(result.status.state).toBe("stopped");
     expect(fs.existsSync(paths.pidFile)).toBe(false);
+    expect(fs.existsSync(paths.metadataFile)).toBe(false);
+  });
+
+  it("fails closed instead of stopping a running pid without matching metadata", () => {
+    const repo = makeTempDir();
+    const paths = workerSupervisorPaths(repo, "nas");
+    fs.mkdirSync(paths.dir, { recursive: true });
+    fs.writeFileSync(paths.pidFile, "444\n", "utf8");
+    let terminated = false;
+
+    const result = stopWorkerSupervisor(
+      repo,
+      "nas",
+      (processId) => processId === 444,
+      () => {
+        terminated = true;
+        return true;
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status.state).toBe("running");
+    expect(result.status.verified).toBe(false);
+    expect(result.message).toBe("worker stop blocked: pid metadata missing or mismatched");
+    expect(terminated).toBe(false);
   });
 
   it("blocks restart when the previous process does not exit", async () => {
@@ -142,6 +182,7 @@ describe("worker supervisor", () => {
     const paths = workerSupervisorPaths(repo, "windows");
     fs.mkdirSync(paths.dir, { recursive: true });
     fs.writeFileSync(paths.pidFile, "555\n", "utf8");
+    writeMetadata(repo, "windows", 555);
     const terminator: ProcessTerminator = () => true;
     let startCount = 0;
 

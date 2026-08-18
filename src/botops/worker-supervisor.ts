@@ -9,6 +9,7 @@ export type WorkerSupervisorState = "running" | "stopped" | "stale";
 export interface WorkerSupervisorPaths {
   dir: string;
   pidFile: string;
+  metadataFile: string;
   stdoutLog: string;
   stderrLog: string;
 }
@@ -17,6 +18,7 @@ export interface WorkerSupervisorStatus {
   target: WorkerSupervisorTarget;
   state: WorkerSupervisorState;
   pid: number | null;
+  verified: boolean;
   log_name: string;
   error_log_name: string;
 }
@@ -51,6 +53,7 @@ export function workerSupervisorPaths(
   return {
     dir,
     pidFile: path.join(dir, `${target}.pid`),
+    metadataFile: path.join(dir, `${target}.json`),
     stdoutLog: path.join(dir, `${target}.out.log`),
     stderrLog: path.join(dir, `${target}.err.log`),
   };
@@ -91,6 +94,7 @@ export function readWorkerSupervisorStatus(
 ): WorkerSupervisorStatus {
   const paths = workerSupervisorPaths(repoRoot, target);
   const pid = readPid(paths.pidFile);
+  const verified = pid ? readWorkerMetadata(paths.metadataFile, target, pid) : false;
   const state = pid && probe(pid)
     ? "running"
     : pid
@@ -101,6 +105,7 @@ export function readWorkerSupervisorStatus(
     target,
     state,
     pid,
+    verified,
     log_name: path.basename(paths.stdoutLog),
     error_log_name: path.basename(paths.stderrLog),
   };
@@ -111,6 +116,7 @@ export function formatWorkerSupervisorStatus(status: WorkerSupervisorStatus): st
     `worker target: ${status.target}`,
     `state: ${status.state}`,
     `pid: ${status.pid ?? "none"}`,
+    `verified: ${status.verified ? "yes" : "no"}`,
     `log: ${status.log_name}`,
     `error log: ${status.error_log_name}`,
   ].join("\n");
@@ -149,6 +155,7 @@ export function startWorkerSupervisor(
   }
 
   fs.writeFileSync(paths.pidFile, `${pid}\n`, "utf8");
+  writeWorkerMetadata(paths.metadataFile, target, pid, command);
   const after = readWorkerSupervisorStatus(repoRoot, target, (processId) => processId === pid || probe(processId));
   return {
     ok: true,
@@ -178,10 +185,19 @@ export function stopWorkerSupervisor(
   const paths = workerSupervisorPaths(repoRoot, target);
   if (status.state === "stale") {
     fs.rmSync(paths.pidFile, { force: true });
+    fs.rmSync(paths.metadataFile, { force: true });
     return {
       ok: true,
       status: readWorkerSupervisorStatus(repoRoot, target, probe),
       message: "stale worker pid removed",
+    };
+  }
+
+  if (!status.verified) {
+    return {
+      ok: false,
+      status,
+      message: "worker stop blocked: pid metadata missing or mismatched",
     };
   }
 
@@ -199,6 +215,7 @@ export function stopWorkerSupervisor(
   }
   if (!probe(status.pid)) {
     fs.rmSync(paths.pidFile, { force: true });
+    fs.rmSync(paths.metadataFile, { force: true });
     return {
       ok: true,
       status: readWorkerSupervisorStatus(repoRoot, target, probe),
@@ -223,6 +240,13 @@ export async function restartWorkerSupervisor(
 ): Promise<WorkerSupervisorActionResult> {
   const before = readWorkerSupervisorStatus(repoRoot, target, probe);
   if (before.state === "running") {
+    if (!before.verified) {
+      return {
+        ok: false,
+        status: before,
+        message: "worker restart blocked: pid metadata missing or mismatched",
+      };
+    }
     const stopped = stopWorkerSupervisor(repoRoot, target, probe, terminator, 0);
     if (!stopped.ok || !before.pid) return stopped;
     const deadline = Date.now() + Math.max(100, waitMs);
@@ -237,6 +261,7 @@ export async function restartWorkerSupervisor(
       };
     }
     fs.rmSync(workerSupervisorPaths(repoRoot, target).pidFile, { force: true });
+    fs.rmSync(workerSupervisorPaths(repoRoot, target).metadataFile, { force: true });
   }
 
   return startWorkerSupervisor(repoRoot, target, probe, starter);
@@ -274,6 +299,44 @@ function readPid(pidFile: string): number | null {
   const raw = fs.readFileSync(pidFile, "utf8").trim();
   const parsed = Number.parseInt(raw, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function readWorkerMetadata(
+  metadataFile: string,
+  target: WorkerSupervisorTarget,
+  processId: number,
+): boolean {
+  if (!fs.existsSync(metadataFile)) return false;
+  try {
+    const metadata = JSON.parse(fs.readFileSync(metadataFile, "utf8")) as {
+      pid?: unknown;
+      target?: unknown;
+      command?: unknown;
+      args?: unknown;
+    };
+    const expected = buildWorkerSupervisorCommand(target);
+    return metadata.pid === processId
+      && metadata.target === target
+      && metadata.command === expected.command
+      && Array.isArray(metadata.args)
+      && metadata.args.join("\u0000") === expected.args.join("\u0000");
+  } catch {
+    return false;
+  }
+}
+
+function writeWorkerMetadata(
+  metadataFile: string,
+  target: WorkerSupervisorTarget,
+  processId: number,
+  command: WorkerSupervisorCommand,
+): void {
+  fs.writeFileSync(metadataFile, `${JSON.stringify({
+    pid: processId,
+    target,
+    command: command.command,
+    args: command.args,
+  }, null, 2)}\n`, "utf8");
 }
 
 async function sleep(ms: number): Promise<void> {

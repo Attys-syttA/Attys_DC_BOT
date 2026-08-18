@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps worker supervisor PID metadata guard: worker start now writes target/command metadata next to the PID file, `/ops workers` shows whether the PID is verified, and local stop/restart helpers fail closed instead of terminating a running PID without matching metadata.
+- Version bump: a package verzio `0.1.1-prerelease.81`, mert az operator-facing worker supervisor status es stop/restart guard szigorodott.
 - BotOps lease visibility: `/ops logs` job details now show `lease expires`, and `/ops jobs` compact rows show the public-safe result for `WaitingWorker` jobs, so expired-lease recovery states are understandable without raw logs.
 - Version bump: a package verzio `0.1.1-prerelease.80`, mert a user-visible BotOps job/lease observability bovult.
 - BotOps lease expiry hardening: expired `Running` worker leases now move to `WaitingWorker` with a public-safe `worker lease expired` result and audit event. Late heartbeats or completions from the expired lease owner are rejected, so a worker cannot continue blindly after its lease window.
