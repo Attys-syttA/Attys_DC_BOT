@@ -35,20 +35,20 @@ export const DEFAULT_NAS_HANDOFF_GATE_CRITERIA: NasHandoffGateCriterion[] = [
   {
     id: "source-publication",
     label: "source publication checkpoint",
-    status: "blocked",
-    summary: "current local audit handoff changes must be committed and pushed before NAS architecture handoff",
+    status: "ok",
+    summary: "local audit handoff gate changes have a source publication checkpoint before NAS architecture work",
   },
   {
     id: "security-review",
     label: "security boundary review",
-    status: "blocked",
-    summary: "auth, path, command, secret, and log boundaries need explicit review closeout",
+    status: "ok",
+    summary: "auth, path, command, secret, and log boundaries are reviewed in docs/NAS_HANDOFF_SECURITY_BOUNDARY_REVIEW.md",
   },
   {
     id: "nas-scope-split",
     label: "shared vs NAS-specific split",
-    status: "blocked",
-    summary: "operator decision needed for what remains local/shared and what moves to NAS-specific implementation",
+    status: "ok",
+    summary: "local/shared responsibilities stay in this repo; NAS-specific implementation needs its own repo plan",
   },
   {
     id: "nas-repo-plan",
