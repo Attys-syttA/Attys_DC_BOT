@@ -39,6 +39,7 @@ export interface NasWorkerStatusSnapshot {
 export const NAS_WORKER_CAPABILITIES = [
   "nas.worker.check",
   "nas.deploy.verify",
+  "nas.deploy.apply",
 ] as const satisfies readonly BotOpsCapability[];
 
 export function defaultNasWorkerId(): string {
@@ -120,6 +121,26 @@ function runNasDeployVerifyHelper(
   };
 }
 
+function runNasDeployApplyHelper(
+  runner: FixedNasCommandRunner,
+): { ok: boolean; result: string } {
+  const apply = runner(npmCommand(), ["run", "nas:deploy", "--", "-Apply"], 900_000);
+  if (apply.code !== 0) {
+    return {
+      ok: false,
+      result: "NAS deploy apply helper failed before post-verify",
+    };
+  }
+
+  const verification = runner(npmCommand(), ["run", "nas:deploy:verify"], 120_000);
+  return {
+    ok: verification.code === 0,
+    result: verification.code === 0
+      ? "NAS deploy apply helper completed and post-verify passed"
+      : "NAS deploy apply helper completed but post-verify failed",
+  };
+}
+
 export function runNasWorkerOnce(
   workerId = defaultNasWorkerId(),
   now = new Date(),
@@ -147,6 +168,17 @@ export function runNasWorkerOnce(
     const execution = runNasDeployVerifyHelper(runner);
     completeBotOpsJob(job.job_id, workerId, execution.ok ? "Completed" : "Failed", execution.result, new Date(now.getTime() + 200));
     recordNasWorkerStatus(buildNasWorkerStatusSnapshot(workerId), execution.ok ? "completed" : "failed", `nas.deploy.verify: ${execution.ok ? "completed" : "failed"}`, new Date(now.getTime() + 200));
+    return {
+      status: execution.ok ? "completed" : "failed",
+      job,
+      result: execution.result,
+    };
+  }
+
+  if (job.capability === "nas.deploy.apply") {
+    const execution = runNasDeployApplyHelper(runner);
+    completeBotOpsJob(job.job_id, workerId, execution.ok ? "Completed" : "Failed", execution.result, new Date(now.getTime() + 200));
+    recordNasWorkerStatus(buildNasWorkerStatusSnapshot(workerId), execution.ok ? "completed" : "failed", `nas.deploy.apply: ${execution.ok ? "completed" : "failed"}`, new Date(now.getTime() + 200));
     return {
       status: execution.ok ? "completed" : "failed",
       job,

@@ -8,6 +8,9 @@
 - Phase: Windows prerelease baseline complete; external-platform acceptance remains active, NAS-0 connection/staging baseline is in place, the bounded audit-orchestration track has guarded repair coverage, and BotOps staged worker execution is consolidated into this primary repository.
 - Git state: local `main` tracks `origin/main`; current source started synced before the BotOps worker consolidation correction.
 - 2026-08-18 repository direction correction: `Attys_DC_BOT` is the single source-of-truth for the live Discord bot, BotOps command surface, NAS handoff/control-plane helpers, and limited Windows/NAS worker execution. The earlier same-day `Attys_DC_BOT_NAS` worker-target-root slice is superseded as a reference implementation, not a second active runtime repository.
+- 2026-08-18 BotOps NAS deploy apply capability: `/nas deploy-apply` creates an approval-gated `nas.deploy.apply` job. The NAS worker handles it only by running the fixed `npm run nas:deploy -- -Apply` helper and then a mandatory `npm run nas:deploy:verify` post-check. The Discord command itself does not deploy directly, and no live deploy/rebuild/restart/cleanup/commit/push was executed in this implementation checkpoint. Package version is `0.1.1-prerelease.89`.
+- 2026-08-18 BotOps approval-preview safe slice: the approved deploy/rebuild/source-write plan has its first safe implementation checkpoint. `botops_jobs` now records `expected_action` and `validation_condition`, `/ops preview job_id:<id>` shows the approval scope read-only, and `/nas deploy-plan` shows only the `npm run --silent nas:deploy` dry-run behind `DISCORD_ENABLE_NAS_STATUS=true`. No `-Apply`, NAS share write, container rebuild, restart, cleanup, commit, push, deploy, or arbitrary shell path was enabled. Package version is `0.1.1-prerelease.88`.
+- 2026-08-18 BotOps next-stage planning: added `docs/codex-tasks/plans/pending/active/botops-approval-gated-deploy-rebuild-source-write.md` as the separately approvable plan for future source-write, NAS deploy/rebuild, restart, cleanup, and rollback capabilities.
 - 2026-08-18 BotOps NAS deploy verifier worker: `/nas worker-deploy-verify` creates an approval-gated `nas.deploy.verify` job. The NAS worker handles it only by running the existing read-only `npm run nas:deploy:verify` helper; no deploy, rebuild, share write, restart, cleanup, or arbitrary shell path was added. Package version is `0.1.1-prerelease.87`.
 - 2026-08-18 live BotOps NAS deploy verifier smoke: synthetic approved job `smoke-nas-deploy-verify-20260818193648` was acquired by `nas-worker-DESKTOP-4Q481HE` and completed with `NAS deploy verify helper completed: verifier passed`; queues returned to zero and worker error logs remained empty.
 - 2026-08-18 BotOps Windows git commit helper: `/windows helper-run helper:commit message:<...>` creates an approval-gated `git.commit` Windows job. The job uses additive `payload_json` for the commit message, and the worker commits only already staged changes after staged diff-check and secret scan; unstaged/untracked changes, invalid message, diff-check failure, or secret-scan failure block fail closed. Package version is `0.1.1-prerelease.86`.
@@ -52,6 +55,7 @@
 - Active plans:
   - `docs/codex-tasks/plans/pending/active/external-platform-acceptance.md`
   - `docs/codex-tasks/plans/pending/active/bounded-audit-orchestration-and-nas-handoff.md`
+  - `docs/codex-tasks/plans/pending/active/botops-approval-gated-deploy-rebuild-source-write.md`
 
 ## Current Goal
 

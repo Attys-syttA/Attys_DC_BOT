@@ -192,7 +192,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "nas",
     category: "ops",
-    usage: "/nas status | /nas doctor | /nas worker-status | /nas worker-deploy-verify | /nas handoff-gate | /nas deploy-status | /nas container-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
+    usage: "/nas status | /nas doctor | /nas worker-status | /nas worker-deploy-verify | /nas handoff-gate | /nas deploy-status | /nas deploy-plan | /nas deploy-apply | /nas container-status | /nas request check:<plans|lint|typecheck|tests|build|full> | /nas requests status:<all|queued|completed|failed> limit:<1-10> | /nas request-status request:<id-prefix> | /nas mailbox box:<inbox|outbox|archive> limit:<1-10> | /nas mailbox-status | /nas results limit:<1-10> | /nas bridge action:<status|start|stop|restart> | /nas smoke | /nas sync-status",
     short: "Public-safe NAS bridge allapotot mutat vagy fixed audit requestet kuld, ha az env engedi.",
     details: [
       "`/nas status` alapbol tiltott; csak `DISCORD_ENABLE_NAS_STATUS=true` mellett mukodik.",
@@ -201,6 +201,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas doctor` ugyanilyen read-only status flag alatt egyetlen public-safe diagnosztikai osszkepet ad a NAS bridge/deploy/sync/mailbox allapotrol.",
       "`/nas handoff-gate` ugyanilyen read-only status flag alatt mutatja, hogy a NAS architecture handoff meg blokkolt-e.",
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
+      "`/nas deploy-plan` ugyanilyen read-only status flag alatt a NAS deploy helper dry-run elonezetet mutatja; nem ad at `-Apply` kapcsolot, nem ir NAS share-t, nem rebuildel es nem restartol.",
+      "`/nas deploy-apply` approval-gated BotOps `nas.deploy.apply` jobot hoz letre; a worker csak approval utan futtathatja a fix deploy apply helpert es utana kotelezo deploy verifiert.",
       "`/nas container-status` ugyanilyen read-only status flag alatt a restricted SSH status wrapperbol csak public-safe kontener elerhetoseg/futas/duration sorokat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas request` a helyi audit store-ban is nyit egy `waiting_nas_result` jobot, igy `/audit status` alatt is kovetheto.",
@@ -232,12 +234,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "ops",
     category: "ops",
-    usage: "/ops status | /ops workers | /ops jobs limit:<1-25> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops recover job_id:<id> | /ops logs job_id:<id>",
+    usage: "/ops status | /ops workers | /ops jobs limit:<1-25> | /ops preview job_id:<id> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops recover job_id:<id> | /ops logs job_id:<id>",
     short: "A staged BotOps jobok allapotat, jovahagyasat es public-safe reszleteit kezeli.",
     details: [
       "`/ops status` osszesitett staged approval allapotot mutat.",
       "`/ops workers` read-only worker supervisor allapotot mutat, de nem indit vagy allit le worker folyamatot.",
       "`/ops jobs` a legutobbi BotOps jobokat listazza.",
+      "`/ops preview` read-only modon megmutatja, pontosan milyen muveletre es validaciora szolna a jovahagyas.",
       "`/ops approve` csak a job approval allapotat rogziti, de nem indit vegrehajtast.",
       "`/ops cancel` statuszt valt es audit trailt hagy, nem torli a jobot.",
       "`/ops recover` csak lease-expired WaitingWorker jobot tesz vissza a sorba; lejart approvalnal uj jovahagyast ker.",

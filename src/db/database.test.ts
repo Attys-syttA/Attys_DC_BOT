@@ -203,6 +203,10 @@ describe("database", () => {
       expect(second.created).toBe(false);
       expect(listBotOpsJobs()).toHaveLength(1);
       expect(getBotOpsJob("job-1")?.status).toBe("Requested");
+      expect(getBotOpsJob("job-1")).toMatchObject({
+        expected_action: "run a fixed NAS worker health check",
+        validation_condition: "NAS worker records a public-safe status result",
+      });
       expect(listBotOpsJobEvents("job-1")).toMatchObject([
         {
           event_type: "job.created",
@@ -226,6 +230,8 @@ describe("database", () => {
       expect(approved?.approval_state).toBe("approved");
       expect(approved?.approved_by).toBe("operator");
       expect(approved?.approval_expires_at).toBe("2026-08-18T10:15:00.000Z");
+      expect(approved?.expected_action).toBe("restart the fixed Windows bot service helper");
+      expect(approved?.validation_condition).toBe("bot health and command registration remain valid after restart");
       expect(getBotOpsJob("restart-1")?.status).toBe("Requested");
       expect(listBotOpsJobEvents("restart-1")[0]).toMatchObject({
         event_type: "approval.approved",

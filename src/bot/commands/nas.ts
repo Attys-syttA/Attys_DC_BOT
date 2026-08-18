@@ -200,6 +200,12 @@ export const data = new SlashCommandBuilder()
     .setName("deploy-status")
     .setDescription("Verify NAS deployed files against the running control-plane snapshot"))
   .addSubcommand((subcommand) => subcommand
+    .setName("deploy-plan")
+    .setDescription("Preview the NAS deploy helper dry-run without applying changes"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("deploy-apply")
+    .setDescription("Queue an approval-gated NAS deploy apply worker job"))
+  .addSubcommand((subcommand) => subcommand
     .setName("handoff-gate")
     .setDescription("Show the read-only NAS architecture handoff gate"))
   .addSubcommand((subcommand) => subcommand
@@ -407,6 +413,37 @@ export function buildNasDeployStatusReport(repoRoot: string): string {
     `build=${smokeField(result.sourceCommit, "unknown", 40)} version=${smokeField(result.packageVersion, "unknown", 40)}`,
     `checks=${passed}/${total}`,
     ...rows,
+    "```",
+  ].join("\n");
+}
+
+function safeOutputLines(output: string, maxLines = 8): string[] {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/[A-Za-z]:\\/.test(line))
+    .filter((line) => !line.includes("-Apply"))
+    .map((line) => sanitizePublicText(line, 160))
+    .filter((line) => !line.includes("<local-path>"))
+    .slice(0, maxLines);
+}
+
+export async function buildNasDeployPlanReport(repoRoot: string): Promise<string> {
+  const result = await runLocalCommand(npmCommand(), ["run", "--silent", "nas:deploy"], repoRoot, 90_000);
+  const outputLines = safeOutputLines(result.output);
+
+  return [
+    "**NAS Deploy Plan**",
+    "```text",
+    result.exitCode === 0 ? "OK deploy dry-run completed" : "FAIL deploy dry-run failed",
+    "mode=dry-run",
+    "apply=disabled",
+    "nas-share-write=disabled",
+    "container-rebuild=disabled-from-this-command",
+    "restart=disabled",
+    outputLines.length > 0 ? "helper summary:" : "helper summary: none",
+    ...outputLines.map((line) => `- ${line}`),
     "```",
   ].join("\n");
 }
@@ -1142,6 +1179,8 @@ export async function execute(
       target: "nas",
       capability: "nas.deploy.verify",
       summary: "NAS fixed deploy verifier request",
+      expected_action: "run the read-only NAS deploy verifier",
+      validation_condition: "NAS deploy verifier reports the expected build identity and health",
     });
     const heartbeats = listBotOpsWorkerHeartbeats("nas");
 
@@ -1154,6 +1193,31 @@ export async function execute(
         formatBotOpsWorkerHeartbeats(heartbeats),
         "```",
         "No verifier was executed directly from Discord. Approval is required before the worker can run it.",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  if (subcommand === "deploy-apply") {
+    const { job, created } = createOrGetBotOpsJob({
+      requested_by: interaction.user.id,
+      target: "nas",
+      capability: "nas.deploy.apply",
+      summary: "NAS fixed deploy apply request",
+      expected_action: "run the fixed NAS deploy apply helper and post-deploy verifier",
+      validation_condition: "deploy apply exits successfully and NAS deploy verifier passes afterwards",
+    });
+    const heartbeats = listBotOpsWorkerHeartbeats("nas");
+
+    await interaction.editReply({
+      content: [
+        created ? "**NAS deploy apply job queued**" : "**NAS deploy apply job already exists**",
+        "```text",
+        formatBotOpsJobDetails(job),
+        "",
+        formatBotOpsWorkerHeartbeats(heartbeats),
+        "```",
+        "No deploy was executed directly from Discord. Review `/ops preview`, then approve explicitly with `/ops approve`.",
       ].join("\n"),
     });
     return;
@@ -1227,6 +1291,20 @@ export async function execute(
 
     await interaction.editReply({
       content: buildNasDeployStatusReport(process.cwd()),
+    });
+    return;
+  }
+
+  if (subcommand === "deploy-plan") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas deploy-plan` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas deploy-plan` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: await buildNasDeployPlanReport(process.cwd()),
     });
     return;
   }

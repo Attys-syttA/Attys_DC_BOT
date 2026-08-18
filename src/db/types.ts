@@ -31,6 +31,8 @@ export interface BotOpsJobRecord {
   approval_expires_at: string | null;
   summary: string;
   payload_json: string;
+  expected_action: string;
+  validation_condition: string;
   lease_owner: string | null;
   lease_expires_at: string | null;
   heartbeat_at: string | null;

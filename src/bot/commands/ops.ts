@@ -75,6 +75,13 @@ export const data = new SlashCommandBuilder()
       .setDescription("BotOps job id")
       .setRequired(true)))
   .addSubcommand((subcommand) => subcommand
+    .setName("preview")
+    .setDescription("Preview exactly what one BotOps approval would allow")
+    .addStringOption((option) => option
+      .setName("job_id")
+      .setDescription("BotOps job id")
+      .setRequired(true)))
+  .addSubcommand((subcommand) => subcommand
     .setName("logs")
     .setDescription("Show public-safe details for one BotOps job")
     .addStringOption((option) => option
@@ -106,6 +113,16 @@ export async function execute(
   }
 
   const jobId = interaction.options.getString("job_id", true);
+  if (action === "preview") {
+    const job = getBotOpsJob(jobId);
+    await interaction.editReply({
+      content: job
+        ? `**BotOps approval preview**\n\`\`\`text\n${formatBotOpsJobDetails(job)}\n\`\`\`\nThis preview is read-only and starts no worker execution.`
+        : `BotOps job \`${jobId}\` was not found.`,
+    });
+    return;
+  }
+
   if (action === "approve") {
     const job = approveBotOpsJob(jobId, interaction.user.id);
     await interaction.editReply({

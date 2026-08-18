@@ -142,6 +142,8 @@ export function initDatabase(): void {
       approval_expires_at TEXT,
       summary TEXT NOT NULL,
       payload_json TEXT NOT NULL DEFAULT '',
+      expected_action TEXT NOT NULL DEFAULT 'run the requested fixed helper',
+      validation_condition TEXT NOT NULL DEFAULT 'worker records a public-safe result',
       lease_owner TEXT,
       lease_expires_at TEXT,
       heartbeat_at TEXT,
@@ -176,6 +178,8 @@ export function initDatabase(): void {
   ensureColumn("botops_jobs", "approved_by", "TEXT");
   ensureColumn("botops_jobs", "approval_expires_at", "TEXT");
   ensureColumn("botops_jobs", "payload_json", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("botops_jobs", "expected_action", "TEXT NOT NULL DEFAULT 'run the requested fixed helper'");
+  ensureColumn("botops_jobs", "validation_condition", "TEXT NOT NULL DEFAULT 'worker records a public-safe result'");
   normalizeInterruptedAuditJobs();
 }
 
@@ -292,6 +296,8 @@ function botOpsJobFromRecord(record: BotOpsJobRecord): BotOpsJob {
     approval_expires_at: record.approval_expires_at,
     summary: record.summary,
     payload_json: record.payload_json,
+    expected_action: record.expected_action,
+    validation_condition: record.validation_condition,
     lease_owner: record.lease_owner,
     lease_expires_at: record.lease_expires_at,
     heartbeat_at: record.heartbeat_at,
@@ -404,6 +410,8 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
       approval_expires_at,
       summary,
       payload_json,
+      expected_action,
+      validation_condition,
       lease_owner,
       lease_expires_at,
       heartbeat_at,
@@ -412,7 +420,7 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = insert.run(
     job.job_id,
@@ -425,6 +433,8 @@ export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
     job.approval_expires_at,
     sanitizePublicText(job.summary, 300),
     sanitizePublicText(job.payload_json, 2_000),
+    sanitizePublicText(job.expected_action, 300),
+    sanitizePublicText(job.validation_condition, 300),
     job.lease_owner,
     job.lease_expires_at,
     job.heartbeat_at,

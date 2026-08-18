@@ -16,6 +16,8 @@ function makeJob(overrides: Partial<BotOpsJob> = {}): BotOpsJob {
     capability: "nas.worker.check",
     summary: "worker check",
     payload_json: "",
+    expected_action: "run a fixed NAS worker health check",
+    validation_condition: "NAS worker records a public-safe status result",
     created_at: "2026-08-18T10:00:00.000Z",
     status: "Requested",
     approval_state: "not_required",
@@ -41,6 +43,8 @@ describe("BotOps renderer", () => {
 
     expect(content).toContain("lease: worker-1");
     expect(content).toContain("lease expires: 2026-08-18T10:00:30.000Z");
+    expect(content).toContain("expected action: run a fixed NAS worker health check");
+    expect(content).toContain("validation: NAS worker records a public-safe status result");
   });
 
   it("shows WaitingWorker result on compact job lines", () => {

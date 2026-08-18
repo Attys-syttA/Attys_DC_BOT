@@ -15,6 +15,8 @@ export function formatBotOpsJobDetails(job: BotOpsJob): string {
     `capability: ${job.capability}`,
     `approval: ${job.approval_state}`,
     `approval expires: ${job.approval_expires_at ?? "none"}`,
+    `expected action: ${job.expected_action}`,
+    `validation: ${job.validation_condition}`,
     `summary: ${job.summary}`,
     `lease: ${job.lease_owner ?? "none"}`,
     `lease expires: ${job.lease_expires_at ?? "none"}`,

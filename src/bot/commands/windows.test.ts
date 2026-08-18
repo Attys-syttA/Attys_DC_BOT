@@ -78,6 +78,8 @@ describe("/windows helper-run", () => {
       approval_expires_at: null,
       summary: "Windows fixed helper request: commit staged changes",
       payload_json: JSON.stringify({ message: "feat: test commit" }),
+      expected_action: "commit already staged source changes",
+      validation_condition: "commit succeeds after diff-check and secret scan",
       lease_owner: null,
       lease_expires_at: null,
       heartbeat_at: null,
@@ -108,6 +110,8 @@ describe("/windows helper-run", () => {
       capability: "git.commit",
       payload_json: JSON.stringify({ message: "feat: test commit" }),
       summary: "Windows fixed helper request: commit staged changes",
+      expected_action: "commit already staged source changes",
+      validation_condition: "commit succeeds after diff-check and secret scan",
     }));
   });
 });

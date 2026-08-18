@@ -81,6 +81,7 @@ import {
   buildNasBridgeLifecycleReport,
   buildNasBridgeSmokeReport,
   buildNasContainerStatusReport,
+  buildNasDeployPlanReport,
   buildNasDeployStatusReport,
   buildNasDoctorReport,
   buildNasMailboxReport,
@@ -153,6 +154,8 @@ describe("/nas", () => {
         approval_expires_at: null,
         summary: "NAS fixed worker health check",
         payload_json: "",
+        expected_action: "run a fixed NAS worker health check",
+        validation_condition: "NAS worker records a public-safe status result",
         lease_owner: null,
         lease_expires_at: null,
         heartbeat_at: null,
@@ -951,6 +954,83 @@ describe("/nas", () => {
     expect(report).not.toContain("private");
   });
 
+  it("builds a read-only NAS deploy plan from dry-run output", async () => {
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: [
+        "==> prepare NAS staging",
+        "==> dry-run NAS share sync",
+        "Dry-run complete. Re-run with -Apply to sync, rebuild, and verify.",
+        "private path E:\\secret\\repo should not leak",
+      ].join("\n"),
+    });
+
+    const report = await buildNasDeployPlanReport("E:\\private\\repo");
+
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith(
+      "npm.cmd",
+      ["run", "--silent", "nas:deploy"],
+      "E:\\private\\repo",
+      90_000,
+    );
+    expect(report).toContain("NAS Deploy Plan");
+    expect(report).toContain("OK deploy dry-run completed");
+    expect(report).toContain("mode=dry-run");
+    expect(report).toContain("apply=disabled");
+    expect(report).toContain("nas-share-write=disabled");
+    expect(report).toContain("container-rebuild=disabled-from-this-command");
+    expect(report).not.toContain("-Apply");
+    expect(report).not.toContain("E:\\");
+    expect(report).not.toContain("secret");
+  });
+
+  it("executes the NAS deploy plan as a dry-run only", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: "==> dry-run NAS share sync\nDry-run complete.",
+    });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "deploy-plan"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith(
+      "npm.cmd",
+      ["run", "--silent", "nas:deploy"],
+      process.cwd(),
+      90_000,
+    );
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS Deploy Plan");
+    expect(content).toContain("mode=dry-run");
+    expect(content).toContain("apply=disabled");
+    expect(content).not.toContain("-Apply");
+  });
+
+  it("keeps the NAS deploy plan behind the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "deploy-plan"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas deploy-plan` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+  });
+
   it("builds a public-safe NAS container status report", async () => {
     mocks.runLocalCommand.mockReset().mockResolvedValueOnce({
       exitCode: 0,
@@ -1587,6 +1667,8 @@ describe("/nas", () => {
         approval_expires_at: null,
         summary: "NAS fixed deploy verifier request",
         payload_json: "",
+        expected_action: "run the read-only NAS deploy verifier",
+        validation_condition: "NAS deploy verifier reports the expected build identity and health",
         lease_owner: null,
         lease_expires_at: null,
         heartbeat_at: null,
@@ -1613,11 +1695,67 @@ describe("/nas", () => {
       target: "nas",
       capability: "nas.deploy.verify",
       summary: "NAS fixed deploy verifier request",
+      expected_action: "run the read-only NAS deploy verifier",
+      validation_condition: "NAS deploy verifier reports the expected build identity and health",
     }));
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS deploy verifier job queued");
     expect(content).toContain("approval: required");
     expect(content).toContain("No verifier was executed directly from Discord");
+  });
+
+  it("queues an approval-gated NAS deploy apply worker job without executing it", async () => {
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({
+      created: true,
+      job: {
+        job_id: "nas-deploy-apply-1",
+        requested_by: "operator-1",
+        target: "nas",
+        capability: "nas.deploy.apply",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        summary: "NAS fixed deploy apply request",
+        payload_json: "",
+        expected_action: "run the fixed NAS deploy apply helper and post-deploy verifier",
+        validation_condition: "deploy apply exits successfully and NAS deploy verifier passes afterwards",
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        created_at: "2026-08-18T10:00:00.000Z",
+        updated_at: "2026-08-18T10:00:00.000Z",
+      },
+    });
+    const interaction = {
+      user: {
+        id: "operator-1",
+      },
+      options: {
+        getSubcommand: vi.fn(() => "deploy-apply"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      requested_by: "operator-1",
+      target: "nas",
+      capability: "nas.deploy.apply",
+      summary: "NAS fixed deploy apply request",
+      expected_action: "run the fixed NAS deploy apply helper and post-deploy verifier",
+      validation_condition: "deploy apply exits successfully and NAS deploy verifier passes afterwards",
+    }));
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS deploy apply job queued");
+    expect(content).toContain("approval: required");
+    expect(content).toContain("No deploy was executed directly from Discord");
+    expect(content).toContain("/ops preview");
+    expect(content).toContain("/ops approve");
   });
 
   it("keeps the NAS handoff gate behind the NAS status flag", async () => {

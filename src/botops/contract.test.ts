@@ -20,6 +20,7 @@ describe("BotOps contract", () => {
     expect(capabilityRequiresApproval("audit.repair.apply")).toBe(true);
     expect(capabilityRequiresApproval("git.push")).toBe(true);
     expect(capabilityRequiresApproval("service.restart")).toBe(true);
+    expect(capabilityRequiresApproval("nas.deploy.apply")).toBe(true);
   });
 
   it("creates read-only jobs without approval", () => {
@@ -34,6 +35,8 @@ describe("BotOps contract", () => {
     expect(job.status).toBe("Requested");
     expect(job.approval_state).toBe("not_required");
     expect(job.payload_json).toBe("");
+    expect(job.expected_action).toBe("run a fixed NAS worker health check");
+    expect(job.validation_condition).toBe("NAS worker records a public-safe status result");
     expect(job.created_at).toBe("2026-08-18T10:00:00.000Z");
   });
 
@@ -48,6 +51,38 @@ describe("BotOps contract", () => {
 
     expect(job.status).toBe("WaitingApproval");
     expect(job.approval_state).toBe("required");
+    expect(job.expected_action).toBe("restart the fixed Windows bot service helper");
+    expect(job.validation_condition).toBe("bot health and command registration remain valid after restart");
+  });
+
+  it("keeps explicit approval preview metadata when a job needs a narrower contract", () => {
+    const job = createBotOpsJob({
+      job_id: "push-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push after release",
+      expected_action: "push commit abc123 to origin/main",
+      validation_condition: "origin/main contains abc123 and worktree stays clean",
+    });
+
+    expect(job.expected_action).toBe("push commit abc123 to origin/main");
+    expect(job.validation_condition).toBe("origin/main contains abc123 and worktree stays clean");
+  });
+
+  it("creates NAS deploy apply jobs with exact approval metadata", () => {
+    const job = createBotOpsJob({
+      job_id: "nas-deploy-apply-1",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.deploy.apply",
+      summary: "deploy apply",
+    });
+
+    expect(job.status).toBe("WaitingApproval");
+    expect(job.approval_state).toBe("required");
+    expect(job.expected_action).toBe("run the fixed NAS deploy apply helper and post-deploy verifier");
+    expect(job.validation_condition).toBe("deploy apply exits successfully and NAS deploy verifier passes afterwards");
   });
 
   it("matches approvals by exact job target and capability", () => {
@@ -65,14 +100,16 @@ describe("BotOps contract", () => {
       target: "repo",
       capability: "audit.repair.apply",
       state: "approved",
-      expected_action: "apply reviewed repair",
-      validation: "rerun tests",
+      expected_action: "apply a reviewed passing repair diff to the source worktree",
+      validation: "the original named check passes again in the source worktree",
       created_at: "2026-08-18T10:00:00.000Z",
       expires_at: "2026-08-18T10:05:00.000Z",
     };
 
     expect(approvalMatchesJob(job, approval, new Date("2026-08-18T10:01:00.000Z"))).toBe(true);
     expect(approvalMatchesJob(job, { ...approval, capability: "git.push" }, new Date("2026-08-18T10:01:00.000Z"))).toBe(false);
+    expect(approvalMatchesJob(job, { ...approval, expected_action: "push branch" }, new Date("2026-08-18T10:01:00.000Z"))).toBe(false);
+    expect(approvalMatchesJob(job, { ...approval, validation: "skip validation" }, new Date("2026-08-18T10:01:00.000Z"))).toBe(false);
     expect(approvalMatchesJob(job, approval, new Date("2026-08-18T10:06:00.000Z"))).toBe(false);
   });
 

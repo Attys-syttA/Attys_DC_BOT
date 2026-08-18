@@ -56,4 +56,18 @@ describe("/ops command surface", () => {
       required: true,
     });
   });
+
+  it("registers preview as a read-only approval inspection action", () => {
+    const json = data.toJSON();
+    const preview = json.options?.find((option) => option.name === "preview");
+
+    expect(preview).toBeDefined();
+    expect(preview?.type).toBe(ApplicationCommandOptionType.Subcommand);
+    if (preview?.type !== ApplicationCommandOptionType.Subcommand) return;
+    expect(preview?.description).toContain("Preview");
+    expect(preview?.options?.[0]).toMatchObject({
+      name: "job_id",
+      required: true,
+    });
+  });
 });

@@ -2,6 +2,12 @@
 
 ## 2026-08-18
 
+- BotOps NAS deploy apply capability: `/nas deploy-apply` now creates an approval-gated `nas.deploy.apply` job. The NAS worker can run only the fixed `npm run nas:deploy -- -Apply` helper for that capability, followed by a mandatory `npm run nas:deploy:verify` post-check; Discord command execution itself still starts no deploy.
+- Version bump: a package verzio `0.1.1-prerelease.89`, mert uj approval-gated `/nas deploy-apply` subcommand es NAS worker `nas.deploy.apply` capability jelent meg.
+- BotOps approval-preview safe slice: `botops_jobs` now stores `expected_action` and `validation_condition`, approval matching checks those exact fields when present, and `/ops preview job_id:<id>` shows the approval scope without starting worker execution.
+- NAS deploy-plan Discord preview: `/nas deploy-plan` runs only the existing `npm run --silent nas:deploy` dry-run behind `DISCORD_ENABLE_NAS_STATUS=true`, reports a public-safe summary, and explicitly keeps apply, NAS share write, container rebuild, and restart disabled.
+- Version bump: a package verzio `0.1.1-prerelease.88`, mert user-visible `/ops preview`, BotOps approval metadata, es read-only `/nas deploy-plan` subcommand jelent meg.
+- BotOps deploy/rebuild/source-write planning: added `docs/codex-tasks/plans/pending/active/botops-approval-gated-deploy-rebuild-source-write.md` as the next separately approvable staged-autonomy plan. It documents source-write, NAS deploy/rebuild, restart, cleanup, rollback, approval, failure-branch, and validation rules in operator-readable Hungarian; no runtime capability was enabled.
 - BotOps NAS deploy verifier worker: `/nas worker-deploy-verify` now creates an approval-gated `nas.deploy.verify` job. The NAS worker can run only the fixed read-only `npm run nas:deploy:verify` helper for that capability; no NAS deploy, rebuild, share write, restart, cleanup, or arbitrary shell path was added.
 - Version bump: a package verzio `0.1.1-prerelease.87`, mert uj user-visible `/nas worker-deploy-verify` subcommand es NAS worker `nas.deploy.verify` capability jelent meg.
 - Live BotOps NAS deploy verifier smoke: a synthetic approved `nas.deploy.verify` BotOps jobot a live NAS worker felvette es `Completed` allapotban zarta `NAS deploy verify helper completed: verifier passed` eredmennyel. A queue utana ures maradt, a NAS/Windows worker hibalognak nem volt uj tartalma.
