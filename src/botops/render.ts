@@ -1,0 +1,86 @@
+import type { BotOpsEventRecord, BotOpsWorkerHeartbeatRecord } from "../db/types.js";
+import type { BotOpsJob } from "./contract.js";
+
+export function formatBotOpsJobLine(job: BotOpsJob): string {
+  const approval = job.approval_state === "not_required" ? "" : ` approval=${job.approval_state}`;
+  return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}`;
+}
+
+export function formatBotOpsJobDetails(job: BotOpsJob): string {
+  return [
+    `job: ${job.job_id}`,
+    `status: ${job.status}`,
+    `target: ${job.target}`,
+    `capability: ${job.capability}`,
+    `approval: ${job.approval_state}`,
+    `approval expires: ${job.approval_expires_at ?? "none"}`,
+    `summary: ${job.summary}`,
+    `lease: ${job.lease_owner ?? "none"}`,
+    `heartbeat: ${job.heartbeat_at ?? "none"}`,
+    `result: ${job.result || "none"}`,
+  ].join("\n");
+}
+
+export function buildBotOpsJobsReply(jobs: BotOpsJob[]): string {
+  if (jobs.length === 0) {
+    return "**BotOps jobs**\nNo BotOps jobs recorded yet.";
+  }
+
+  return [
+    "**BotOps jobs**",
+    "```text",
+    ...jobs.map(formatBotOpsJobLine),
+    "```",
+  ].join("\n");
+}
+
+export function formatBotOpsEventLine(event: BotOpsEventRecord): string {
+  return `- ${event.created_at} ${event.event_type} actor=${event.actor} ${event.detail}`;
+}
+
+export function formatBotOpsEventDetails(events: BotOpsEventRecord[]): string {
+  if (events.length === 0) {
+    return "events: none";
+  }
+
+  return [
+    "events:",
+    ...events.map(formatBotOpsEventLine),
+  ].join("\n");
+}
+
+export function formatBotOpsWorkerHeartbeatLine(heartbeat: BotOpsWorkerHeartbeatRecord): string {
+  return `- ${heartbeat.worker_id}: ${heartbeat.status} at ${heartbeat.heartbeat_at} capabilities=${heartbeat.capabilities}`;
+}
+
+export function formatBotOpsWorkerHeartbeats(heartbeats: BotOpsWorkerHeartbeatRecord[]): string {
+  if (heartbeats.length === 0) {
+    return "worker heartbeats: none";
+  }
+
+  return [
+    "worker heartbeats:",
+    ...heartbeats.map(formatBotOpsWorkerHeartbeatLine),
+  ].join("\n");
+}
+
+export function buildBotOpsStatusReply(jobs: BotOpsJob[]): string {
+  const running = jobs.filter((job) => job.status === "Running").length;
+  const waitingApproval = jobs.filter((job) => job.status === "WaitingApproval").length;
+  const waitingWorker = jobs.filter((job) => job.status === "WaitingWorker").length;
+  const failed = jobs.filter((job) => job.status === "Failed" || job.status === "FailedDuplicateWorker").length;
+
+  return [
+    "**BotOps status**",
+    "```text",
+    "mode: staged approval",
+    "arbitrary shell: disabled",
+    "auto commit/push/deploy: disabled",
+    `known jobs: ${jobs.length}`,
+    `running: ${running}`,
+    `waiting approval: ${waitingApproval}`,
+    `waiting worker: ${waitingWorker}`,
+    `failed: ${failed}`,
+    "```",
+  ].join("\n");
+}

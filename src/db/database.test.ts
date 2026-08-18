@@ -48,6 +48,18 @@ import {
   listNasHandoffRequests,
   listNasHandoffRequestsByStatus,
   updateNasHandoffRequestResult,
+  createOrGetBotOpsJob,
+  getBotOpsJob,
+  listBotOpsJobs,
+  approveBotOpsJob,
+  acquireNextBotOpsJob,
+  markExpiredBotOpsApprovals,
+  recordBotOpsHeartbeat,
+  completeBotOpsJob,
+  updateBotOpsJobStatus,
+  listBotOpsJobEvents,
+  recordBotOpsWorkerHeartbeat,
+  listBotOpsWorkerHeartbeats,
 } from "./database.js";
 import { defaultAuditCapabilities } from "../audit/types.js";
 
@@ -165,6 +177,208 @@ describe("database", () => {
     it("getAllSessions returns empty for guild with no sessions", () => {
       registerProject("ch2", "/p2", "guild2");
       expect(getAllSessions("guild2")).toHaveLength(0);
+    });
+  });
+
+  describe("BotOps jobs", () => {
+    it("creates BotOps jobs idempotently by job id", () => {
+      const first = createOrGetBotOpsJob({
+        job_id: "job-1",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+      const second = createOrGetBotOpsJob({
+        job_id: "job-1",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+
+      expect(first.created).toBe(true);
+      expect(second.created).toBe(false);
+      expect(listBotOpsJobs()).toHaveLength(1);
+      expect(getBotOpsJob("job-1")?.status).toBe("Requested");
+      expect(listBotOpsJobEvents("job-1")).toMatchObject([
+        {
+          event_type: "job.created",
+          actor: "operator",
+          detail: "nas/nas.worker.check",
+        },
+      ]);
+    });
+
+    it("requires approval before approval-gated jobs become requested", () => {
+      createOrGetBotOpsJob({
+        job_id: "restart-1",
+        requested_by: "operator",
+        target: "windows",
+        capability: "service.restart",
+        summary: "restart",
+      });
+
+      expect(getBotOpsJob("restart-1")?.status).toBe("WaitingApproval");
+      const approved = approveBotOpsJob("restart-1", "operator", new Date("2026-08-18T10:00:00.000Z"));
+      expect(approved?.approval_state).toBe("approved");
+      expect(approved?.approved_by).toBe("operator");
+      expect(approved?.approval_expires_at).toBe("2026-08-18T10:15:00.000Z");
+      expect(getBotOpsJob("restart-1")?.status).toBe("Requested");
+      expect(listBotOpsJobEvents("restart-1")[0]).toMatchObject({
+        event_type: "approval.approved",
+        actor: "operator",
+        detail: "expires 2026-08-18T10:15:00.000Z",
+      });
+    });
+
+    it("can cancel a queued job without deleting its audit trail", () => {
+      createOrGetBotOpsJob({
+        job_id: "check-1",
+        requested_by: "operator",
+        target: "repo",
+        capability: "audit.check",
+        summary: "check",
+      });
+
+      expect(updateBotOpsJobStatus("check-1", "Cancelled", "cancelled by test")).toBe(true);
+      expect(getBotOpsJob("check-1")?.status).toBe("Cancelled");
+      expect(getBotOpsJob("check-1")?.result).toBe("cancelled by test");
+      expect(listBotOpsJobEvents("check-1")[0]).toMatchObject({
+        event_type: "status.Cancelled",
+        actor: "system",
+        detail: "cancelled by test",
+      });
+    });
+
+    it("acquires only requested jobs matching target and capability", () => {
+      createOrGetBotOpsJob({
+        job_id: "windows-1",
+        requested_by: "operator",
+        target: "windows",
+        capability: "status.read",
+        summary: "windows status",
+      });
+      createOrGetBotOpsJob({
+        job_id: "nas-1",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+
+      const job = acquireNextBotOpsJob(
+        "nas-worker-1",
+        "nas",
+        ["nas.worker.check"],
+        30_000,
+        new Date("2026-08-18T10:00:00.000Z"),
+      );
+
+      expect(job?.job_id).toBe("nas-1");
+      expect(job?.status).toBe("Running");
+      expect(job?.lease_owner).toBe("nas-worker-1");
+      expect(getBotOpsJob("windows-1")?.status).toBe("Requested");
+    });
+
+    it("marks expired approvals stale before worker pickup", () => {
+      createOrGetBotOpsJob({
+        job_id: "deploy-2",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.deploy.verify",
+        summary: "deploy verify",
+      });
+      approveBotOpsJob("deploy-2", "operator", new Date("2026-08-18T10:00:00.000Z"), 1_000);
+
+      expect(acquireNextBotOpsJob(
+        "nas-worker-1",
+        "nas",
+        ["nas.deploy.verify"],
+        30_000,
+        new Date("2026-08-18T10:00:02.000Z"),
+      )).toBeUndefined();
+
+      const job = getBotOpsJob("deploy-2");
+      expect(job?.approval_state).toBe("stale");
+      expect(job?.status).toBe("WaitingApproval");
+      expect(job?.result).toBe("approval expired");
+      expect(listBotOpsJobEvents("deploy-2")[0]).toMatchObject({
+        event_type: "approval.stale",
+        actor: "system",
+        detail: "approval expired",
+      });
+    });
+
+    it("can mark expired approvals in a maintenance pass", () => {
+      createOrGetBotOpsJob({
+        job_id: "push-1",
+        requested_by: "operator",
+        target: "repo",
+        capability: "git.push",
+        summary: "push",
+      });
+      approveBotOpsJob("push-1", "operator", new Date("2026-08-18T10:00:00.000Z"), 1_000);
+
+      expect(markExpiredBotOpsApprovals(new Date("2026-08-18T10:00:02.000Z"))).toBe(1);
+      expect(getBotOpsJob("push-1")?.approval_state).toBe("stale");
+    });
+
+    it("records heartbeat and completion only for the lease owner", () => {
+      createOrGetBotOpsJob({
+        job_id: "nas-2",
+        requested_by: "operator",
+        target: "nas",
+        capability: "nas.worker.check",
+        summary: "worker check",
+      });
+      acquireNextBotOpsJob("nas-worker-1", "nas", ["nas.worker.check"], 30_000);
+
+      expect(recordBotOpsHeartbeat("nas-2", "other-worker")).toBe(false);
+      expect(recordBotOpsHeartbeat("nas-2", "nas-worker-1", new Date("2026-08-18T10:00:01.000Z"))).toBe(true);
+      expect(completeBotOpsJob("nas-2", "other-worker", "Completed", "wrong owner")).toBe(false);
+      expect(completeBotOpsJob("nas-2", "nas-worker-1", "Completed", "ok")).toBe(true);
+      expect(getBotOpsJob("nas-2")?.status).toBe("Completed");
+      expect(getBotOpsJob("nas-2")?.lease_owner).toBeNull();
+      expect(listBotOpsJobEvents("nas-2").map((event) => event.event_type)).toEqual([
+        "worker.Completed",
+        "worker.acquired",
+        "job.created",
+      ]);
+    });
+
+    it("records worker heartbeat snapshots by worker id", () => {
+      recordBotOpsWorkerHeartbeat({
+        worker_id: "nas-worker-1",
+        target: "nas",
+        host: "host-a",
+        capabilities: ["nas.worker.check"],
+        status: "status",
+        detail: "first",
+        now: new Date("2026-08-18T10:00:00.000Z"),
+      });
+      recordBotOpsWorkerHeartbeat({
+        worker_id: "nas-worker-1",
+        target: "nas",
+        host: "host-a",
+        capabilities: ["nas.worker.check"],
+        status: "idle",
+        detail: "second",
+        now: new Date("2026-08-18T10:01:00.000Z"),
+      });
+
+      expect(listBotOpsWorkerHeartbeats("windows")).toHaveLength(0);
+      expect(listBotOpsWorkerHeartbeats("nas")).toMatchObject([
+        {
+          worker_id: "nas-worker-1",
+          target: "nas",
+          host: "host-a",
+          capabilities: "nas.worker.check",
+          status: "idle",
+          detail: "second",
+          heartbeat_at: "2026-08-18T10:01:00.000Z",
+        },
+      ]);
     });
   });
 

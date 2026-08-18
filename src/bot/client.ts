@@ -28,6 +28,8 @@ import * as usageCmd from "./commands/usage.js";
 import * as askCmd from "./commands/ask.js";
 import * as auditCmd from "./commands/audit.js";
 import * as nasCmd from "./commands/nas.js";
+import * as opsCmd from "./commands/ops.js";
+import * as windowsCmd from "./commands/windows.js";
 import * as doctorCmd from "./commands/doctor.js";
 import * as gitStatusCmd from "./commands/git-status.js";
 import * as runTestsCmd from "./commands/run-tests.js";
@@ -57,6 +59,8 @@ const chatCommands = [
   askCmd,
   auditCmd,
   nasCmd,
+  opsCmd,
+  windowsCmd,
   doctorCmd,
   gitStatusCmd,
   runTestsCmd,

@@ -23,8 +23,11 @@ import {
   listNasHandoffRequestsByStatus,
   updateAuditJobProgress,
   updateNasHandoffRequestResult,
+  createOrGetBotOpsJob,
+  listBotOpsWorkerHeartbeats,
 } from "../../db/database.js";
 import type { NasHandoffRequestRecord, NasHandoffRequestStatusFilter } from "../../db/types.js";
+import { formatBotOpsJobDetails, formatBotOpsWorkerHeartbeats } from "../../botops/render.js";
 import {
   listHandoffEnvelopeFiles,
   readHandoffEnvelope,
@@ -201,7 +204,10 @@ export const data = new SlashCommandBuilder()
     .setDescription("Show the read-only NAS architecture handoff gate"))
   .addSubcommand((subcommand) => subcommand
     .setName("container-status")
-    .setDescription("Show read-only NAS control-plane container status"));
+    .setDescription("Show read-only NAS control-plane container status"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("worker-status")
+    .setDescription("Queue a fixed NAS worker health check"));
 
 function ok(value: unknown): boolean {
   return value === true;
@@ -1104,6 +1110,29 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
+  if (subcommand === "worker-status") {
+    const { job, created } = createOrGetBotOpsJob({
+      requested_by: interaction.user.id,
+      target: "nas",
+      capability: "nas.worker.check",
+      summary: "NAS fixed worker health check",
+    });
+    const heartbeats = listBotOpsWorkerHeartbeats("nas");
+
+    await interaction.editReply({
+      content: [
+        created ? "**NAS worker check queued**" : "**NAS worker check already exists**",
+        "```text",
+        formatBotOpsJobDetails(job),
+        "",
+        formatBotOpsWorkerHeartbeats(heartbeats),
+        "```",
+        "No NAS shell or deploy action was executed directly from Discord.",
+      ].join("\n"),
+    });
+    return;
+  }
+
   if (subcommand === "bridge") {
     const config = getConfig();
     if (!config.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE) {

@@ -81,11 +81,11 @@ export function renderHelpList(commandName: string): string {
   return splitDiscordContent([
     "**Attys DC BOT sugo**",
     "Kezdes: `/dashboard`, `/health`, `/events`, `/logs`.",
-    "",
-    ...lines,
     `Elso lepesek: \`/${commandName} parancs: kezdetek\``,
     `Fajlfeltoltes: \`/${commandName} parancs: fajlfeltoltes\``,
     `Reszletes parancs: \`/${commandName} parancs: ask\``,
+    "",
+    ...lines,
   ].join("\n"))[0];
 }
 

@@ -5,6 +5,14 @@ import { randomUUID } from "node:crypto";
 import { sanitizePublicFileLabel, sanitizePublicText } from "../utils/public-safety.js";
 import type { AuditCheckRunResult } from "../audit/check-runner.js";
 import { isTerminalAuditStatus, type AuditJobStatus } from "../audit/types.js";
+import {
+  createBotOpsJob,
+  type BotOpsCapability,
+  type BotOpsJob,
+  type BotOpsJobRequest,
+  type BotOpsJobStatus,
+  type BotOpsTarget,
+} from "../botops/contract.js";
 import type {
   AuditJobCreateInput,
   AuditJobRecord,
@@ -15,6 +23,9 @@ import type {
   AuditRepairWorktreeRecord,
   AuditRepairWorktreeStatus,
   AuditStepRecord,
+  BotOpsEventRecord,
+  BotOpsJobRecord,
+  BotOpsWorkerHeartbeatRecord,
   NasHandoffRequestCreateInput,
   NasHandoffRequestRecord,
   NasHandoffRequestStatusFilter,
@@ -119,10 +130,50 @@ export function initDatabase(): void {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS botops_jobs (
+      job_id TEXT PRIMARY KEY,
+      requested_by TEXT NOT NULL,
+      target TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      status TEXT NOT NULL,
+      approval_state TEXT NOT NULL,
+      approved_by TEXT,
+      approval_expires_at TEXT,
+      summary TEXT NOT NULL,
+      lease_owner TEXT,
+      lease_expires_at TEXT,
+      heartbeat_at TEXT,
+      logs TEXT NOT NULL DEFAULT '',
+      result TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS botops_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      actor TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS botops_worker_heartbeats (
+      worker_id TEXT PRIMARY KEY,
+      target TEXT NOT NULL,
+      host TEXT NOT NULL,
+      capabilities TEXT NOT NULL,
+      status TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      heartbeat_at TEXT NOT NULL
+    );
   `);
   ensureColumn("audit_jobs", "requested_check", "TEXT");
   ensureColumn("audit_repair_executions", "iteration", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
+  ensureColumn("botops_jobs", "approved_by", "TEXT");
+  ensureColumn("botops_jobs", "approval_expires_at", "TEXT");
   normalizeInterruptedAuditJobs();
 }
 
@@ -221,6 +272,354 @@ export function getAllSessions(guildId: string): (Session & { project_path: stri
       WHERE p.guild_id = ?
     `)
     .all(guildId) as (Session & { project_path: string })[];
+}
+
+function nowFromIso(value: string): Date {
+  return new Date(value);
+}
+
+function botOpsJobFromRecord(record: BotOpsJobRecord): BotOpsJob {
+  return {
+    job_id: record.job_id,
+    requested_by: record.requested_by,
+    target: record.target as BotOpsJob["target"],
+    capability: record.capability as BotOpsJob["capability"],
+    status: record.status as BotOpsJob["status"],
+    approval_state: record.approval_state as BotOpsJob["approval_state"],
+    approved_by: record.approved_by,
+    approval_expires_at: record.approval_expires_at,
+    summary: record.summary,
+    lease_owner: record.lease_owner,
+    lease_expires_at: record.lease_expires_at,
+    heartbeat_at: record.heartbeat_at,
+    logs: record.logs,
+    result: record.result,
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+  };
+}
+
+export function recordBotOpsEvent(
+  jobId: string,
+  eventType: string,
+  actor: string,
+  detail: string,
+  now = new Date(),
+): void {
+  db.prepare(`
+    INSERT INTO botops_events (job_id, event_type, actor, detail, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(
+    sanitizePublicText(jobId, 120),
+    sanitizePublicText(eventType, 80),
+    sanitizePublicText(actor, 80),
+    sanitizePublicText(detail, 300),
+    now.toISOString(),
+  );
+}
+
+export function listBotOpsJobEvents(jobId: string, limit = 10): BotOpsEventRecord[] {
+  return db.prepare(`
+    SELECT *
+    FROM botops_events
+    WHERE job_id = ?
+    ORDER BY id DESC
+    LIMIT ?
+  `).all(sanitizePublicText(jobId, 120), Math.max(1, Math.min(25, limit))) as BotOpsEventRecord[];
+}
+
+export function recordBotOpsWorkerHeartbeat(input: {
+  worker_id: string;
+  target: BotOpsTarget;
+  host: string;
+  capabilities: readonly BotOpsCapability[];
+  status: string;
+  detail: string;
+  now?: Date;
+}): void {
+  const timestamp = (input.now ?? new Date()).toISOString();
+  db.prepare(`
+    INSERT INTO botops_worker_heartbeats (
+      worker_id,
+      target,
+      host,
+      capabilities,
+      status,
+      detail,
+      heartbeat_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(worker_id) DO UPDATE SET
+      target = excluded.target,
+      host = excluded.host,
+      capabilities = excluded.capabilities,
+      status = excluded.status,
+      detail = excluded.detail,
+      heartbeat_at = excluded.heartbeat_at
+  `).run(
+    sanitizePublicText(input.worker_id, 120),
+    input.target,
+    sanitizePublicText(input.host, 120),
+    [...new Set(input.capabilities)].join(", "),
+    sanitizePublicText(input.status, 80),
+    sanitizePublicText(input.detail, 300),
+    timestamp,
+  );
+}
+
+export function listBotOpsWorkerHeartbeats(target?: BotOpsTarget): BotOpsWorkerHeartbeatRecord[] {
+  if (target) {
+    return db.prepare(`
+      SELECT *
+      FROM botops_worker_heartbeats
+      WHERE target = ?
+      ORDER BY heartbeat_at DESC
+    `).all(target) as BotOpsWorkerHeartbeatRecord[];
+  }
+
+  return db.prepare(`
+    SELECT *
+    FROM botops_worker_heartbeats
+    ORDER BY heartbeat_at DESC
+  `).all() as BotOpsWorkerHeartbeatRecord[];
+}
+
+export function createOrGetBotOpsJob(request: BotOpsJobRequest): {
+  job: BotOpsJob;
+  created: boolean;
+} {
+  const job = createBotOpsJob(request);
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO botops_jobs (
+      job_id,
+      requested_by,
+      target,
+      capability,
+      status,
+      approval_state,
+      approved_by,
+      approval_expires_at,
+      summary,
+      lease_owner,
+      lease_expires_at,
+      heartbeat_at,
+      logs,
+      result,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const result = insert.run(
+    job.job_id,
+    sanitizePublicText(job.requested_by, 80),
+    job.target,
+    job.capability,
+    job.status,
+    job.approval_state,
+    job.approved_by,
+    job.approval_expires_at,
+    sanitizePublicText(job.summary, 300),
+    job.lease_owner,
+    job.lease_expires_at,
+    job.heartbeat_at,
+    job.logs,
+    job.result,
+    job.created_at,
+    job.updated_at,
+  );
+  if (result.changes === 1) {
+    recordBotOpsEvent(
+      job.job_id,
+      "job.created",
+      job.requested_by,
+      `${job.target}/${job.capability}`,
+      new Date(job.created_at),
+    );
+  }
+  return {
+    job: getBotOpsJob(job.job_id) ?? job,
+    created: result.changes === 1,
+  };
+}
+
+export function getBotOpsJob(jobId: string): BotOpsJob | undefined {
+  const record = db
+    .prepare("SELECT * FROM botops_jobs WHERE job_id = ?")
+    .get(sanitizePublicText(jobId, 120)) as BotOpsJobRecord | undefined;
+  return record ? botOpsJobFromRecord(record) : undefined;
+}
+
+export function listBotOpsJobs(limit = 10): BotOpsJob[] {
+  const records = db
+    .prepare("SELECT * FROM botops_jobs ORDER BY created_at DESC LIMIT ?")
+    .all(Math.max(1, Math.min(25, limit))) as BotOpsJobRecord[];
+  return records.map(botOpsJobFromRecord);
+}
+
+export function updateBotOpsJobStatus(
+  jobId: string,
+  status: BotOpsJobStatus,
+  result = "",
+): boolean {
+  const updated = new Date().toISOString();
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET status = ?, result = ?, updated_at = ?
+    WHERE job_id = ?
+  `).run(status, sanitizePublicText(result, 2_000), updated, sanitizePublicText(jobId, 120));
+  if (changed.changes === 1) {
+    recordBotOpsEvent(jobId, `status.${status}`, "system", result || status, nowFromIso(updated));
+  }
+  return changed.changes === 1;
+}
+
+export function approveBotOpsJob(
+  jobId: string,
+  approvedBy: string,
+  now = new Date(),
+  ttlMs = 15 * 60_000,
+): BotOpsJob | undefined {
+  const job = getBotOpsJob(jobId);
+  if (!job) return undefined;
+  if (job.approval_state !== "required") return job;
+
+  const updated = now.toISOString();
+  const expiresAt = new Date(now.getTime() + Math.max(1_000, ttlMs)).toISOString();
+  const safeApprovedBy = sanitizePublicText(approvedBy, 80);
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET approval_state = 'approved',
+      status = 'Requested',
+      approved_by = ?,
+      approval_expires_at = ?,
+      logs = ?,
+      updated_at = ?
+    WHERE job_id = ?
+  `).run(safeApprovedBy, expiresAt, `approved by ${safeApprovedBy}`, updated, sanitizePublicText(jobId, 120));
+  if (changed.changes === 1) {
+    recordBotOpsEvent(jobId, "approval.approved", safeApprovedBy, `expires ${expiresAt}`, now);
+  }
+  return getBotOpsJob(jobId);
+}
+
+export function markExpiredBotOpsApprovals(now = new Date()): number {
+  const timestamp = now.toISOString();
+  const expiredJobs = db.prepare(`
+    SELECT job_id
+    FROM botops_jobs
+    WHERE approval_state = 'approved'
+      AND status = 'Requested'
+      AND approval_expires_at IS NOT NULL
+      AND approval_expires_at <= ?
+  `).all(timestamp) as { job_id: string }[];
+
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET approval_state = 'stale',
+      status = 'WaitingApproval',
+      result = 'approval expired',
+      updated_at = ?
+    WHERE approval_state = 'approved'
+      AND status = 'Requested'
+      AND approval_expires_at IS NOT NULL
+      AND approval_expires_at <= ?
+  `).run(timestamp, timestamp);
+  for (const job of expiredJobs) {
+    recordBotOpsEvent(job.job_id, "approval.stale", "system", "approval expired", now);
+  }
+  return changed.changes;
+}
+
+export function acquireNextBotOpsJob(
+  workerId: string,
+  target: BotOpsTarget,
+  capabilities: readonly BotOpsCapability[],
+  leaseMs: number,
+  now = new Date(),
+): BotOpsJob | undefined {
+  const uniqueCapabilities = [...new Set(capabilities)];
+  if (uniqueCapabilities.length === 0) return undefined;
+  markExpiredBotOpsApprovals(now);
+
+  const placeholders = uniqueCapabilities.map(() => "?").join(", ");
+  const record = db.prepare(`
+    SELECT *
+    FROM botops_jobs
+    WHERE status = 'Requested'
+      AND target = ?
+      AND approval_state IN ('not_required', 'approved')
+      AND capability IN (${placeholders})
+    ORDER BY created_at ASC
+    LIMIT 1
+  `).get(target, ...uniqueCapabilities) as BotOpsJobRecord | undefined;
+
+  if (!record) return undefined;
+
+  const leaseExpiresAt = new Date(now.getTime() + Math.max(1_000, leaseMs)).toISOString();
+  const updated = now.toISOString();
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET status = 'Running',
+      lease_owner = ?,
+      lease_expires_at = ?,
+      heartbeat_at = ?,
+      updated_at = ?
+    WHERE job_id = ?
+      AND status = 'Requested'
+  `).run(sanitizePublicText(workerId, 120), leaseExpiresAt, updated, updated, record.job_id);
+
+  if (changed.changes !== 1) return undefined;
+  recordBotOpsEvent(record.job_id, "worker.acquired", workerId, `lease expires ${leaseExpiresAt}`, now);
+  return getBotOpsJob(record.job_id);
+}
+
+export function recordBotOpsHeartbeat(
+  jobId: string,
+  workerId: string,
+  now = new Date(),
+): boolean {
+  const timestamp = now.toISOString();
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET heartbeat_at = ?,
+      updated_at = ?
+    WHERE job_id = ?
+      AND lease_owner = ?
+      AND status = 'Running'
+  `).run(timestamp, timestamp, sanitizePublicText(jobId, 120), sanitizePublicText(workerId, 120));
+  return changed.changes === 1;
+}
+
+export function completeBotOpsJob(
+  jobId: string,
+  workerId: string,
+  status: Extract<BotOpsJobStatus, "Completed" | "Failed" | "WaitingWorker">,
+  result: string,
+  now = new Date(),
+): boolean {
+  const updated = now.toISOString();
+  const changed = db.prepare(`
+    UPDATE botops_jobs
+    SET status = ?,
+      result = ?,
+      lease_owner = NULL,
+      lease_expires_at = NULL,
+      updated_at = ?
+    WHERE job_id = ?
+      AND lease_owner = ?
+      AND status = 'Running'
+  `).run(
+    status,
+    sanitizePublicText(result, 2_000),
+    updated,
+    sanitizePublicText(jobId, 120),
+    sanitizePublicText(workerId, 120),
+  );
+  if (changed.changes === 1) {
+    recordBotOpsEvent(jobId, `worker.${status}`, workerId, result, now);
+  }
+  return changed.changes === 1;
 }
 
 export function createAuditJob(input: AuditJobCreateInput): void {
