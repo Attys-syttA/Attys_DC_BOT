@@ -142,6 +142,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - BotOps worker supervisor PID metadata guard: a helyi worker supervisor start target/command metadata fájlt ír a PID mellé, `/ops workers` `verified: yes/no` mezőt mutat, stop/restart pedig nem terminál futó PID-et hiányzó vagy eltérő metadata mellett.
 - BotOps worker heartbeat freshness: a worker heartbeat listák `fresh` vagy `stale` jelzést kapnak, így `/windows status` és `/nas worker-status` alatt látszik, ha egy worker offline vagy késik.
 - BotOps WaitingWorker recovery: `/ops recover job_id:<id>` csak lease-expired `WaitingWorker` jobot tesz vissza `Requested` állapotba, és nem indít executiont. Approval-gated jobnál csak friss, ugyanahhoz a jobhoz tartozó approval mellett requeue-ol; lejárt approvalnál `WaitingApproval` állapotba zár vissza.
+- BotOps aggregate worker heartbeat visibility: `/ops status` most a job számlálók mellett public-safe worker heartbeat friss/stale összképet is mutat, így az operátor egyetlen nézetből látja, ha a NAS vagy Windows worker nem friss.
 - Live NAS update checkpoint: a NAS control-plane deploy frissült a publikált Windows oldali source commitra, a verifier, bridge státusz és synthetic bridge smoke zöld; ez deploy-bizonyíték, nem általános automatikus NAS write/deploy engedély.
 - NAS bridge live smoke refresh: 2026-08-18-án a Windows bridge indítása után a read-only deploy verifier zöld lett (`worker-health` 1/1), és a synthetic `nas:bridge:smoke` `plans` request `passed`, `summary=1/1 passed` eredménnyel zárt, NAS konténer rebuild nélkül.
 
@@ -965,6 +966,7 @@ Repair/worktree szeletnél ezen felül:
 - A BotOps worker supervisor PID metadata guard miatt a package verzió `0.1.1-prerelease.81`, mert az operator-facing `/ops workers` kimenet verified mezőt kapott, és a helyi stop/restart helper fail-closed módon védi a nem igazolt PID-et.
 - A BotOps worker heartbeat freshness miatt a package verzió `0.1.1-prerelease.82`, mert a user-visible worker heartbeat listák friss/stale jelzést kapnak.
 - A BotOps WaitingWorker recovery miatt a package verzió `0.1.1-prerelease.83`, mert új user-visible `/ops recover` operatori recovery parancs jelent meg.
+- A BotOps aggregate worker heartbeat visibility miatt a package verzió `0.1.1-prerelease.84`, mert a user-visible `/ops status` összkép worker heartbeat lathatóságot kapott.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

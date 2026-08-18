@@ -7,6 +7,7 @@ import {
   getBotOpsJob,
   listBotOpsJobEvents,
   listBotOpsJobs,
+  listBotOpsWorkerHeartbeats,
   recoverBotOpsWaitingWorkerJob,
   updateBotOpsJobStatus,
 } from "../../db/database.js";
@@ -87,7 +88,9 @@ export async function execute(
   const action = interaction.options.getSubcommand();
 
   if (action === "status") {
-    await interaction.editReply({ content: buildBotOpsStatusReply(listBotOpsJobs(25)) });
+    await interaction.editReply({
+      content: buildBotOpsStatusReply(listBotOpsJobs(25), listBotOpsWorkerHeartbeats()),
+    });
     return;
   }
 

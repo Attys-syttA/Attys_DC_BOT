@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatBotOpsJobDetails, formatBotOpsJobLine, formatBotOpsWorkerHeartbeats } from "./render.js";
+import {
+  buildBotOpsStatusReply,
+  formatBotOpsJobDetails,
+  formatBotOpsJobLine,
+  formatBotOpsWorkerHeartbeats,
+} from "./render.js";
 import type { BotOpsJob } from "./contract.js";
 import type { BotOpsWorkerHeartbeatRecord } from "../db/types.js";
 
@@ -76,5 +81,24 @@ describe("BotOps renderer", () => {
 
     expect(content).toContain("windows-worker-1: idle fresh");
     expect(content).toContain("nas-worker-1: idle stale");
+  });
+
+  it("includes worker heartbeat visibility in the aggregate status", () => {
+    const content = buildBotOpsStatusReply(
+      [makeJob({ status: "WaitingWorker", result: "worker lease expired" })],
+      [{
+        worker_id: "windows-worker-1",
+        target: "windows",
+        host: "host-a",
+        capabilities: "status.read, audit.check",
+        status: "idle",
+        detail: "no job",
+        heartbeat_at: "2026-08-18T10:00:00.000Z",
+      }],
+    );
+
+    expect(content).toContain("waiting worker: 1");
+    expect(content).toContain("worker heartbeats:");
+    expect(content).toContain("windows-worker-1: idle");
   });
 });

@@ -78,7 +78,10 @@ export function formatBotOpsWorkerHeartbeats(
   ].join("\n");
 }
 
-export function buildBotOpsStatusReply(jobs: BotOpsJob[]): string {
+export function buildBotOpsStatusReply(
+  jobs: BotOpsJob[],
+  heartbeats: BotOpsWorkerHeartbeatRecord[] = [],
+): string {
   const running = jobs.filter((job) => job.status === "Running").length;
   const waitingApproval = jobs.filter((job) => job.status === "WaitingApproval").length;
   const waitingWorker = jobs.filter((job) => job.status === "WaitingWorker").length;
@@ -95,6 +98,8 @@ export function buildBotOpsStatusReply(jobs: BotOpsJob[]): string {
     `waiting approval: ${waitingApproval}`,
     `waiting worker: ${waitingWorker}`,
     `failed: ${failed}`,
+    "",
+    formatBotOpsWorkerHeartbeats(heartbeats),
     "```",
   ].join("\n");
 }
