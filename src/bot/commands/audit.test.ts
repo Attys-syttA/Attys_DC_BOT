@@ -18,11 +18,13 @@ const mocks = vi.hoisted(() => ({
   updateAuditRepairExecutionResult: vi.fn(),
   createAuditRepairCodexStarter: vi.fn(),
   applyRepairWorktreeChanges: vi.fn(),
+  revertAppliedRepairWorktreeChanges: vi.fn(),
   startTrackedAuditRepairExecution: vi.fn(),
   runAuditCheckPipeline: vi.fn(),
   inspectRepairWorktreeChanges: vi.fn(),
   removeAppliedRepairWorktree: vi.fn(),
   removeRepairWorktree: vi.fn(),
+  removeRevertedRepairWorktree: vi.fn(),
   recordOperatorEvent: vi.fn(),
 }));
 
@@ -61,6 +63,7 @@ vi.mock("../../audit/repair-codex-starter.js", () => ({
 
 vi.mock("../../audit/repair-apply.js", () => ({
   applyRepairWorktreeChanges: mocks.applyRepairWorktreeChanges,
+  revertAppliedRepairWorktreeChanges: mocks.revertAppliedRepairWorktreeChanges,
 }));
 
 vi.mock("../../audit/repair-execution-tracker.js", () => ({
@@ -75,6 +78,7 @@ vi.mock("../../audit/worktree-manager.js", () => ({
   inspectRepairWorktreeChanges: mocks.inspectRepairWorktreeChanges,
   removeAppliedRepairWorktree: mocks.removeAppliedRepairWorktree,
   removeRepairWorktree: mocks.removeRepairWorktree,
+  removeRevertedRepairWorktree: mocks.removeRevertedRepairWorktree,
 }));
 
 vi.mock("../operator-events.js", () => ({
@@ -86,7 +90,7 @@ import type { AuditCheckName } from "../../audit/check-catalog.js";
 import type { AuditCheckRunnerOptions } from "../../audit/check-runner.js";
 
 function makeInteraction(
-  subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "repair-run" | "repair-reviewed" | "repair-cleanup" | "repair-apply" | "recheck",
+  subcommand: "start" | "status" | "review" | "repair-plan" | "stop" | "repair" | "repair-run" | "repair-reviewed" | "repair-cleanup" | "repair-apply" | "repair-revert" | "recheck",
   check = "tests",
   stringOptions: Record<string, string | null> = {},
   integerOptions: Record<string, number | null> = {},
@@ -175,6 +179,22 @@ describe("/audit", () => {
         durationMs: 1_000,
       }],
     });
+    mocks.revertAppliedRepairWorktreeChanges.mockResolvedValue({
+      changedFiles: 1,
+      summary: "reverted files=1",
+      validationPassed: true,
+      validationResults: [{
+        name: "tests",
+        status: "passed",
+        exitCode: 0,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "ok",
+        startedAt: "2026-08-01T12:00:04.000Z",
+        finishedAt: "2026-08-01T12:00:05.000Z",
+        durationMs: 1_000,
+      }],
+    });
     mocks.startTrackedAuditRepairExecution.mockResolvedValue({
       status: "started",
       summary: "repair Codex turn started in isolated worktree",
@@ -192,6 +212,7 @@ describe("/audit", () => {
     });
     mocks.removeRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
     mocks.removeAppliedRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
+    mocks.removeRevertedRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
     mocks.runAuditCheckPipeline.mockResolvedValue([{
       name: "tests",
       status: "passed",
@@ -498,7 +519,7 @@ describe("/audit", () => {
     expect(content).toContain("repair workspace: retained");
     expect(content).toContain("repair changes: unavailable");
     expect(content).toContain("latest repair execution: none");
-    expect(content).toContain("allowed next actions: /audit status, /audit repair, /audit recheck");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-plan, /audit repair-run, /audit recheck");
     expect(content).toContain("blocked actions: automatic merge, commit, push, source worktree write");
     expect(content).not.toContain("/projects/app");
     expect(content).not.toContain(".discord-bot-state");
@@ -554,6 +575,43 @@ describe("/audit", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("latest repair execution: reviewed: thread=thread-1 turn=turn-1 summary=operator marked repair execution reviewed");
     expect(content).toContain("allowed next actions: /audit status, /audit review, /audit recheck");
+  });
+
+  it("shows a new repair-run option after a failed recheck advances the iteration", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "waiting_manual_review",
+      requested_check: "tests",
+      iteration: 1,
+      max_iterations: 2,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "retained",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:01:00.000Z",
+    });
+    mocks.listAuditRepairExecutions.mockReturnValue([{
+      id: "repair-exec-1",
+      job_id: "audit-job-1",
+      status: "reviewed",
+      iteration: 0,
+      thread_id: "thread-1",
+      turn_id: "turn-1",
+      result_summary: "operator marked repair execution reviewed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:10.000Z",
+    }]);
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("iteration budget: 1/2 (1 recheck(s) left)");
+    expect(content).toContain("latest repair execution: reviewed: thread=thread-1 turn=turn-1 summary=operator marked repair execution reviewed");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-plan, /audit repair-run, /audit recheck");
   });
 
   it("does not suggest repair or recheck when the review budget is exhausted", async () => {
@@ -623,6 +681,93 @@ describe("/audit", () => {
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("decision: stagnated; manual review required");
     expect(content).toContain("repair workspace: retained");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-cleanup");
+  });
+
+  it("shows source handoff guidance after an applied repair workspace was cleaned up", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "applied_removed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("repair workspace: applied_removed");
+    expect(content).toContain("repair changes: removed");
+    expect(content).toContain("source handoff: applied repair result is in the normal source worktree");
+    expect(content).toContain("source next action: manually review, then commit or revert outside /audit");
+    expect(content).toContain("allowed next actions: /audit status, /audit review");
+    expect(mocks.inspectRepairWorktreeChanges).not.toHaveBeenCalled();
+  });
+
+  it("shows repair-revert as the next action while an applied repair workspace is still available", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "applied",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    mocks.inspectRepairWorktreeChanges.mockReturnValue({
+      available: true,
+      summary: "files=1 staged=0 unstaged=1 untracked=0",
+      changedFiles: 1,
+      staged: 0,
+      unstaged: 1,
+      untracked: 0,
+    });
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("repair workspace: applied");
+    expect(content).toContain("source next action: manually review, then commit outside /audit or run /audit repair-revert before cleanup");
+    expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-revert, /audit repair-cleanup");
+  });
+
+  it("shows reverted source handoff guidance after repair-revert", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "reverted",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("review");
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("repair workspace: reverted");
+    expect(content).toContain("source handoff: reverted from the normal source worktree");
+    expect(content).toContain("source next action: review source status; no audit commit is pending");
     expect(content).toContain("allowed next actions: /audit status, /audit review, /audit repair-cleanup");
   });
 
@@ -1215,7 +1360,38 @@ describe("/audit", () => {
       worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
     });
     expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "removed", expect.any(String));
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "applied_removed", expect.any(String));
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` repair workspace cleanup: removed.",
+    });
+  });
+
+  it("uses reverted repair cleanup after the source handoff was reverted", async () => {
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "reverted",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("repair-cleanup");
+
+    await execute(interaction as never);
+
+    expect(mocks.removeRevertedRepairWorktree).toHaveBeenCalledWith({
+      sourceRoot: "/projects/app",
+      jobId: "audit-job-1",
+      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+    });
+    expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.removeAppliedRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "reverted_removed", expect.any(String));
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "Audit job `audit-jo...` repair workspace cleanup: removed.",
     });
@@ -1324,6 +1500,80 @@ describe("/audit", () => {
     expect(mocks.applyRepairWorktreeChanges).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "Audit job `audit-jo...` has no reviewed repair execution to apply.",
+    });
+  });
+
+  it("reverts an applied repair handoff from the source worktree and records validation", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_APPLY: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "applied",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("repair-revert");
+
+    await execute(interaction as never);
+
+    expect(mocks.revertAppliedRepairWorktreeChanges).toHaveBeenCalledWith({
+      sourceRoot: "/projects/app",
+      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      requestedCheck: "tests",
+    });
+    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith("audit-job-1", expect.objectContaining({
+      name: "tests",
+      status: "passed",
+    }));
+    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "reverted", expect.any(String));
+    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
+      kind: "task",
+      status: "audit-repair-reverted",
+      channelId: "channel-1",
+    });
+    const followUp = (interaction.followUp as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0].content;
+    expect(followUp).toContain("**Audit repair revert completed**");
+    expect(followUp).toContain("no commit, push, deploy, cleanup, or branch merge was performed");
+  });
+
+  it("rejects repair-revert after the isolated applied handoff was cleaned up", async () => {
+    mocks.getConfig.mockReturnValue({
+      DISCORD_ENABLE_AUDIT: true,
+      DISCORD_ENABLE_AUDIT_REPAIR: true,
+      DISCORD_ENABLE_AUDIT_REPAIR_APPLY: true,
+    });
+    mocks.getLatestAuditJob.mockReturnValue(makeJob({
+      status: "completed",
+      requested_check: "tests",
+      iteration: 1,
+    }));
+    mocks.getAuditRepairWorktree.mockReturnValue({
+      job_id: "audit-job-1",
+      worktree_path: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
+      branch_name: "audit-repair/audit-job-1",
+      head_commit: "0123456789abcdef",
+      status: "applied_removed",
+      created_at: "2026-08-01T12:00:00.000Z",
+      updated_at: "2026-08-01T12:00:01.000Z",
+    });
+    const interaction = makeInteraction("repair-revert");
+
+    await execute(interaction as never);
+
+    expect(mocks.revertAppliedRepairWorktreeChanges).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "Audit job `audit-jo...` repair handoff was already cleaned up; /audit cannot safely revert it without the isolated worktree.",
     });
   });
 

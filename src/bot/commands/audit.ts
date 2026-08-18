@@ -9,7 +9,10 @@ import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { createAuditRepairCodexStarter } from "../../audit/repair-codex-starter.js";
-import { applyRepairWorktreeChanges } from "../../audit/repair-apply.js";
+import {
+  applyRepairWorktreeChanges,
+  revertAppliedRepairWorktreeChanges,
+} from "../../audit/repair-apply.js";
 import { buildAuditRepairContract } from "../../audit/repair-contract.js";
 import { startTrackedAuditRepairExecution } from "../../audit/repair-execution-tracker.js";
 import { renderAuditRepairPlan } from "../../audit/repair-plan.js";
@@ -19,6 +22,7 @@ import {
   inspectRepairWorktreeChanges,
   removeAppliedRepairWorktree,
   removeRepairWorktree,
+  removeRevertedRepairWorktree,
 } from "../../audit/worktree-manager.js";
 import {
   assertAuditModeAllowsCapabilities,
@@ -104,12 +108,19 @@ export const data = new SlashCommandBuilder()
     .setName("repair-apply")
     .setDescription("Apply a reviewed repair result to the source worktree"))
   .addSubcommand((subcommand) => subcommand
+    .setName("repair-revert")
+    .setDescription("Revert an applied repair handoff from the source worktree"))
+  .addSubcommand((subcommand) => subcommand
     .setName("recheck")
     .setDescription("Rerun the original named check in the isolated repair worktree"));
 
 const activeAuditControllers = new Map<string, AbortController>();
 const DEFAULT_AUDIT_MAX_ITERATIONS = 2;
 const HARD_MAX_AUDIT_ITERATIONS = 3;
+
+function isRemovedRepairWorktreeStatus(status: string): boolean {
+  return status === "removed" || status === "applied_removed" || status === "reverted_removed";
+}
 
 function renderStep(step: AuditStepRecord): string {
   const exit = step.exit_code === null ? "n/a" : String(step.exit_code);
@@ -124,7 +135,7 @@ function renderRepairExecution(execution: AuditRepairExecutionRecord): string {
 
 function repairWorktreeChangeSummary(worktree: ReturnType<typeof getAuditRepairWorktree>): string {
   if (!worktree) return "unavailable";
-  if (worktree.status === "removed") return "removed";
+  if (isRemovedRepairWorktreeStatus(worktree.status)) return "removed";
   return inspectRepairWorktreeChanges(worktree.worktree_path).summary;
 }
 
@@ -214,15 +225,39 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
     lines.push("latest repair execution: none");
   }
 
-  const hasCleanupReadyWorktree = repairWorktree && repairWorktree.status !== "removed";
+  if (repairWorktree?.status === "applied") {
+    lines.push(
+      "source handoff: applied repair result is in the normal source worktree",
+      "source next action: manually review, then commit outside /audit or run /audit repair-revert before cleanup",
+    );
+  }
+  if (repairWorktree?.status === "applied_removed") {
+    lines.push(
+      "source handoff: applied repair result is in the normal source worktree",
+      "source next action: manually review, then commit or revert outside /audit",
+    );
+  }
+  if (repairWorktree?.status === "reverted" || repairWorktree?.status === "reverted_removed") {
+    lines.push(
+      "source handoff: reverted from the normal source worktree",
+      "source next action: review source status; no audit commit is pending",
+    );
+  }
+
+  const hasCleanupReadyWorktree = repairWorktree && !isRemovedRepairWorktreeStatus(repairWorktree.status);
+  const hasRevertReadyWorktree = repairWorktree?.status === "applied";
+  const hasRunnableRepairWorktree = repairWorktree?.status === "prepared" || repairWorktree?.status === "retained";
   const hasApplyReadyWorktree = repairWorktree
-    && repairWorktree.status !== "removed"
+    && !isRemovedRepairWorktreeStatus(repairWorktree.status)
     && repairWorktree.status !== "applied"
+    && repairWorktree.status !== "reverted"
     && job.status === "completed"
     && latestRepairExecution?.status === "reviewed";
   const allowedNextActions = isTerminalAuditStatus(job.status)
     ? hasApplyReadyWorktree
       ? "/audit status, /audit review, /audit repair-apply, /audit repair-cleanup"
+      : hasRevertReadyWorktree
+      ? "/audit status, /audit review, /audit repair-revert, /audit repair-cleanup"
       : hasCleanupReadyWorktree
       ? "/audit status, /audit review, /audit repair-cleanup"
       : "/audit status, /audit review"
@@ -232,6 +267,8 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
         ? "/audit status, /audit review"
         : latestRepairExecution?.status === "reviewed" && latestRepairExecution.iteration === job.iteration
         ? "/audit status, /audit review, /audit recheck"
+        : hasRunnableRepairWorktree
+        ? "/audit status, /audit review, /audit repair-plan, /audit repair-run, /audit recheck"
         : "/audit status, /audit repair, /audit recheck";
   lines.push(
     `allowed next actions: ${allowedNextActions}`,
@@ -789,7 +826,7 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
   }
 
   const repairWorktree = getAuditRepairWorktree(job.id);
-  if (!repairWorktree || repairWorktree.status === "removed") {
+  if (!repairWorktree || isRemovedRepairWorktreeStatus(repairWorktree.status)) {
     await interaction.editReply({
       content: `Audit job \`${job.id.slice(0, 8)}...\` has no cleanup-ready repair workspace.`,
     });
@@ -812,8 +849,18 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
     };
     const result = repairWorktree.status === "applied"
       ? await removeAppliedRepairWorktree(cleanupOptions)
+      : repairWorktree.status === "reverted"
+      ? await removeRevertedRepairWorktree(cleanupOptions)
       : await removeRepairWorktree(cleanupOptions);
-    updateAuditRepairWorktreeStatus(job.id, "removed", new Date().toISOString());
+    updateAuditRepairWorktreeStatus(
+      job.id,
+      repairWorktree.status === "applied"
+        ? "applied_removed"
+        : repairWorktree.status === "reverted"
+        ? "reverted_removed"
+        : "removed",
+      new Date().toISOString(),
+    );
     recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup", channelId: interaction.channelId });
     await interaction.editReply({
       content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup: ${result.summary}.`,
@@ -870,7 +917,7 @@ async function executeRepairApply(interaction: ChatInputCommandInteraction): Pro
   }
 
   const repairWorktree = getAuditRepairWorktree(job.id);
-  if (!repairWorktree || repairWorktree.status === "removed") {
+  if (!repairWorktree || isRemovedRepairWorktreeStatus(repairWorktree.status)) {
     await interaction.editReply({
       content: `Audit job \`${job.id.slice(0, 8)}...\` has no apply-ready repair workspace.`,
     });
@@ -947,6 +994,117 @@ async function executeRepairApply(interaction: ChatInputCommandInteraction): Pro
   }
 }
 
+async function executeRepairRevert(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit repair-revert` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` first.",
+    });
+    return;
+  }
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR_APPLY) {
+    await interaction.editReply({
+      content: [
+        "`/audit repair-revert` is disabled.",
+        "Set `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` only when source-worktree handoff writes are allowed.",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  const project = getProject(interaction.channelId);
+  if (!project) {
+    await interaction.editReply({ content: "This channel is not registered to any project." });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job found for this channel." });
+    return;
+  }
+  if (job.status !== "completed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not completed; revert requires an applied repair handoff first.`,
+    });
+    return;
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  if (!repairWorktree) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no applied repair handoff to revert.`,
+    });
+    return;
+  }
+  if (repairWorktree.status === "applied_removed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` repair handoff was already cleaned up; /audit cannot safely revert it without the isolated worktree.`,
+    });
+    return;
+  }
+  if (repairWorktree.status !== "applied") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no applied repair handoff to revert.`,
+    });
+    return;
+  }
+  const requestedCheck = job.requested_check;
+  if (!requestedCheck || !isAuditCheckName(requestedCheck)) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has an unsupported check for repair revert.`,
+    });
+    return;
+  }
+
+  recordOperatorEvent({ kind: "task", status: "audit-repair-revert-started", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: `Reverting applied repair changes from the source worktree for audit job \`${job.id.slice(0, 8)}...\`.`,
+  });
+
+  try {
+    const result = await revertAppliedRepairWorktreeChanges({
+      sourceRoot: project.project_path,
+      worktreePath: repairWorktree.worktree_path,
+      requestedCheck,
+    });
+    for (const validationResult of result.validationResults) {
+      insertAuditStepResult(job.id, validationResult);
+      recordAuditStepEvent(validationResult, interaction.channelId);
+    }
+    updateAuditRepairWorktreeStatus(job.id, "reverted", new Date().toISOString());
+    recordOperatorEvent({
+      kind: "task",
+      status: result.validationPassed ? "audit-repair-reverted" : "audit-repair-reverted-validation-failed",
+      channelId: interaction.channelId,
+    });
+    await interaction.followUp({
+      content: [
+        `**Audit repair revert ${result.validationPassed ? "completed" : "validation failed"}**`,
+        "```text",
+        `job: ${job.id.slice(0, 8)}...`,
+        `changes: ${result.summary}`,
+        `source validation: ${result.validationPassed ? "passed" : "failed"}`,
+        "source worktree: reverted",
+        "no commit, push, deploy, cleanup, or branch merge was performed",
+        "```",
+      ].join("\n"),
+    });
+  } catch (error) {
+    recordOperatorEvent({ kind: "task", status: "audit-repair-revert-blocked", channelId: interaction.channelId });
+    await interaction.followUp({
+      content: [
+        "**Audit repair revert blocked**",
+        "```text",
+        `job: ${job.id.slice(0, 8)}...`,
+        `reason: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair revert error", 240)}`,
+        "source write: not performed by this command",
+        "```",
+      ].join("\n"),
+    });
+  }
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -989,6 +1147,10 @@ export async function execute(
   }
   if (subcommand === "repair-apply") {
     await executeRepairApply(interaction);
+    return;
+  }
+  if (subcommand === "repair-revert") {
+    await executeRepairRevert(interaction);
     return;
   }
   if (subcommand === "recheck") {

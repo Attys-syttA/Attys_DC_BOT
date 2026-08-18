@@ -33,6 +33,7 @@ import {
   type HandoffEnvelope,
 } from "../../nas/handoff-store.js";
 import { verifyNasDeploy } from "../../nas/deploy-verification.js";
+import { renderNasHandoffGateReport } from "../../nas/handoff-gate.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
 import { sanitizePublicText } from "../../utils/public-safety.js";
@@ -195,6 +196,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("deploy-status")
     .setDescription("Verify NAS deployed files against the running control-plane snapshot"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("handoff-gate")
+    .setDescription("Show the read-only NAS architecture handoff gate"))
   .addSubcommand((subcommand) => subcommand
     .setName("container-status")
     .setDescription("Show read-only NAS control-plane container status"));
@@ -1168,6 +1172,20 @@ export async function execute(
 
     await interaction.editReply({
       content: buildNasDeployStatusReport(process.cwd()),
+    });
+    return;
+  }
+
+  if (subcommand === "handoff-gate") {
+    if (!getConfig().DISCORD_ENABLE_NAS_STATUS) {
+      await interaction.editReply({
+        content: L("`/nas handoff-gate` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.", "A `/nas handoff-gate` ki van kapcsolva."),
+      });
+      return;
+    }
+
+    await interaction.editReply({
+      content: `**NAS Handoff Gate**\n\`\`\`text\n${renderNasHandoffGateReport()}\n\`\`\``,
     });
     return;
   }

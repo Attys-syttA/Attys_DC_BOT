@@ -39,6 +39,9 @@ export interface ApplyRepairWorktreeChangesResult {
   validationPassed: boolean;
 }
 
+export type RevertAppliedRepairWorktreeChangesOptions = ApplyRepairWorktreeChangesOptions;
+export type RevertAppliedRepairWorktreeChangesResult = ApplyRepairWorktreeChangesResult;
+
 async function defaultRunGit(args: string[], options: { cwd: string }): Promise<GitCommandResult> {
   const result = await execFileAsync("git", args, {
     cwd: options.cwd,
@@ -152,6 +155,41 @@ async function getApplyableChangedPaths(worktreePath: string, runGit: RepairAppl
   return paths;
 }
 
+async function getRevertableSourceChangedPaths(sourceRoot: string, runGit: RepairApplyGitRunner): Promise<string[]> {
+  const status = await runGit(["status", "--porcelain=v1", "-z"], { cwd: sourceRoot });
+  const entries = parseRepairStatus(status.stdout);
+  if (entries.length === 0) {
+    throw new Error("repair revert requires source worktree changes to revert");
+  }
+
+  const paths: string[] = [];
+  for (const entry of entries) {
+    const state = entry.slice(0, 2);
+    if (state === "??") {
+      throw new Error("repair revert blocks untracked source files; review them manually");
+    }
+    if (state[0] !== " ") {
+      throw new Error("repair revert blocks staged, renamed, deleted, or conflicted source changes");
+    }
+    if (state !== " M") {
+      throw new Error("repair revert only supports unstaged tracked source modifications");
+    }
+    const changedPath = changedPathFromStatusEntry(entry);
+    if (!changedPath) {
+      throw new Error("repair revert could not parse changed file status safely");
+    }
+    paths.push(changedPath);
+  }
+  return paths;
+}
+
+function samePathSet(left: string[], right: string[]): boolean {
+  const normalizedLeft = [...left].sort();
+  const normalizedRight = [...right].sort();
+  return normalizedLeft.length === normalizedRight.length
+    && normalizedLeft.every((value, index) => value === normalizedRight[index]);
+}
+
 async function ensureSameHead(sourceRoot: string, worktreePath: string, runGit: RepairApplyGitRunner): Promise<void> {
   const sourceHead = await runGit(["rev-parse", "--verify", "HEAD"], { cwd: sourceRoot });
   const repairHead = await runGit(["rev-parse", "--verify", "HEAD"], { cwd: worktreePath });
@@ -204,6 +242,62 @@ export async function applyRepairWorktreeChanges(
   return {
     changedFiles: changedPaths.length,
     summary: `applied files=${changedPaths.length}`,
+    validationResults,
+    validationPassed: validationResults.length > 0 && validationResults.every((result) => result.status === "passed"),
+  };
+}
+
+export async function revertAppliedRepairWorktreeChanges(
+  options: RevertAppliedRepairWorktreeChangesOptions,
+): Promise<RevertAppliedRepairWorktreeChangesResult> {
+  const runGit = options.runGit ?? defaultRunGit;
+  const runGitWithInput = options.runGitWithInput ?? defaultRunGitWithInput;
+  const runChecks = options.runChecks ?? runAuditCheckPipeline;
+  const sourceRoot = await ensureGitRoot(options.sourceRoot, runGit, "source root");
+  const worktreePath = await ensureGitRoot(options.worktreePath, runGit, "repair worktree");
+
+  await ensureSameHead(sourceRoot, worktreePath, runGit);
+
+  const repairChangedPaths = await getApplyableChangedPaths(worktreePath, runGit);
+  const sourceChangedPaths = await getRevertableSourceChangedPaths(sourceRoot, runGit);
+  if (!samePathSet(repairChangedPaths, sourceChangedPaths)) {
+    throw new Error("repair revert requires source and repair changed paths to match");
+  }
+
+  const repairDiff = await runGit(["diff", "--binary", "--", ...repairChangedPaths], { cwd: worktreePath });
+  const sourceDiff = await runGit(["diff", "--binary", "--", ...sourceChangedPaths], { cwd: sourceRoot });
+  if (!repairDiff.stdout.trim() || repairDiff.stdout !== sourceDiff.stdout) {
+    throw new Error("repair revert requires source and repair diffs to match");
+  }
+
+  await runGitWithInput(["apply", "-R", "--check", "--whitespace=nowarn"], { cwd: sourceRoot, input: repairDiff.stdout });
+  await runGitWithInput(["apply", "-R", "--whitespace=nowarn"], { cwd: sourceRoot, input: repairDiff.stdout });
+  await runGit(["restore", "--worktree", "--", ...sourceChangedPaths], { cwd: sourceRoot });
+
+  let validationResults: AuditCheckRunResult[];
+  try {
+    validationResults = await runChecks(sourceRoot, options.requestedCheck);
+  } catch (error) {
+    const now = new Date().toISOString();
+    validationResults = [{
+      name: options.requestedCheck,
+      status: "error",
+      exitCode: null,
+      timedOut: false,
+      stopped: false,
+      publicOutput: sanitizePublicText(
+        error instanceof Error ? error.message : "source validation runner error",
+        1_800,
+      ) || "source validation runner error",
+      startedAt: now,
+      finishedAt: now,
+      durationMs: 0,
+    }];
+  }
+
+  return {
+    changedFiles: repairChangedPaths.length,
+    summary: `reverted files=${repairChangedPaths.length}`,
     validationResults,
     validationPassed: validationResults.length > 0 && validationResults.every((result) => result.status === "passed"),
   };

@@ -1,7 +1,7 @@
 import type { AuditRepairWorktreeRecord, AuditJobRecord, AuditStepRecord } from "../db/types.js";
 import { sanitizePublicFileLabel } from "../utils/public-safety.js";
 
-export const AUDIT_REPAIR_CONTRACT_VERSION = "audit-repair-contract/v1";
+export const AUDIT_REPAIR_CONTRACT_VERSION = "audit-repair-contract/v2";
 
 export interface AuditRepairEvidenceSummary {
   stepName: string;
@@ -16,6 +16,14 @@ export interface AuditRepairWorkspaceSummary {
   changeSummary: string;
 }
 
+export type AuditRepairRoleName = "planner" | "executor" | "validator";
+
+export interface AuditRepairRolePhase {
+  role: AuditRepairRoleName;
+  responsibility: string;
+  handoff: string;
+}
+
 export interface AuditRepairContract {
   version: typeof AUDIT_REPAIR_CONTRACT_VERSION;
   jobId: string;
@@ -28,6 +36,7 @@ export interface AuditRepairContract {
   repairWorkspace: AuditRepairWorkspaceSummary;
   allowedScope: string;
   allowedCapabilities: string[];
+  rolePhases: AuditRepairRolePhase[];
   requiredValidation: string;
   blockedActions: string[];
   operatorDecision: string;
@@ -49,7 +58,25 @@ const BLOCKED_ACTIONS = [
   "dependency install",
   "deploy",
   "arbitrary shell",
+];
+const ROLE_PHASES: AuditRepairRolePhase[] = [
+  {
+    role: "planner",
+    responsibility: "derive the smallest isolated repair plan from the stored audit evidence before editing",
+    handoff: "state the intended files by public-safe label and the target check being repaired",
+  },
+  {
+    role: "executor",
+    responsibility: "make only the minimal repair inside the isolated repair worktree",
+    handoff: "summarize changed file labels and any residual implementation risk",
+  },
+  {
+    role: "validator",
+    responsibility: "self-check scope, blocked actions, and expected validation without running the orchestrator-owned recheck",
+    handoff: "leave final validation to /audit recheck and report any reason it may fail",
+  },
 ] as const;
+const REQUIRED_ROLE_PHASES: AuditRepairRoleName[] = ["planner", "executor", "validator"];
 
 function latestRelevantStep(steps: AuditStepRecord[]): AuditStepRecord | undefined {
   for (let index = steps.length - 1; index >= 0; index -= 1) {
@@ -109,6 +136,7 @@ export function buildAuditRepairContract(input: AuditRepairContractInput): Audit
       "edit existing files",
       "create/delete only inside the repair workspace when needed",
     ],
+    rolePhases: [...ROLE_PHASES],
     requiredValidation: "rerun the original named check through /audit recheck",
     blockedActions: [...BLOCKED_ACTIONS],
     operatorDecision: "review this contract before any future Codex repair execution",
@@ -128,6 +156,12 @@ export function validateAuditRepairContract(contract: AuditRepairContract): stri
   }
   if (contract.allowedScope !== "isolated repair worktree only") {
     issues.push("repair contract scope is not isolated");
+  }
+  const roleNames = contract.rolePhases.map((phase) => phase.role);
+  for (const role of REQUIRED_ROLE_PHASES) {
+    if (!roleNames.includes(role)) {
+      issues.push(`repair contract missing ${role} role phase`);
+    }
   }
   for (const action of BLOCKED_ACTIONS) {
     if (!contract.blockedActions.includes(action)) {

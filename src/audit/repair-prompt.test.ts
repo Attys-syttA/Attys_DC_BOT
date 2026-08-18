@@ -64,8 +64,12 @@ describe("audit repair prompt", () => {
 
     const prompt = buildAuditRepairPrompt(contract);
 
-    expect(prompt).toContain("Contract version: audit-repair-contract/v1");
+    expect(prompt).toContain("Contract version: audit-repair-contract/v2");
     expect(prompt).toContain("Target check: tests");
+    expect(prompt).toContain("Role phases in this single repair turn:");
+    expect(prompt).toContain("planner:");
+    expect(prompt).toContain("executor:");
+    expect(prompt).toContain("validator:");
     expect(prompt).toContain("Do not source worktree write.");
     expect(prompt).toContain("Do not install dependencies, deploy, merge, commit, push, or run arbitrary shell commands.");
     expect(prompt).toContain("Leave validation to the orchestrator; it will run /audit recheck.");

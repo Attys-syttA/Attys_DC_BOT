@@ -30,6 +30,7 @@ export function renderAuditRepairPlan(input: AuditRepairPlanInput): string {
     `repair changes: ${contract.repairWorkspace.changeSummary}`,
     `allowed repair scope: ${contract.allowedScope}`,
     `allowed capabilities: ${contract.allowedCapabilities.join(", ")}`,
+    `role phases: ${contract.rolePhases.map((phase) => phase.role).join(" -> ")}`,
     `required validation: ${contract.requiredValidation}`,
     `repair prompt: ${promptIssues.length === 0 ? "ready" : `blocked (${promptIssues.length} issue(s))`}`,
     `repair prompt issues: ${promptIssues.length === 0 ? "none" : promptIssues.join("; ")}`,

@@ -3,7 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { applyRepairWorktreeChanges } from "./repair-apply.js";
+import {
+  applyRepairWorktreeChanges,
+  revertAppliedRepairWorktreeChanges,
+} from "./repair-apply.js";
 
 const tempRoots: string[] = [];
 
@@ -132,6 +135,77 @@ describe("applyRepairWorktreeChanges", () => {
       status: "error",
       publicOutput: "synthetic validation runner error",
     })]);
+    expect(fs.readFileSync(path.join(sourceRoot, "check.js"), "utf8")).toContain("after repair");
+  });
+});
+
+describe("revertAppliedRepairWorktreeChanges", () => {
+  it("reverts matching applied repair changes from the source worktree", async () => {
+    const sourceRoot = makeSourceRepo();
+    const worktreePath = addRepairWorktree(sourceRoot);
+    fs.writeFileSync(path.join(worktreePath, "check.js"), "console.log('after repair'); process.exit(0);\n", "utf8");
+    await applyRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    });
+
+    const result = await revertAppliedRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    });
+
+    expect(result).toMatchObject({
+      changedFiles: 1,
+      summary: "reverted files=1",
+      validationPassed: false,
+    });
+    expect(result.validationResults).toHaveLength(1);
+    expect(result.validationResults[0].status).toBe("failed");
+    expect(fs.readFileSync(path.join(sourceRoot, "check.js"), "utf8")).toContain("before repair");
+    expect(git(sourceRoot, ["status", "--porcelain=v1"])).toBe("");
+    expect(git(worktreePath, ["status", "--porcelain=v1"])).toBe("M check.js");
+  });
+
+  it("blocks revert when source and repair diffs no longer match", async () => {
+    const sourceRoot = makeSourceRepo();
+    const worktreePath = addRepairWorktree(sourceRoot);
+    fs.writeFileSync(path.join(worktreePath, "check.js"), "console.log('after repair'); process.exit(0);\n", "utf8");
+    await applyRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    });
+    fs.writeFileSync(path.join(sourceRoot, "check.js"), "console.error('operator edit'); process.exit(1);\n", "utf8");
+
+    await expect(revertAppliedRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    })).rejects.toThrow("source and repair diffs to match");
+
+    expect(fs.readFileSync(path.join(sourceRoot, "check.js"), "utf8")).toContain("operator edit");
+  });
+
+  it("blocks revert when untracked source files are present", async () => {
+    const sourceRoot = makeSourceRepo();
+    const worktreePath = addRepairWorktree(sourceRoot);
+    fs.writeFileSync(path.join(worktreePath, "check.js"), "console.log('after repair'); process.exit(0);\n", "utf8");
+    await applyRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    });
+    fs.writeFileSync(path.join(sourceRoot, "operator-note.txt"), "manual review required\n", "utf8");
+
+    await expect(revertAppliedRepairWorktreeChanges({
+      sourceRoot,
+      worktreePath,
+      requestedCheck: "tests",
+    })).rejects.toThrow("untracked source files");
+
+    expect(fs.existsSync(path.join(sourceRoot, "operator-note.txt"))).toBe(true);
     expect(fs.readFileSync(path.join(sourceRoot, "check.js"), "utf8")).toContain("after repair");
   });
 });

@@ -76,6 +76,7 @@ describe("audit repair contract", () => {
       headCommit: "0123456789ab",
     });
     expect(contract.allowedScope).toBe("isolated repair worktree only");
+    expect(contract.rolePhases.map((phase) => phase.role)).toEqual(["planner", "executor", "validator"]);
     expect(contract.blockedActions).toContain("source worktree write");
     expect(contract.blockedActions).toContain("push");
     expect(validateAuditRepairContract(contract)).toEqual([]);
@@ -108,12 +109,14 @@ describe("audit repair contract", () => {
     const broken: AuditRepairContract = {
       ...contract,
       allowedScope: "source worktree",
+      rolePhases: contract.rolePhases.filter((phase) => phase.role !== "validator"),
       blockedActions: contract.blockedActions.filter((action) => action !== "push"),
       requiredValidation: "none",
     };
 
     expect(validateAuditRepairContract(broken)).toEqual([
       "repair contract scope is not isolated",
+      "repair contract missing validator role phase",
       "repair contract does not block push",
       "repair contract does not require isolated recheck validation",
     ]);

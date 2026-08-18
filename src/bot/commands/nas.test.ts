@@ -1523,6 +1523,41 @@ describe("/nas", () => {
     expect(content).toContain("mailbox=");
   });
 
+  it("shows the read-only NAS handoff gate report", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
+    const interaction = {
+      channelId: "channel-1",
+      options: {
+        getSubcommand: vi.fn(() => "handoff-gate"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("**NAS Handoff Gate**");
+    expect(content).toContain("status: blocked");
+    expect(content).toContain("BLOCKED source publication checkpoint");
+    expect(content).toContain("blocked actions: NAS repo source writes, remote execution architecture changes, deploy");
+  });
+
+  it("keeps the NAS handoff gate behind the NAS status flag", async () => {
+    mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "handoff-gate"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas handoff-gate` is disabled. Set `DISCORD_ENABLE_NAS_STATUS=true` in `.env` to enable it.",
+    });
+  });
+
   it("keeps NAS result summaries compact and public-safe", () => {
     mocks.listNasHandoffRequests.mockReturnValue([{
       id: "request-long",

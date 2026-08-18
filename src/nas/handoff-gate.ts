@@ -1,0 +1,94 @@
+export type NasHandoffGateCriterionStatus = "ok" | "blocked";
+
+export interface NasHandoffGateCriterion {
+  id: string;
+  label: string;
+  status: NasHandoffGateCriterionStatus;
+  summary: string;
+}
+
+export interface NasHandoffGateReport {
+  status: "ready" | "blocked";
+  criteria: NasHandoffGateCriterion[];
+  nextAction: string;
+}
+
+export const DEFAULT_NAS_HANDOFF_GATE_CRITERIA: NasHandoffGateCriterion[] = [
+  {
+    id: "local-audit-foundation",
+    label: "local read-only audit",
+    status: "ok",
+    summary: "fixed named checks, job/step store, stop, review, and bounded recheck are implemented",
+  },
+  {
+    id: "repair-acceptance",
+    label: "isolated repair acceptance",
+    status: "ok",
+    summary: "synthetic acceptance covers isolated repair execution, manual review marker, recheck, and cleanup retention",
+  },
+  {
+    id: "job-step-contract",
+    label: "job/step contract",
+    status: "ok",
+    summary: "audit-job-step-contract/v1 and audit-repair-contract/v2 are explicit",
+  },
+  {
+    id: "source-publication",
+    label: "source publication checkpoint",
+    status: "blocked",
+    summary: "current local audit handoff changes must be committed and pushed before NAS architecture handoff",
+  },
+  {
+    id: "security-review",
+    label: "security boundary review",
+    status: "blocked",
+    summary: "auth, path, command, secret, and log boundaries need explicit review closeout",
+  },
+  {
+    id: "nas-scope-split",
+    label: "shared vs NAS-specific split",
+    status: "blocked",
+    summary: "operator decision needed for what remains local/shared and what moves to NAS-specific implementation",
+  },
+  {
+    id: "nas-repo-plan",
+    label: "NAS repository plan",
+    status: "blocked",
+    summary: "Attys_DC_BOT_NAS needs its own AGENTS, STATE, and active architecture plan before source changes",
+  },
+  {
+    id: "remote-boundary-approval",
+    label: "remote boundary approval",
+    status: "blocked",
+    summary: "multi-machine execution boundary change requires explicit operator approval",
+  },
+];
+
+export function evaluateNasHandoffGate(
+  criteria: NasHandoffGateCriterion[] = DEFAULT_NAS_HANDOFF_GATE_CRITERIA,
+): NasHandoffGateReport {
+  const blocked = criteria.filter((criterion) => criterion.status !== "ok");
+  return {
+    status: blocked.length === 0 ? "ready" : "blocked",
+    criteria: criteria.map((criterion) => ({ ...criterion })),
+    nextAction: blocked.length === 0
+      ? "NAS handoff may proceed to the dedicated architecture plan"
+      : `resolve ${blocked[0].label}`,
+  };
+}
+
+export function renderNasHandoffGateReport(report = evaluateNasHandoffGate()): string {
+  const lines = [
+    "NAS handoff gate",
+    `status: ${report.status}`,
+    `next: ${report.nextAction}`,
+    "",
+    "criteria:",
+    ...report.criteria.map((criterion) =>
+      `- ${criterion.status.toUpperCase()} ${criterion.label}: ${criterion.summary}`
+    ),
+    "",
+    "blocked actions: NAS repo source writes, remote execution architecture changes, deploy",
+  ];
+  return lines.join("\n");
+}

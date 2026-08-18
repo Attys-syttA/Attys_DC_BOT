@@ -54,6 +54,7 @@ export interface RemoveRepairWorktreeResult {
 }
 
 export type RemoveAppliedRepairWorktreeResult = RemoveRepairWorktreeResult;
+export type RemoveRevertedRepairWorktreeResult = RemoveRepairWorktreeResult;
 
 async function defaultRunGit(args: string[], options: { cwd: string }): Promise<GitCommandResult> {
   const result = await execFileAsync("git", args, {
@@ -248,6 +249,55 @@ export async function removeAppliedRepairWorktree(
     throw new Error("applied repair cleanup requires source and repair diffs to match");
   }
 
+  if (repairDiff.stdout.trim()) {
+    await runGit(["restore", "--worktree", "--", "."], { cwd: repairRoot });
+  }
+  await runGit(["worktree", "remove", repairRoot], { cwd: sourceRoot });
+  return { removed: true, summary: "removed" };
+}
+
+export async function removeRevertedRepairWorktree(
+  options: RemoveRepairWorktreeOptions,
+): Promise<RemoveRevertedRepairWorktreeResult> {
+  assertSafeId(options.jobId, "jobId");
+  const runGit = options.runGit ?? defaultRunGit;
+  const sourceRoot = await ensureGitRoot(path.resolve(options.sourceRoot), runGit);
+  const baseDirRaw = path.resolve(options.baseDir ?? path.join(sourceRoot, ".discord-bot-state", "audit-worktrees"));
+  const baseDir = fs.existsSync(baseDirRaw) ? fs.realpathSync.native(baseDirRaw) : baseDirRaw;
+  const expectedWorktreePath = path.resolve(baseDir, options.jobId);
+  const requestedWorktreePath = path.resolve(options.worktreePath);
+  assertNoReparseRisk(baseDirRaw);
+
+  if (!fs.existsSync(requestedWorktreePath)) {
+    const expectedRawWorktreePath = path.resolve(baseDirRaw, options.jobId);
+    assertPathInside(baseDirRaw, requestedWorktreePath);
+    if (requestedWorktreePath !== expectedRawWorktreePath) {
+      throw new Error("repair worktree path does not match the audit job cleanup boundary");
+    }
+    return { removed: false, summary: "already removed" };
+  }
+
+  const repairRoot = await ensureGitRoot(requestedWorktreePath, runGit);
+  assertPathInside(baseDir, repairRoot);
+
+  if (repairRoot !== expectedWorktreePath) {
+    throw new Error("repair worktree path does not match the audit job cleanup boundary");
+  }
+
+  const sourceHead = await runGit(["rev-parse", "--verify", "HEAD"], { cwd: sourceRoot });
+  const repairHead = await runGit(["rev-parse", "--verify", "HEAD"], { cwd: repairRoot });
+  if (sourceHead.stdout.trim() !== repairHead.stdout.trim()) {
+    throw new Error("reverted repair cleanup requires source and repair worktree to share the same HEAD");
+  }
+
+  const sourceStatus = await runGit(["status", "--porcelain=v1"], { cwd: sourceRoot });
+  if (sourceStatus.stdout.trim()) {
+    throw new Error("reverted repair cleanup requires a clean source worktree");
+  }
+
+  const repairStatus = await runGit(["status", "--porcelain=v1"], { cwd: repairRoot });
+  assertApplyCleanupStatus(repairStatus.stdout);
+  const repairDiff = await runGit(["diff", "--binary"], { cwd: repairRoot });
   if (repairDiff.stdout.trim()) {
     await runGit(["restore", "--worktree", "--", "."], { cwd: repairRoot });
   }

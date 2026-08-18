@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   inspectRepairWorktreeChanges,
   removeAppliedRepairWorktree,
+  removeRevertedRepairWorktree,
   prepareRepairWorktree,
   removeRepairWorktree,
   type GitCommandRunner,
@@ -265,6 +266,61 @@ describe("removeAppliedRepairWorktree", () => {
     });
 
     expect(result).toEqual({ removed: false, summary: "already removed" });
+  });
+});
+
+describe("removeRevertedRepairWorktree", () => {
+  it("removes a reverted repair worktree only when the source worktree is clean", async () => {
+    const sourceRoot = makeRealGitRepo();
+    const baseDir = path.join(path.dirname(sourceRoot), "reverted-repair-worktrees");
+    const worktreePath = path.join(baseDir, "audit-job-1");
+    tempRoots.push(baseDir);
+    fs.mkdirSync(baseDir, { recursive: true });
+    execFileSync("git", ["worktree", "add", "-b", "audit-repair/audit-job-1", worktreePath, "HEAD"], {
+      cwd: sourceRoot,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    fs.writeFileSync(path.join(worktreePath, "package.json"), "{\"scripts\":{\"test\":\"node check.js\"}}\n", "utf8");
+
+    const result = await removeRevertedRepairWorktree({
+      sourceRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      baseDir,
+    });
+
+    expect(result).toEqual({ removed: true, summary: "removed" });
+    expect(fs.existsSync(worktreePath)).toBe(false);
+    expect(execFileSync("git", ["status", "--porcelain=v1"], {
+      cwd: sourceRoot,
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim()).toBe("");
+  });
+
+  it("blocks reverted cleanup while source handoff changes still exist", async () => {
+    const sourceRoot = makeRealGitRepo();
+    const baseDir = path.join(path.dirname(sourceRoot), "dirty-source-reverted-repair-worktrees");
+    const worktreePath = path.join(baseDir, "audit-job-1");
+    tempRoots.push(baseDir);
+    fs.mkdirSync(baseDir, { recursive: true });
+    execFileSync("git", ["worktree", "add", "-b", "audit-repair/audit-job-1", worktreePath, "HEAD"], {
+      cwd: sourceRoot,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    fs.writeFileSync(path.join(sourceRoot, "package.json"), "{\"scripts\":{\"test\":\"node source.js\"}}\n", "utf8");
+    fs.writeFileSync(path.join(worktreePath, "package.json"), "{\"scripts\":{\"test\":\"node repair.js\"}}\n", "utf8");
+
+    await expect(removeRevertedRepairWorktree({
+      sourceRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      baseDir,
+    })).rejects.toThrow("clean source worktree");
+
+    expect(fs.existsSync(worktreePath)).toBe(true);
   });
 });
 
