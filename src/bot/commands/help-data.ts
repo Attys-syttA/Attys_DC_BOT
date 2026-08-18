@@ -231,10 +231,11 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "ops",
     category: "ops",
-    usage: "/ops status | /ops jobs limit:<1-25> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops logs job_id:<id>",
+    usage: "/ops status | /ops workers | /ops jobs limit:<1-25> | /ops approve job_id:<id> | /ops cancel job_id:<id> | /ops logs job_id:<id>",
     short: "A staged BotOps jobok allapotat, jovahagyasat es public-safe reszleteit kezeli.",
     details: [
       "`/ops status` osszesitett staged approval allapotot mutat.",
+      "`/ops workers` read-only worker supervisor allapotot mutat, de nem indit vagy allit le worker folyamatot.",
       "`/ops jobs` a legutobbi BotOps jobokat listazza.",
       "`/ops approve` csak a job approval allapotat rogziti, de nem indit vegrehajtast.",
       "`/ops cancel` statuszt valt es audit trailt hagy, nem torli a jobot.",

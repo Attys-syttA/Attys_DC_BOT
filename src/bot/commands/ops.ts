@@ -15,6 +15,24 @@ import {
   formatBotOpsEventDetails,
   formatBotOpsJobDetails,
 } from "../../botops/render.js";
+import {
+  formatWorkerSupervisorStatus,
+  readWorkerSupervisorStatus,
+} from "../../botops/worker-supervisor.js";
+
+export function buildBotOpsWorkersReply(repoRoot: string): string {
+  return [
+    "**BotOps workers**",
+    "```text",
+    "mode: supervisor status only",
+    "start/stop/restart from Discord: disabled",
+    "",
+    formatWorkerSupervisorStatus(readWorkerSupervisorStatus(repoRoot, "nas")),
+    "",
+    formatWorkerSupervisorStatus(readWorkerSupervisorStatus(repoRoot, "windows")),
+    "```",
+  ].join("\n");
+}
 
 export const data = new SlashCommandBuilder()
   .setName("ops")
@@ -22,6 +40,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("status")
     .setDescription("Show staged BotOps control-plane status"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("workers")
+    .setDescription("Show read-only BotOps worker supervisor status"))
   .addSubcommand((subcommand) => subcommand
     .setName("jobs")
     .setDescription("List recent BotOps jobs")
@@ -59,6 +80,11 @@ export async function execute(
 
   if (action === "status") {
     await interaction.editReply({ content: buildBotOpsStatusReply(listBotOpsJobs(25)) });
+    return;
+  }
+
+  if (action === "workers") {
+    await interaction.editReply({ content: buildBotOpsWorkersReply(process.cwd()) });
     return;
   }
 
