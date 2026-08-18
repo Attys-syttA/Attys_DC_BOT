@@ -9,12 +9,17 @@ import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { createAuditRepairCodexStarter } from "../../audit/repair-codex-starter.js";
+import { applyRepairWorktreeChanges } from "../../audit/repair-apply.js";
 import { buildAuditRepairContract } from "../../audit/repair-contract.js";
 import { startTrackedAuditRepairExecution } from "../../audit/repair-execution-tracker.js";
 import { renderAuditRepairPlan } from "../../audit/repair-plan.js";
 import { buildAuditRepairPrompt } from "../../audit/repair-prompt.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
-import { inspectRepairWorktreeChanges, removeRepairWorktree } from "../../audit/worktree-manager.js";
+import {
+  inspectRepairWorktreeChanges,
+  removeAppliedRepairWorktree,
+  removeRepairWorktree,
+} from "../../audit/worktree-manager.js";
 import {
   assertAuditModeAllowsCapabilities,
   defaultAuditCapabilities,
@@ -95,6 +100,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) => subcommand
     .setName("repair-cleanup")
     .setDescription("Remove a terminal audit job's clean isolated repair worktree"))
+  .addSubcommand((subcommand) => subcommand
+    .setName("repair-apply")
+    .setDescription("Apply a reviewed repair result to the source worktree"))
   .addSubcommand((subcommand) => subcommand
     .setName("recheck")
     .setDescription("Rerun the original named check in the isolated repair worktree"));
@@ -207,8 +215,15 @@ function renderAuditReview(job: AuditJobRecord, steps: AuditStepRecord[]): strin
   }
 
   const hasCleanupReadyWorktree = repairWorktree && repairWorktree.status !== "removed";
+  const hasApplyReadyWorktree = repairWorktree
+    && repairWorktree.status !== "removed"
+    && repairWorktree.status !== "applied"
+    && job.status === "completed"
+    && latestRepairExecution?.status === "reviewed";
   const allowedNextActions = isTerminalAuditStatus(job.status)
-    ? hasCleanupReadyWorktree
+    ? hasApplyReadyWorktree
+      ? "/audit status, /audit review, /audit repair-apply, /audit repair-cleanup"
+      : hasCleanupReadyWorktree
       ? "/audit status, /audit review, /audit repair-cleanup"
       : "/audit status, /audit review"
     : latestRepairExecution?.status === "started" && latestRepairExecution.iteration === job.iteration
@@ -790,11 +805,14 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
   }
 
   try {
-    const result = await removeRepairWorktree({
+    const cleanupOptions = {
       sourceRoot: project.project_path,
       jobId: job.id,
       worktreePath: repairWorktree.worktree_path,
-    });
+    };
+    const result = repairWorktree.status === "applied"
+      ? await removeAppliedRepairWorktree(cleanupOptions)
+      : await removeRepairWorktree(cleanupOptions);
     updateAuditRepairWorktreeStatus(job.id, "removed", new Date().toISOString());
     recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup", channelId: interaction.channelId });
     await interaction.editReply({
@@ -805,6 +823,126 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
     recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup-failed", channelId: interaction.channelId });
     await interaction.editReply({
       content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup failed; workspace retained for manual review.`,
+    });
+  }
+}
+
+async function executeRepairApply(interaction: ChatInputCommandInteraction): Promise<void> {
+  const config = getConfig();
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR) {
+    await interaction.editReply({
+      content: "`/audit repair-apply` is disabled. Set `DISCORD_ENABLE_AUDIT_REPAIR=true` first.",
+    });
+    return;
+  }
+  if (!config.DISCORD_ENABLE_AUDIT_REPAIR_APPLY) {
+    await interaction.editReply({
+      content: [
+        "`/audit repair-apply` is disabled.",
+        "Set `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` only after reviewing `/audit review` and the isolated repair diff.",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  const job = getLatestAuditJob(interaction.channelId);
+  if (!job) {
+    await interaction.editReply({ content: "No audit job has been recorded for this channel yet." });
+    return;
+  }
+  if (job.status !== "completed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` is not completed; apply requires a successful isolated recheck first.`,
+    });
+    return;
+  }
+  if (!job.requested_check || !isAuditCheckName(job.requested_check)) {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no supported requested check for source validation.`,
+    });
+    return;
+  }
+
+  const project = getProject(interaction.channelId);
+  if (!project) {
+    await interaction.editReply({ content: "This channel is not registered to any project." });
+    return;
+  }
+
+  const repairWorktree = getAuditRepairWorktree(job.id);
+  if (!repairWorktree || repairWorktree.status === "removed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no apply-ready repair workspace.`,
+    });
+    return;
+  }
+  if (repairWorktree.status === "applied") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` repair changes were already applied.`,
+    });
+    return;
+  }
+
+  const latestRepairExecution = listAuditRepairExecutions(job.id, 1).at(0);
+  if (!latestRepairExecution || latestRepairExecution.status !== "reviewed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no reviewed repair execution to apply.`,
+    });
+    return;
+  }
+
+  const latestStep = listAuditSteps(job.id).at(-1);
+  if (!latestStep || latestStep.step_name !== job.requested_check || latestStep.status !== "passed") {
+    await interaction.editReply({
+      content: `Audit job \`${job.id.slice(0, 8)}...\` has no passing isolated recheck result to apply.`,
+    });
+    return;
+  }
+
+  recordOperatorEvent({ kind: "task", status: "audit-repair-apply-started", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: `Applying reviewed repair changes to the source worktree for audit job \`${job.id.slice(0, 8)}...\`.`,
+  });
+
+  try {
+    const result = await applyRepairWorktreeChanges({
+      sourceRoot: project.project_path,
+      worktreePath: repairWorktree.worktree_path,
+      requestedCheck: job.requested_check,
+    });
+    for (const validationResult of result.validationResults) {
+      insertAuditStepResult(job.id, validationResult);
+      recordAuditStepEvent(validationResult, interaction.channelId);
+    }
+    updateAuditRepairWorktreeStatus(job.id, "applied", new Date().toISOString());
+    recordOperatorEvent({
+      kind: "task",
+      status: result.validationPassed ? "audit-repair-applied" : "audit-repair-applied-validation-failed",
+      channelId: interaction.channelId,
+    });
+    await interaction.followUp({
+      content: [
+        `**Audit repair apply ${result.validationPassed ? "completed" : "validation failed"}**`,
+        "```text",
+        `job: ${job.id.slice(0, 8)}...`,
+        `changes: ${result.summary}`,
+        `source validation: ${result.validationPassed ? "passed" : "failed"}`,
+        "source worktree: modified",
+        "no commit, push, deploy, cleanup, or branch merge was performed",
+        "```",
+      ].join("\n"),
+    });
+  } catch (error) {
+    recordOperatorEvent({ kind: "task", status: "audit-repair-apply-blocked", channelId: interaction.channelId });
+    await interaction.followUp({
+      content: [
+        "**Audit repair apply blocked**",
+        "```text",
+        `job: ${job.id.slice(0, 8)}...`,
+        `reason: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair apply error", 240)}`,
+        "source write: not performed by this command",
+        "```",
+      ].join("\n"),
     });
   }
 }
@@ -847,6 +985,10 @@ export async function execute(
   }
   if (subcommand === "repair-cleanup") {
     await executeRepairCleanup(interaction);
+    return;
+  }
+  if (subcommand === "repair-apply") {
+    await executeRepairApply(interaction);
     return;
   }
   if (subcommand === "recheck") {

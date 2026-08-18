@@ -26,6 +26,7 @@ describe("config", () => {
     delete process.env.DISCORD_ENABLE_AUDIT;
     delete process.env.DISCORD_ENABLE_AUDIT_REPAIR;
     delete process.env.DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION;
+    delete process.env.DISCORD_ENABLE_AUDIT_REPAIR_APPLY;
     delete process.env.DISCORD_ENABLE_NAS_STATUS;
     delete process.env.DISCORD_ENABLE_NAS_HANDOFF;
     delete process.env.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE;
@@ -71,6 +72,7 @@ describe("config", () => {
     expect(config.DISCORD_ENABLE_AUDIT).toBe(false);
     expect(config.DISCORD_ENABLE_AUDIT_REPAIR).toBe(false);
     expect(config.DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION).toBe(false);
+    expect(config.DISCORD_ENABLE_AUDIT_REPAIR_APPLY).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_STATUS).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_HANDOFF).toBe(false);
     expect(config.DISCORD_ENABLE_NAS_BRIDGE_LIFECYCLE).toBe(false);
@@ -174,6 +176,13 @@ describe("config", () => {
     const { loadConfig } = await import("./config.js");
     const config = loadConfig();
     expect(config.DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION).toBe(true);
+  });
+
+  it("parses DISCORD_ENABLE_AUDIT_REPAIR_APPLY as boolean", async () => {
+    process.env.DISCORD_ENABLE_AUDIT_REPAIR_APPLY = "true";
+    const { loadConfig } = await import("./config.js");
+    const config = loadConfig();
+    expect(config.DISCORD_ENABLE_AUDIT_REPAIR_APPLY).toBe(true);
   });
 
   it("parses DISCORD_ENABLE_NAS_STATUS as boolean", async () => {

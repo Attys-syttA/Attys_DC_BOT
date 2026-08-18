@@ -32,7 +32,7 @@ Expected:
 
 - branch is `main`
 - local and `origin/main` are synced before release tagging
-- `npm run check` passes lint, typecheck, tests, and build
+- `npm run check` passes plans check, lint, typecheck, tests, synthetic audit repair-flow smoke, and build
 - `git diff --check` is clean
 - secret scan reports no secrets
 - `.env`, logs, local database files, generated executables, and Codex auth state

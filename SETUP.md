@@ -375,7 +375,8 @@ Optional local commands:
 - `/audit repair-run` is additionally disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true` is set in `.env`; when enabled it can start one tracked Codex repair turn in the isolated repair worktree only when there is non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It does not merge, commit, push, deploy, or write the normal source worktree.
 - `/audit repair-reviewed note:<optional>` marks the latest started repair execution as manually reviewed before `/audit recheck` and may store one sanitized public-safe review note; it only updates the local public-safe ledger and does not run checks, merge, commit, push, deploy, or write files.
 - `/audit recheck` refuses to run while the current iteration has a repair execution that is still only `started`; mark it with `/audit repair-reviewed` first.
-- `/audit repair-cleanup` is available only after the audit job is terminal. It removes only the matching isolated repair worktree with non-force `git worktree remove`; if Git refuses because the workspace is dirty or otherwise unsafe, the workspace remains and the record becomes `cleanup_failed`.
+- `/audit repair-apply` is disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` is set in `.env`; when enabled it applies only a completed, reviewed, passing isolated repair result to the normal source worktree, validates the original named check there, and still does not commit, push, deploy, merge branches, or clean up the repair worktree.
+- `/audit repair-cleanup` is available only after the audit job is terminal. It removes only the matching isolated repair worktree with non-force `git worktree remove`; after `/audit repair-apply`, it first verifies that the repair diff already matches the source diff, then clears only the isolated worktree before removal. If Git refuses because the workspace is dirty or otherwise unsafe, the workspace remains and the record becomes `cleanup_failed`.
 
 ## 9. Troubleshooting
 
@@ -418,6 +419,7 @@ Get-Content bot.err.log -Tail 80
 npm run lint
 npm run typecheck
 npm test
+npm run audit:repair-flow:smoke
 npm run build
 npm run check
 ggshield secret scan path --recursive --yes --use-gitignore .

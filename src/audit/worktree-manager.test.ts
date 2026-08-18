@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   inspectRepairWorktreeChanges,
+  removeAppliedRepairWorktree,
   prepareRepairWorktree,
   removeRepairWorktree,
   type GitCommandRunner,
@@ -191,6 +192,79 @@ describe("removeRepairWorktree", () => {
       worktreePath: path.join(realRepoRoot, ".discord-bot-state", "audit-worktrees", "other-job"),
       runGit: makeGitRunner(repoRoot),
     })).rejects.toThrow("cleanup boundary");
+  });
+});
+
+describe("removeAppliedRepairWorktree", () => {
+  it("removes an applied dirty repair worktree only after matching source diff is verified", async () => {
+    const sourceRoot = makeRealGitRepo();
+    const baseDir = path.join(path.dirname(sourceRoot), "applied-repair-worktrees");
+    const worktreePath = path.join(baseDir, "audit-job-1");
+    tempRoots.push(baseDir);
+    fs.mkdirSync(baseDir, { recursive: true });
+    execFileSync("git", ["worktree", "add", "-b", "audit-repair/audit-job-1", worktreePath, "HEAD"], {
+      cwd: sourceRoot,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    fs.writeFileSync(path.join(sourceRoot, "package.json"), "{\"scripts\":{\"test\":\"node check.js\"}}\n", "utf8");
+    fs.writeFileSync(path.join(worktreePath, "package.json"), "{\"scripts\":{\"test\":\"node check.js\"}}\n", "utf8");
+
+    const result = await removeAppliedRepairWorktree({
+      sourceRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      baseDir,
+    });
+
+    expect(result).toEqual({ removed: true, summary: "removed" });
+    expect(fs.existsSync(worktreePath)).toBe(false);
+    expect(execFileSync("git", ["status", "--porcelain=v1"], {
+      cwd: sourceRoot,
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim()).toBe("M package.json");
+  });
+
+  it("blocks applied cleanup when the source diff does not match the repair diff", async () => {
+    const sourceRoot = makeRealGitRepo();
+    const baseDir = path.join(path.dirname(sourceRoot), "mismatched-repair-worktrees");
+    const worktreePath = path.join(baseDir, "audit-job-1");
+    tempRoots.push(baseDir);
+    fs.mkdirSync(baseDir, { recursive: true });
+    execFileSync("git", ["worktree", "add", "-b", "audit-repair/audit-job-1", worktreePath, "HEAD"], {
+      cwd: sourceRoot,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    fs.writeFileSync(path.join(sourceRoot, "package.json"), "{\"scripts\":{\"test\":\"node source.js\"}}\n", "utf8");
+    fs.writeFileSync(path.join(worktreePath, "package.json"), "{\"scripts\":{\"test\":\"node repair.js\"}}\n", "utf8");
+
+    await expect(removeAppliedRepairWorktree({
+      sourceRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      baseDir,
+    })).rejects.toThrow("source and repair diffs to match");
+
+    expect(fs.existsSync(worktreePath)).toBe(true);
+  });
+
+  it("reports already removed when the applied repair worktree path is gone", async () => {
+    const sourceRoot = makeRealGitRepo();
+    const baseDir = path.join(path.dirname(sourceRoot), "missing-applied-repair-worktrees");
+    const worktreePath = path.join(baseDir, "audit-job-1");
+    tempRoots.push(baseDir);
+    fs.mkdirSync(baseDir, { recursive: true });
+
+    const result = await removeAppliedRepairWorktree({
+      sourceRoot,
+      jobId: "audit-job-1",
+      worktreePath,
+      baseDir,
+    });
+
+    expect(result).toEqual({ removed: false, summary: "already removed" });
   });
 });
 

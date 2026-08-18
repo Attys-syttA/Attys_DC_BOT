@@ -310,7 +310,7 @@ Acceptance note: GitHub Actions provides compile-only Swift evidence, but macOS 
 | `/mappings` | List project-channel mappings and clean duplicate legacy mappings |
 | `/git-status` | Run read-only `git status --short --branch` for the registered project |
 | `/run-tests` | Run `npm test` in the registered project when enabled |
-| `/audit start/status/stop/repair/recheck/repair-cleanup` | Run fixed read-only audit checks with a bounded iteration budget, request explicit repair approval, recheck an isolated repair workspace, and clean up a terminal isolated workspace when enabled |
+| `/audit start/status/stop/repair/recheck/repair-apply/repair-cleanup` | Run fixed read-only audit checks with a bounded iteration budget, request explicit repair approval, recheck an isolated repair workspace, explicitly apply a reviewed repair result, and clean up a terminal isolated workspace when enabled |
 | `/usage` | Show local Codex usage/rate-limit information when available |
 | `/auto-approve` | Toggle approval bypass when explicitly enabled |
 | `/clear-sessions` | Delete local session files when explicitly enabled |
@@ -369,7 +369,8 @@ Optional source-repo parity mode:
 - audit repair execution is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION=true`; when enabled, `/audit repair-run` may start one isolated Codex repair turn in the prepared worktree and record public-safe execution tracking, but only with non-passed audit evidence, remaining iteration budget, and no already-started repair execution for the same iteration. It still does not merge, commit, push, deploy, or write the normal source worktree
 - after reviewing that Codex turn manually, `/audit repair-reviewed note:<optional>` can mark the latest started repair execution as reviewed before `/audit recheck` and may store one sanitized public-safe review note; it only updates the local public-safe ledger and does not run checks or write files
 - `/audit recheck` can rerun the original named check in the isolated repair workspace while respecting the job iteration budget; after a started repair execution it requires `/audit repair-reviewed` first, and repeated matching public-safe failures stop as `stagnated`
-- `/audit repair-cleanup` can remove only a terminal job's matching isolated repair worktree with non-force `git worktree remove`; dirty cleanup failures are recorded as `cleanup_failed`, and the normal source worktree is not merged, committed, pushed, deployed, reset, or deleted
+- `/audit repair-apply` is separately disabled unless `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true`; when enabled, it can apply a completed, reviewed, passing isolated repair result to the normal source worktree as a Git patch, then rerun the original named check in the source worktree. It blocks dirty source worktrees, untracked/staged/renamed/deleted repair changes, and mismatched `HEAD`; it does not commit, push, deploy, merge branches, or clean up the repair worktree
+- `/audit repair-cleanup` can remove only a terminal job's matching isolated repair worktree with non-force `git worktree remove`; after `/audit repair-apply`, it first verifies that the repair diff already matches the source diff, then clears only the isolated worktree before removal. Other dirty cleanup failures are recorded as `cleanup_failed`, and the normal source worktree is not merged, committed, pushed, deployed, reset, or deleted
 - session deletion is disabled unless `DISCORD_ENABLE_SESSION_DELETE=true`
 - Discord-side bot restart is disabled unless `DISCORD_ENABLE_BOT_LIFECYCLE=true`
 - `/logs`, `/events`, `/health`, `/doctor`, and `/dashboard` avoid tokens, raw Discord IDs, private paths, and config values
@@ -396,6 +397,7 @@ Important `.env` keys:
 | `DISCORD_ENABLE_AUDIT` | Enables default-off read-only `/audit` named checks |
 | `DISCORD_ENABLE_AUDIT_REPAIR` | Enables default-off explicit `/audit repair` approval, isolated worktree preflight, public-safe repair workspace status, and isolated `/audit recheck` |
 | `DISCORD_ENABLE_AUDIT_REPAIR_EXECUTION` | Enables default-off `/audit repair-run` for one tracked isolated Codex repair turn |
+| `DISCORD_ENABLE_AUDIT_REPAIR_APPLY` | Enables default-off `/audit repair-apply` handoff from a reviewed, passing isolated repair workspace into the source worktree |
 | `DISCORD_ENABLE_AUTO_APPROVE` | Enables approval bypass toggle |
 | `DISCORD_ENABLE_SESSION_DELETE` | Enables destructive session deletion |
 | `DISCORD_ENABLE_BOT_LIFECYCLE` | Enables Discord-triggered bot restart |
@@ -408,6 +410,7 @@ Tracked examples and docs must use placeholders only.
 npm run lint
 npm run typecheck
 npm test
+npm run audit:repair-flow:smoke
 npm run build
 npm run check
 npm run doctor:local

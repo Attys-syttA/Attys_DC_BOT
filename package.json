@@ -1,6 +1,6 @@
 {
   "name": "attys-dc-bot",
-  "version": "0.1.1-prerelease.64",
+  "version": "0.1.1-prerelease.66",
   "description": "Local-first Windows Discord control surface for Codex CLI",
   "type": "module",
   "main": "dist/index.js",
@@ -41,6 +41,7 @@
     "worker:handoff:restart": "pwsh -NoProfile -File scripts/worker-handoff-lifecycle.ps1 -Action restart",
     "worker:smoke": "pwsh -NoProfile -File scripts/worker-http-smoke.ps1",
     "audit:check": "tsx src/cli/audit-check.ts",
+    "audit:repair-flow:smoke": "tsx src/cli/audit-repair-flow-smoke.ts",
     "plans:check": "tsx src/cli/plans-check.ts",
     "safe-update:status": "tsx src/cli/safe-update.ts --status",
     "safe-update:apply": "tsx src/cli/safe-update.ts --apply",
@@ -48,7 +49,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check": "npm run plans:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "check": "npm run plans:check && npm run lint && npm run typecheck && npm test && npm run audit:repair-flow:smoke && npm run build",
     "secret:scan": "ggshield secret scan path --recursive --yes --use-gitignore ."
   },
   "dependencies": {

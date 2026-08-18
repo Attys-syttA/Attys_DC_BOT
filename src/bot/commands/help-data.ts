@@ -24,8 +24,8 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "audit",
     category: "repo",
-    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> max_iterations:<1..3 optional> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed note:<optional> | /audit recheck | /audit repair-cleanup",
-    short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, izolalt repair turnt indithat, review-readyre jelol, es recheckel.",
+    usage: "/audit start check: <plans|lint|typecheck|tests|build|full> max_iterations:<1..3 optional> | /audit status | /audit review | /audit repair-plan | /audit stop | /audit repair | /audit repair-run | /audit repair-reviewed note:<optional> | /audit recheck | /audit repair-apply | /audit repair-cleanup",
+    short: "Fix audit checkeket futtat, review/repair-plan osszegzest ad, repair approvalt ker, izolalt repair turnt indithat, recheckel, es kulon jovahagyassal applyolhat.",
     details: [
       "Alapbol tiltott; csak `DISCORD_ENABLE_AUDIT=true` mellett mukodik.",
       "Csak a source-controlled named-check catalogbol valaszthato check fut.",
@@ -47,8 +47,9 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit recheck` a `DISCORD_ENABLE_AUDIT_REPAIR=true` flag alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
+      "`/audit repair-apply` kulon `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` flaget ker; csak completed, reviewed es passed recheck utan vesz at egyszeru tracked modositast a normal source worktree-be, majd ott ujra validal.",
       "`/audit repair-cleanup` csak terminal jobnal probalja non-force modon eltavolitani a sajat izolalt repair worktree-t; dirty workspace eseten fail-closed `cleanup_failed` allapot marad.",
-      "A repair-run sem merge-el, commitol, pushol, deployol, es nem ir a normal source worktree-be.",
+      "A repair-run nem merge-el, commitol, pushol, deployol, es nem ir a normal source worktree-be; a repair-apply sem commitol, pushol, deployol vagy takarit automatikusan.",
     ],
   },
   {

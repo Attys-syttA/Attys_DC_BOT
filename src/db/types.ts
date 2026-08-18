@@ -67,7 +67,7 @@ export interface AuditStepRecord {
   created_at: string;
 }
 
-export type AuditRepairWorktreeStatus = "prepared" | "retained" | "cleanup_failed" | "removed";
+export type AuditRepairWorktreeStatus = "prepared" | "retained" | "cleanup_failed" | "applied" | "removed";
 
 export interface AuditRepairWorktreeRecord {
   job_id: string;
