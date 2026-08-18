@@ -367,13 +367,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
   {
     name: "windows",
     category: "ops",
-    usage: "/windows status | /windows helper-run helper:<status|check|restart> job_id:<optional>",
+    usage: "/windows status | /windows helper-run helper:<status|check|push|restart> job_id:<optional>",
     short: "Korlatozott Windows execution-plane job requesteket hoz letre.",
     details: [
       "`/windows status` a legutobbi ismert Windows worker heartbeatet mutatja.",
       "`/windows helper-run` csak elore ismert helper capabilityhez hoz letre BotOps jobot.",
-      "`status` es `check` approval nelkuli fixed helper request, `restart` approval-koteles.",
-      "A parancs nem futtat kozvetlen shellt, nem indit szolgaltatast, nem commitol, nem pushol es nem deployol.",
+      "`status` es `check` approval nelkuli fixed helper request; `push` es `restart` approval-koteles.",
+      "A parancs nem futtat kozvetlen shellt, nem indit szolgaltatast, nem commitol es nem deployol.",
     ],
   },
 ];

@@ -45,6 +45,7 @@ export interface WindowsWorkerStatusSnapshot {
 export const WINDOWS_WORKER_CAPABILITIES = [
   "status.read",
   "audit.check",
+  "git.push",
   "service.restart",
 ] as const satisfies readonly BotOpsCapability[];
 
@@ -263,6 +264,67 @@ function runServiceRestartHelper(
   };
 }
 
+function parseAheadBehind(output: string): { ahead: number; behind: number } | undefined {
+  const [aheadText, behindText] = output.trim().split(/\s+/);
+  const ahead = Number.parseInt(aheadText ?? "", 10);
+  const behind = Number.parseInt(behindText ?? "", 10);
+  if (!Number.isInteger(ahead) || !Number.isInteger(behind) || ahead < 0 || behind < 0) {
+    return undefined;
+  }
+  return { ahead, behind };
+}
+
+function runGitPushHelper(
+  repoRoot: string,
+  workerId: string,
+  runner: FixedCommandRunner,
+): { ok: boolean; result: string } {
+  const snapshot = buildWindowsWorkerStatusSnapshot(repoRoot, workerId, runner);
+  if (snapshot.worktree !== "clean") {
+    return {
+      ok: false,
+      result: `git push blocked: worktree ${snapshot.worktree}`,
+    };
+  }
+
+  const upstream = runner("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repoRoot, 10_000);
+  if (upstream.code !== 0 || !upstream.output.trim()) {
+    return {
+      ok: false,
+      result: "git push blocked: upstream missing",
+    };
+  }
+
+  const counts = runner("git", ["rev-list", "--left-right", "--count", "HEAD...@{u}"], repoRoot, 10_000);
+  const parsed = counts.code === 0 ? parseAheadBehind(counts.output) : undefined;
+  if (!parsed) {
+    return {
+      ok: false,
+      result: "git push blocked: upstream comparison failed",
+    };
+  }
+  if (parsed.behind > 0) {
+    return {
+      ok: false,
+      result: `git push blocked: upstream behind=${parsed.behind}`,
+    };
+  }
+  if (parsed.ahead === 0) {
+    return {
+      ok: true,
+      result: "git push helper completed: nothing to push",
+    };
+  }
+
+  const push = runner("git", ["push"], repoRoot, 120_000);
+  return {
+    ok: push.code === 0,
+    result: push.code === 0
+      ? `git push helper completed: pushed ${parsed.ahead} commit(s)`
+      : "git push helper failed: git push returned failure",
+  };
+}
+
 export function runWindowsWorkerOnce(
   repoRoot: string,
   workerId = defaultWindowsWorkerId(),
@@ -296,9 +358,11 @@ export function runWindowsWorkerOnce(
     ? runStatusHelper(repoRoot, workerId, runner)
     : job.capability === "audit.check"
       ? runCheckHelper(repoRoot, workerId, runner)
-      : job.capability === "service.restart"
-        ? runServiceRestartHelper(repoRoot, workerId, runner)
-        : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
+      : job.capability === "git.push"
+        ? runGitPushHelper(repoRoot, workerId, runner)
+        : job.capability === "service.restart"
+          ? runServiceRestartHelper(repoRoot, workerId, runner)
+          : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
 
   completeBotOpsJob(
     job.job_id,

@@ -16,6 +16,7 @@ describe("/windows helper-run", () => {
   it("maps only allowlisted helpers to BotOps capabilities", () => {
     expect(resolveWindowsHelperCapability("status")).toBe("status.read");
     expect(resolveWindowsHelperCapability("check")).toBe("audit.check");
+    expect(resolveWindowsHelperCapability("push")).toBe("git.push");
     expect(resolveWindowsHelperCapability("restart")).toBe("service.restart");
     expect(resolveWindowsHelperCapability("shell")).toBeUndefined();
   });
@@ -36,7 +37,7 @@ describe("/windows helper-run", () => {
 
     expect(mocks.createOrGetBotOpsJob).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "`/windows helper-run` rejected an unsupported helper. Allowed helpers: `status`, `check`, `restart`.",
+      content: "`/windows helper-run` rejected an unsupported helper. Allowed helpers: `status`, `check`, `push`, `restart`.",
     });
   });
 });

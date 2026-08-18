@@ -2,6 +2,8 @@
 
 ## 2026-08-18
 
+- BotOps Windows git push helper: `/windows helper-run helper:push` now creates an approval-gated `git.push` Windows job. The Windows worker only runs the fixed push path after approval, with clean-worktree, upstream-present, and not-behind preflight checks; no commit, deploy, restart, or arbitrary shell path was added.
+- Version bump: a package verzio `0.1.1-prerelease.85`, mert a user-visible `/windows helper-run` push helper es Windows worker `git.push` vegrehajtasi gate megjelent.
 - Live BotOps worker-loop smoke: after confirming zero queued/running/waiting approval jobs, the existing NAS and Windows worker supervisors were started locally. Synthetic safe jobs for `nas.worker.check` and `status.read` completed through the loops, both workers returned to `idle`, and worker error logs stayed empty.
 - BotOps aggregate worker heartbeat visibility: `/ops status` now includes public-safe worker heartbeat freshness in the aggregate BotOps status view, next to job counters and safety mode lines.
 - Version bump: a package verzio `0.1.1-prerelease.84`, mert a user-visible `/ops status` osszkep worker heartbeat lathatosagot kapott.

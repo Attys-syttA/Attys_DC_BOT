@@ -44,6 +44,15 @@ function makeRunner(gitStatusOutput: string, npmCode = 0, cmdCode = 0): FixedCom
     if (command === "git" && args.join(" ") === "status --porcelain") {
       return { code: 0, output: gitStatusOutput };
     }
+    if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
+      return { code: 0, output: "origin/main" };
+    }
+    if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
+      return { code: 0, output: "0\t0" };
+    }
+    if (command === "git" && args.join(" ") === "push") {
+      return { code: 0, output: "pushed" };
+    }
     if (command === "npm" || command === "npm.cmd") {
       return { code: npmCode, output: npmCode === 0 ? "ok" : "failed" };
     }
@@ -163,6 +172,109 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("restart-1")?.status).toBe("WaitingApproval");
   });
 
+  it("does not pick git push jobs without approval", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "push-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push",
+    });
+
+    expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("")).status).toBe("idle");
+    expect(getBotOpsJob("push-1")?.status).toBe("WaitingApproval");
+  });
+
+  it("blocks approved git push jobs on a dirty worktree", () => {
+    const repo = makeTempDir();
+    createOrGetBotOpsJob({
+      job_id: "push-dirty",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push",
+    });
+    approveBotOpsJob("push-dirty", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(
+      repo,
+      "worker-1",
+      makeRunner(" M src/file.ts"),
+      new Date("2026-08-18T10:01:00.000Z"),
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git push blocked: worktree dirty");
+    expect(getBotOpsJob("push-dirty")?.status).toBe("Failed");
+  });
+
+  it("blocks approved git push jobs when the upstream is behind", () => {
+    const repo = makeTempDir();
+    const runner: FixedCommandRunner = (command, args) => {
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
+      if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
+        return { code: 0, output: "origin/main" };
+      }
+      if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
+        return { code: 0, output: "0\t1" };
+      }
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "push-behind",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push",
+    });
+    approveBotOpsJob("push-behind", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git push blocked: upstream behind=1");
+    expect(getBotOpsJob("push-behind")?.status).toBe("Failed");
+  });
+
+  it("runs only fixed git push commands after exact approval", () => {
+    const repo = makeTempDir();
+    const calls: string[] = [];
+    const runner: FixedCommandRunner = (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
+      if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
+        return { code: 0, output: "origin/main" };
+      }
+      if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
+        return { code: 0, output: "2\t0" };
+      }
+      if (command === "git" && args.join(" ") === "push") return { code: 0, output: "pushed" };
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "push-approved",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push",
+    });
+    approveBotOpsJob("push-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("git push helper completed: pushed 2 commit(s)");
+    expect(calls).toEqual([
+      "git status --porcelain",
+      "git rev-parse --abbrev-ref --symbolic-full-name @{u}",
+      "git rev-list --left-right --count HEAD...@{u}",
+      "git push",
+      "git status --porcelain",
+    ]);
+    expect(getBotOpsJob("push-approved")?.status).toBe("Completed");
+  });
+
   it("blocks approved service restart jobs on a dirty worktree", () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
@@ -267,7 +379,7 @@ describe("Windows worker", () => {
     );
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: status.read, audit.check, service.restart");
+    expect(formatted).toContain("capabilities: status.read, audit.check, git.push, service.restart");
     expect(formatted).toContain("worktree: clean");
     expect(formatted).not.toContain(":\\");
   });
@@ -280,7 +392,7 @@ describe("Windows worker", () => {
     expect(listBotOpsWorkerHeartbeats("windows")[0]).toMatchObject({
       worker_id: "worker-1",
       target: "windows",
-      capabilities: "status.read, audit.check, service.restart",
+      capabilities: "status.read, audit.check, git.push, service.restart",
       status: "status",
       detail: "manual status check",
       heartbeat_at: "2026-08-18T10:00:00.000Z",

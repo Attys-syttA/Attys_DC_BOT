@@ -143,6 +143,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 - BotOps worker heartbeat freshness: a worker heartbeat listák `fresh` vagy `stale` jelzést kapnak, így `/windows status` és `/nas worker-status` alatt látszik, ha egy worker offline vagy késik.
 - BotOps WaitingWorker recovery: `/ops recover job_id:<id>` csak lease-expired `WaitingWorker` jobot tesz vissza `Requested` állapotba, és nem indít executiont. Approval-gated jobnál csak friss, ugyanahhoz a jobhoz tartozó approval mellett requeue-ol; lejárt approvalnál `WaitingApproval` állapotba zár vissza.
 - BotOps aggregate worker heartbeat visibility: `/ops status` most a job számlálók mellett public-safe worker heartbeat friss/stale összképet is mutat, így az operátor egyetlen nézetből látja, ha a NAS vagy Windows worker nem friss.
+- BotOps Windows git push helper: `/windows helper-run helper:push` approval-gated `git.push` jobot hoz létre. A Windows worker csak fix Git push útvonalat futtat, tiszta worktree, upstream meglét és not-behind ahead/behind preflight után; commit, deploy, restart vagy arbitrary shell nincs hozzáadva.
 - Live BotOps worker-loop smoke: a helyi NAS és Windows worker supervisor futó/verified állapotban indult, majd egy-egy safe `nas.worker.check` és `status.read` jobot completed státuszra vitt, üres worker error logok mellett.
 - Live NAS update checkpoint: a NAS control-plane deploy frissült a publikált Windows oldali source commitra, a verifier, bridge státusz és synthetic bridge smoke zöld; ez deploy-bizonyíték, nem általános automatikus NAS write/deploy engedély.
 - NAS bridge live smoke refresh: 2026-08-18-án a Windows bridge indítása után a read-only deploy verifier zöld lett (`worker-health` 1/1), és a synthetic `nas:bridge:smoke` `plans` request `passed`, `summary=1/1 passed` eredménnyel zárt, NAS konténer rebuild nélkül.
@@ -150,7 +151,7 @@ Az átirányítás oka: ha a NAS lesz a 24/7 control-plane irány, akkor előbb 
 ## Nyitott reszek
 
 - NAS control-plane és Windows worker transport/auth kapcsolatának további keményítése a mostani file-backed handoff mailbox, PC worker HTTP, restricted SSH container lifecycle helper és jóváhagyott staged-autonomy checkpoint után.
-- Repair eredményének utókezelése: apply után a normál source worktree szándékosan dirty marad, ezért commit/push vagy visszaállítás továbbra is külön emberi/operátori döntés.
+- Repair eredményének utókezelése: apply után a normál source worktree szándékosan dirty marad, ezért commit vagy visszaállítás továbbra is külön emberi/operátori döntés. A push első approval-gated worker helperként elkészült, de csak már commitolt, clean és not-behind upstream állapotot publikál.
 - Semleges planner/executor/validator szerepek opcionális bevezetése, kezdetben egy Codex threaden belül.
 - A korábbi külön NAS repo source-of-truth irány lezárása dokumentációban és Git állapotban; új NAS write/deploy/rebuild runtime csak innen, külön approval gate mögött indulhat.
 
@@ -968,6 +969,7 @@ Repair/worktree szeletnél ezen felül:
 - A BotOps worker heartbeat freshness miatt a package verzió `0.1.1-prerelease.82`, mert a user-visible worker heartbeat listák friss/stale jelzést kapnak.
 - A BotOps WaitingWorker recovery miatt a package verzió `0.1.1-prerelease.83`, mert új user-visible `/ops recover` operatori recovery parancs jelent meg.
 - A BotOps aggregate worker heartbeat visibility miatt a package verzió `0.1.1-prerelease.84`, mert a user-visible `/ops status` összkép worker heartbeat lathatóságot kapott.
+- A BotOps Windows git push helper miatt a package verzió `0.1.1-prerelease.85`, mert a user-visible `/windows helper-run helper:push` approval-gated `git.push` worker utat kapott.
 - Minden elkészült szelet után frissítendő ez a terv, `docs/STATE.md` és `docs/CHANGELOG.dev.md`.
 - Lezáráskor a terv csak akkor mozgatható `done` alá, ha a NAS handoff külön tervben ténylegesen elindult vagy explicit későbbi iránnyá lett visszasorolva.
 

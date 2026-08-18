@@ -9,6 +9,7 @@ import type { BotOpsCapability } from "../../botops/contract.js";
 const helperCapabilities: Record<string, BotOpsCapability> = {
   status: "status.read",
   check: "audit.check",
+  push: "git.push",
   restart: "service.restart",
 };
 
@@ -32,6 +33,7 @@ export const data = new SlashCommandBuilder()
       .addChoices(
         { name: "status", value: "status" },
         { name: "check", value: "check" },
+        { name: "push", value: "push" },
         { name: "restart", value: "restart" },
       ))
     .addStringOption((option) => option
@@ -45,8 +47,8 @@ export function buildWindowsStatusReply(): string {
     "```text",
     "mode: limited fixed helpers",
     "arbitrary shell: disabled",
-    "helpers: status, check, restart",
-    "restart approval: required",
+    "helpers: status, check, push, restart",
+    "approval required: push, restart",
     "",
     formatBotOpsWorkerHeartbeats(heartbeats),
     "```",
@@ -66,7 +68,7 @@ export async function execute(
   const capability = resolveWindowsHelperCapability(helper);
   if (!capability) {
     await interaction.editReply({
-      content: "`/windows helper-run` rejected an unsupported helper. Allowed helpers: `status`, `check`, `restart`.",
+      content: "`/windows helper-run` rejected an unsupported helper. Allowed helpers: `status`, `check`, `push`, `restart`.",
     });
     return;
   }
