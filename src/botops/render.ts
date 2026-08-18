@@ -51,18 +51,30 @@ export function formatBotOpsEventDetails(events: BotOpsEventRecord[]): string {
   ].join("\n");
 }
 
-export function formatBotOpsWorkerHeartbeatLine(heartbeat: BotOpsWorkerHeartbeatRecord): string {
-  return `- ${heartbeat.worker_id}: ${heartbeat.status} at ${heartbeat.heartbeat_at} capabilities=${heartbeat.capabilities}`;
+export function formatBotOpsWorkerHeartbeatLine(
+  heartbeat: BotOpsWorkerHeartbeatRecord,
+  now = new Date(),
+  staleAfterMs = 120_000,
+): string {
+  const heartbeatTime = Date.parse(heartbeat.heartbeat_at);
+  const freshness = Number.isFinite(heartbeatTime) && now.getTime() - heartbeatTime <= staleAfterMs
+    ? "fresh"
+    : "stale";
+  return `- ${heartbeat.worker_id}: ${heartbeat.status} ${freshness} at ${heartbeat.heartbeat_at} capabilities=${heartbeat.capabilities}`;
 }
 
-export function formatBotOpsWorkerHeartbeats(heartbeats: BotOpsWorkerHeartbeatRecord[]): string {
+export function formatBotOpsWorkerHeartbeats(
+  heartbeats: BotOpsWorkerHeartbeatRecord[],
+  now = new Date(),
+  staleAfterMs = 120_000,
+): string {
   if (heartbeats.length === 0) {
     return "worker heartbeats: none";
   }
 
   return [
     "worker heartbeats:",
-    ...heartbeats.map(formatBotOpsWorkerHeartbeatLine),
+    ...heartbeats.map((heartbeat) => formatBotOpsWorkerHeartbeatLine(heartbeat, now, staleAfterMs)),
   ].join("\n");
 }
 

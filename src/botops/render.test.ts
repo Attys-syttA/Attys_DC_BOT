@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { formatBotOpsJobDetails, formatBotOpsJobLine } from "./render.js";
+import { formatBotOpsJobDetails, formatBotOpsJobLine, formatBotOpsWorkerHeartbeats } from "./render.js";
 import type { BotOpsJob } from "./contract.js";
+import type { BotOpsWorkerHeartbeatRecord } from "../db/types.js";
 
 function makeJob(overrides: Partial<BotOpsJob> = {}): BotOpsJob {
   return {
@@ -43,5 +44,37 @@ describe("BotOps renderer", () => {
     }));
 
     expect(content).toContain("WaitingWorker nas/nas.worker.check result=worker lease expired");
+  });
+
+  it("labels worker heartbeats as fresh or stale", () => {
+    const heartbeats: BotOpsWorkerHeartbeatRecord[] = [
+      {
+        worker_id: "windows-worker-1",
+        target: "windows",
+        host: "host-a",
+        capabilities: "status.read",
+        status: "idle",
+        detail: "no job",
+        heartbeat_at: "2026-08-18T10:00:00.000Z",
+      },
+      {
+        worker_id: "nas-worker-1",
+        target: "nas",
+        host: "host-a",
+        capabilities: "nas.worker.check",
+        status: "idle",
+        detail: "no job",
+        heartbeat_at: "2026-08-18T09:55:00.000Z",
+      },
+    ];
+
+    const content = formatBotOpsWorkerHeartbeats(
+      heartbeats,
+      new Date("2026-08-18T10:00:30.000Z"),
+      120_000,
+    );
+
+    expect(content).toContain("windows-worker-1: idle fresh");
+    expect(content).toContain("nas-worker-1: idle stale");
   });
 });
