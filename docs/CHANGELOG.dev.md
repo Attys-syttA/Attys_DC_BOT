@@ -2,6 +2,7 @@
 
 ## 2026-08-18
 
+- Live BotOps worker-loop smoke: after confirming zero queued/running/waiting approval jobs, the existing NAS and Windows worker supervisors were started locally. Synthetic safe jobs for `nas.worker.check` and `status.read` completed through the loops, both workers returned to `idle`, and worker error logs stayed empty.
 - BotOps aggregate worker heartbeat visibility: `/ops status` now includes public-safe worker heartbeat freshness in the aggregate BotOps status view, next to job counters and safety mode lines.
 - Version bump: a package verzio `0.1.1-prerelease.84`, mert a user-visible `/ops status` osszkep worker heartbeat lathatosagot kapott.
 - BotOps WaitingWorker recovery: `/ops recover job_id:<id>` now requeues only lease-expired `WaitingWorker` jobs and never starts execution directly. Approval-gated jobs are recovered only while the existing approval is still fresh; stale approvals fail closed back to `WaitingApproval`.
