@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { sanitizePublicFileLabel, sanitizePublicText } from "../utils/public-safety.js";
 import type { AuditCheckRunResult } from "../audit/check-runner.js";
 import { isTerminalAuditStatus, type AuditJobStatus } from "../audit/types.js";
@@ -140,6 +140,7 @@ export function initDatabase(): void {
       approval_state TEXT NOT NULL,
       approved_by TEXT,
       approval_expires_at TEXT,
+      approval_fingerprint TEXT NOT NULL DEFAULT '',
       summary TEXT NOT NULL,
       payload_json TEXT NOT NULL DEFAULT '',
       expected_action TEXT NOT NULL DEFAULT 'run the requested fixed helper',
@@ -177,6 +178,7 @@ export function initDatabase(): void {
   ensureColumn("nas_handoff_requests", "audit_job_id", "TEXT");
   ensureColumn("botops_jobs", "approved_by", "TEXT");
   ensureColumn("botops_jobs", "approval_expires_at", "TEXT");
+  ensureColumn("botops_jobs", "approval_fingerprint", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("botops_jobs", "payload_json", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("botops_jobs", "expected_action", "TEXT NOT NULL DEFAULT 'run the requested fixed helper'");
   ensureColumn("botops_jobs", "validation_condition", "TEXT NOT NULL DEFAULT 'worker records a public-safe result'");
@@ -282,6 +284,20 @@ export function getAllSessions(guildId: string): (Session & { project_path: stri
 
 function nowFromIso(value: string): Date {
   return new Date(value);
+}
+
+function botOpsApprovalFingerprint(
+  job: Pick<BotOpsJobRecord, "job_id" | "target" | "capability" | "expected_action" | "validation_condition">,
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      job_id: job.job_id,
+      target: job.target,
+      capability: job.capability,
+      expected_action: job.expected_action,
+      validation_condition: job.validation_condition,
+    }))
+    .digest("hex");
 }
 
 function botOpsJobFromRecord(record: BotOpsJobRecord): BotOpsJob {
@@ -508,11 +524,19 @@ export function approveBotOpsJob(
       status = 'Requested',
       approved_by = ?,
       approval_expires_at = ?,
+      approval_fingerprint = ?,
       logs = ?,
       updated_at = ?
     WHERE job_id = ?
       AND approval_state = 'required'
-  `).run(safeApprovedBy, expiresAt, `approved by ${safeApprovedBy}`, updated, sanitizePublicText(jobId, 120));
+  `).run(
+    safeApprovedBy,
+    expiresAt,
+    botOpsApprovalFingerprint(job),
+    `approved by ${safeApprovedBy}`,
+    updated,
+    sanitizePublicText(jobId, 120),
+  );
   if (changed.changes !== 1) return undefined;
 
   recordBotOpsEvent(jobId, "approval.approved", safeApprovedBy, `expires ${expiresAt}`, now);
@@ -665,7 +689,7 @@ export function acquireNextBotOpsJob(
   markExpiredBotOpsLeases(now);
 
   const placeholders = uniqueCapabilities.map(() => "?").join(", ");
-  const record = db.prepare(`
+  const records = db.prepare(`
     SELECT *
     FROM botops_jobs
     WHERE status = 'Requested'
@@ -673,27 +697,63 @@ export function acquireNextBotOpsJob(
       AND approval_state IN ('not_required', 'approved')
       AND capability IN (${placeholders})
     ORDER BY created_at ASC
-    LIMIT 1
-  `).get(target, ...uniqueCapabilities) as BotOpsJobRecord | undefined;
+    LIMIT 25
+  `).all(target, ...uniqueCapabilities) as BotOpsJobRecord[];
 
-  if (!record) return undefined;
+  for (const record of records) {
+    if (record.approval_state === "approved" && record.approval_fingerprint !== botOpsApprovalFingerprint(record)) {
+      markBotOpsApprovalScopeChanged(record.job_id, now);
+      continue;
+    }
 
-  const leaseExpiresAt = new Date(now.getTime() + Math.max(1_000, leaseMs)).toISOString();
-  const updated = now.toISOString();
+    const leaseExpiresAt = new Date(now.getTime() + Math.max(1_000, leaseMs)).toISOString();
+    const updated = now.toISOString();
+    const changed = db.prepare(`
+      UPDATE botops_jobs
+      SET status = 'Running',
+        lease_owner = ?,
+        lease_expires_at = ?,
+        heartbeat_at = ?,
+        updated_at = ?
+      WHERE job_id = ?
+        AND status = 'Requested'
+        AND target = ?
+        AND capability = ?
+        AND approval_state = ?
+    `).run(
+      sanitizePublicText(workerId, 120),
+      leaseExpiresAt,
+      updated,
+      updated,
+      record.job_id,
+      record.target,
+      record.capability,
+      record.approval_state,
+    );
+
+    if (changed.changes !== 1) continue;
+    recordBotOpsEvent(record.job_id, "worker.acquired", workerId, `lease expires ${leaseExpiresAt}`, now);
+    return getBotOpsJob(record.job_id);
+  }
+
+  return undefined;
+}
+
+function markBotOpsApprovalScopeChanged(jobId: string, now: Date): void {
+  const timestamp = now.toISOString();
   const changed = db.prepare(`
     UPDATE botops_jobs
-    SET status = 'Running',
-      lease_owner = ?,
-      lease_expires_at = ?,
-      heartbeat_at = ?,
+    SET approval_state = 'stale',
+      status = 'WaitingApproval',
+      result = 'approval scope changed',
       updated_at = ?
     WHERE job_id = ?
       AND status = 'Requested'
-  `).run(sanitizePublicText(workerId, 120), leaseExpiresAt, updated, updated, record.job_id);
-
-  if (changed.changes !== 1) return undefined;
-  recordBotOpsEvent(record.job_id, "worker.acquired", workerId, `lease expires ${leaseExpiresAt}`, now);
-  return getBotOpsJob(record.job_id);
+      AND approval_state = 'approved'
+  `).run(timestamp, sanitizePublicText(jobId, 120));
+  if (changed.changes === 1) {
+    recordBotOpsEvent(jobId, "approval.stale", "system", "approval scope changed", now);
+  }
 }
 
 export function recordBotOpsHeartbeat(

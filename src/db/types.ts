@@ -29,6 +29,7 @@ export interface BotOpsJobRecord {
   approval_state: string;
   approved_by: string | null;
   approval_expires_at: string | null;
+  approval_fingerprint: string;
   summary: string;
   payload_json: string;
   expected_action: string;

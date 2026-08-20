@@ -76,6 +76,10 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - `/ops approve` csak akkor ir approvalt, ha az aktualis job meg `approval_state=required`;
   - stale, already-approved vagy not-required jobnal nem allit sikert, hanem public-safe job reszletekkel jelzi, hogy nem tortent jovahagyas;
   - az approval parancs tovabbra sem indit kozvetlen worker executiont.
+- 2026-08-20 approval scope fingerprint slice:
+  - approval-gated job jovahagyasakor belso fingerprint keszul a `job_id`, target, capability, `expected_action` es `validation_condition` ertekekbol;
+  - worker pickup elott az approved job fingerprintje ellenorzodik;
+  - scope drift eseten a job `WaitingApproval` + `approval_state=stale` allapotba kerul `approval scope changed` eredmennyel, es nem fut le.
 - NAS worker fixed helper alap:
   - `nas.worker.check`
   - `nas.deploy.verify`

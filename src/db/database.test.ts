@@ -13,6 +13,7 @@ vi.mock("better-sqlite3", async () => {
 
 import {
   initDatabase,
+  getDb,
   registerProject,
   unregisterProject,
   getProject,
@@ -345,6 +346,53 @@ describe("database", () => {
         event_type: "approval.stale",
         actor: "system",
         detail: "approval expired",
+      });
+    });
+
+    it("rejects approved jobs when the approval scope changed before worker pickup", () => {
+      createOrGetBotOpsJob({
+        job_id: "push-scope-changed",
+        requested_by: "operator",
+        target: "repo",
+        capability: "git.push",
+        summary: "push",
+      });
+      createOrGetBotOpsJob({
+        job_id: "repo-check-safe",
+        requested_by: "operator",
+        target: "repo",
+        capability: "audit.check",
+        summary: "check",
+      });
+      approveBotOpsJob(
+        "push-scope-changed",
+        "operator",
+        new Date("2026-08-18T10:00:00.000Z"),
+      );
+      getDb().prepare(`
+        UPDATE botops_jobs
+        SET expected_action = 'push a different branch'
+        WHERE job_id = 'push-scope-changed'
+      `).run();
+
+      const job = acquireNextBotOpsJob(
+        "repo-worker-1",
+        "repo",
+        ["git.push", "audit.check"],
+        30_000,
+        new Date("2026-08-18T10:01:00.000Z"),
+      );
+
+      expect(job?.job_id).toBe("repo-check-safe");
+      expect(getBotOpsJob("push-scope-changed")).toMatchObject({
+        approval_state: "stale",
+        status: "WaitingApproval",
+        result: "approval scope changed",
+      });
+      expect(listBotOpsJobEvents("push-scope-changed")[0]).toMatchObject({
+        event_type: "approval.stale",
+        actor: "system",
+        detail: "approval scope changed",
       });
     });
 
