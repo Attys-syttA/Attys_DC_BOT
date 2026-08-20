@@ -199,7 +199,7 @@ describe("NAS worker", () => {
     expect(getBotOpsJob("nas-apply-failed")?.status).toBe("Failed");
   });
 
-  it("fails NAS deploy apply when post-verify fails", () => {
+  it("moves NAS deploy apply to manual review when post-verify fails", () => {
     const runner: FixedNasCommandRunner = (_command, args) => {
       if (args.join(" ") === "run nas:deploy -- -Apply") {
         return { code: 0, output: "applied" };
@@ -219,7 +219,7 @@ describe("NAS worker", () => {
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("NAS deploy apply helper completed but post-verify failed");
-    expect(getBotOpsJob("nas-apply-verify-failed")?.status).toBe("Failed");
+    expect(getBotOpsJob("nas-apply-verify-failed")?.status).toBe("WaitingManualReview");
   });
 
   it("formats public-safe worker status", () => {

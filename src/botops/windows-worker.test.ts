@@ -47,6 +47,9 @@ function makeRunner(gitStatusOutput: string, npmCode = 0, cmdCode = 0): FixedCom
     if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
       return { code: 0, output: "origin/main" };
     }
+    if (command === "git" && args.join(" ") === "fetch --prune") {
+      return { code: 0, output: "fetched" };
+    }
     if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
       return { code: 0, output: "0\t0" };
     }
@@ -385,6 +388,7 @@ describe("Windows worker", () => {
       if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
         return { code: 0, output: "origin/main" };
       }
+      if (command === "git" && args.join(" ") === "fetch --prune") return { code: 0, output: "fetched" };
       if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
         return { code: 0, output: "0\t1" };
       }
@@ -406,6 +410,32 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("push-behind")?.status).toBe("Failed");
   });
 
+  it("blocks approved git push jobs when fetch fails", () => {
+    const repo = makeTempDir();
+    const runner: FixedCommandRunner = (command, args) => {
+      if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
+      if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
+        return { code: 0, output: "origin/main" };
+      }
+      if (command === "git" && args.join(" ") === "fetch --prune") return { code: 1, output: "network failed" };
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "push-fetch-failed",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push",
+    });
+    approveBotOpsJob("push-fetch-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("git push blocked: fetch failed");
+    expect(getBotOpsJob("push-fetch-failed")?.status).toBe("Failed");
+  });
+
   it("runs only fixed git push commands after exact approval", () => {
     const repo = makeTempDir();
     const calls: string[] = [];
@@ -414,6 +444,9 @@ describe("Windows worker", () => {
       if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
       if (command === "git" && args.join(" ") === "rev-parse --abbrev-ref --symbolic-full-name @{u}") {
         return { code: 0, output: "origin/main" };
+      }
+      if (command === "git" && args.join(" ") === "fetch --prune") {
+        return { code: 0, output: "fetched" };
       }
       if (command === "git" && args.join(" ") === "rev-list --left-right --count HEAD...@{u}") {
         return { code: 0, output: "2\t0" };
@@ -437,6 +470,7 @@ describe("Windows worker", () => {
     expect(calls).toEqual([
       "git status --porcelain",
       "git rev-parse --abbrev-ref --symbolic-full-name @{u}",
+      "git fetch --prune",
       "git rev-list --left-right --count HEAD...@{u}",
       "git push",
       "git status --porcelain",

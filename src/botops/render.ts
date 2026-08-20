@@ -4,7 +4,7 @@ import type { BotOpsJob } from "./contract.js";
 export function formatBotOpsJobLine(job: BotOpsJob): string {
   const approval = job.approval_state === "not_required" ? "" : ` approval=${job.approval_state}`;
   const risk = job.status === "WaitingApproval" && job.approval_state === "required" ? " dangerous=yes" : "";
-  const result = job.status === "WaitingWorker" && job.result ? ` result=${job.result}` : "";
+  const result = (job.status === "WaitingWorker" || job.status === "WaitingManualReview") && job.result ? ` result=${job.result}` : "";
   return `- ${job.job_id}: ${job.status} ${job.target}/${job.capability}${approval}${risk}${result}`;
 }
 
@@ -97,6 +97,11 @@ export function formatBotOpsNextDecision(jobs: BotOpsJob[]): string {
     return `next decision: wait for worker heartbeat or inspect /ops logs job_id:${running.job_id}`;
   }
 
+  const manualReview = jobs.find((job) => job.status === "WaitingManualReview");
+  if (manualReview) {
+    return `next decision: manual review required; inspect /ops logs job_id:${manualReview.job_id}`;
+  }
+
   const failed = jobs.find((job) => job.status === "Failed" || job.status === "FailedDuplicateWorker");
   if (failed) {
     return `next decision: inspect /ops logs job_id:${failed.job_id}`;
@@ -112,6 +117,7 @@ export function buildBotOpsStatusReply(
   const running = jobs.filter((job) => job.status === "Running").length;
   const waitingApproval = jobs.filter((job) => job.status === "WaitingApproval").length;
   const waitingWorker = jobs.filter((job) => job.status === "WaitingWorker").length;
+  const waitingManualReview = jobs.filter((job) => job.status === "WaitingManualReview").length;
   const failed = jobs.filter((job) => job.status === "Failed" || job.status === "FailedDuplicateWorker").length;
 
   return [
@@ -124,6 +130,7 @@ export function buildBotOpsStatusReply(
     `running: ${running}`,
     `waiting approval: ${waitingApproval}`,
     `waiting worker: ${waitingWorker}`,
+    `waiting manual review: ${waitingManualReview}`,
     `failed: ${failed}`,
     formatBotOpsNextDecision(jobs),
     "",

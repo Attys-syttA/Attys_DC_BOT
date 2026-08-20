@@ -398,6 +398,14 @@ function runGitPushHelper(
     };
   }
 
+  const fetch = runner("git", ["fetch", "--prune"], repoRoot, 120_000);
+  if (fetch.code !== 0) {
+    return {
+      ok: false,
+      result: "git push blocked: fetch failed",
+    };
+  }
+
   const counts = runner("git", ["rev-list", "--left-right", "--count", "HEAD...@{u}"], repoRoot, 10_000);
   const parsed = counts.code === 0 ? parseAheadBehind(counts.output) : undefined;
   if (!parsed) {

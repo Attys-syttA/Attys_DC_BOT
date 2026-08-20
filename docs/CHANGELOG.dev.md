@@ -1,5 +1,14 @@
 # Development Changelog
 
+## 2026-08-20
+
+- BotOps approval diagnostics: `/ops approve` now refuses stale, already-approved, or not-required jobs instead of claiming approval was recorded. It shows the current public-safe job details, only calls the approval update path while the job is still `approval_state=required`, and the database update itself is guarded by the same state condition.
+- Version bump: a package verzio `0.1.1-prerelease.96`, mert a user-visible `/ops approve` stale/not-required approval hibakezelese szigorodott.
+- BotOps git push fetch preflight: the approval-gated Windows `git.push` helper now runs fixed `git fetch --prune` after confirming an upstream and before computing ahead/behind counts. If fetch fails, push is blocked and no fallback merge, rebase, force push, commit, deploy, restart, or cleanup is attempted.
+- Version bump: a package verzio `0.1.1-prerelease.95`, mert a user-visible BotOps git push helper upstream-frissitesi kapuja szigorodott.
+- BotOps NAS deploy apply manual-review guard: when the fixed `nas.deploy.apply` helper completes but the mandatory post-deploy verifier fails, the NAS worker now records the job as `WaitingManualReview` instead of plain `Failed`. `/ops jobs` shows the public-safe result and `/ops status` gives a manual-review next decision. Apply-before-verify failures still fail closed as `Failed`, and no fallback deploy, rebuild, restart, rollback, commit, push, or cleanup is started.
+- Version bump: a package verzio `0.1.1-prerelease.94`, mert a user-visible BotOps deploy apply post-verify hiba vegallapota manual review-ra szigorodott.
+
 ## 2026-08-18
 
 - BotOps dangerous approval visibility: `/ops jobs` compact rows now label waiting approval jobs as `dangerous=yes`, making consequential deploy/restart/push/apply gates visible without opening full logs.

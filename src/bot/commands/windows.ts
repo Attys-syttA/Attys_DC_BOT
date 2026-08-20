@@ -99,14 +99,14 @@ export async function execute(
     expected_action: helper === "commit"
       ? "commit already staged source changes"
       : helper === "push"
-        ? "push the current clean branch to its upstream"
+        ? "fetch remote refs and push the current clean branch to its upstream"
         : helper === "restart"
           ? "restart the fixed Windows bot service helper"
           : undefined,
     validation_condition: helper === "commit"
       ? "commit succeeds after diff-check and secret scan"
       : helper === "push"
-        ? "branch push succeeds without force or rebase"
+        ? "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase"
         : helper === "restart"
           ? "bot health and command registration remain valid after restart"
           : undefined,

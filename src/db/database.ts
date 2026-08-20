@@ -497,7 +497,7 @@ export function approveBotOpsJob(
 ): BotOpsJob | undefined {
   const job = getBotOpsJob(jobId);
   if (!job) return undefined;
-  if (job.approval_state !== "required") return job;
+  if (job.approval_state !== "required") return undefined;
 
   const updated = now.toISOString();
   const expiresAt = new Date(now.getTime() + Math.max(1_000, ttlMs)).toISOString();
@@ -511,10 +511,11 @@ export function approveBotOpsJob(
       logs = ?,
       updated_at = ?
     WHERE job_id = ?
+      AND approval_state = 'required'
   `).run(safeApprovedBy, expiresAt, `approved by ${safeApprovedBy}`, updated, sanitizePublicText(jobId, 120));
-  if (changed.changes === 1) {
-    recordBotOpsEvent(jobId, "approval.approved", safeApprovedBy, `expires ${expiresAt}`, now);
-  }
+  if (changed.changes !== 1) return undefined;
+
+  recordBotOpsEvent(jobId, "approval.approved", safeApprovedBy, `expires ${expiresAt}`, now);
   return getBotOpsJob(jobId);
 }
 
@@ -722,7 +723,7 @@ export function recordBotOpsHeartbeat(
 export function completeBotOpsJob(
   jobId: string,
   workerId: string,
-  status: Extract<BotOpsJobStatus, "Completed" | "Failed" | "WaitingWorker">,
+  status: Extract<BotOpsJobStatus, "Completed" | "Failed" | "WaitingManualReview" | "WaitingWorker">,
   result: string,
   now = new Date(),
 ): boolean {

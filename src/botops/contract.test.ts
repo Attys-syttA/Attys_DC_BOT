@@ -70,6 +70,20 @@ describe("BotOps contract", () => {
     expect(job.validation_condition).toBe("origin/main contains abc123 and worktree stays clean");
   });
 
+  it("creates git push jobs with fetch-aware approval metadata", () => {
+    const job = createBotOpsJob({
+      job_id: "push-default",
+      requested_by: "operator",
+      target: "windows",
+      capability: "git.push",
+      summary: "push current branch",
+    });
+
+    expect(job.status).toBe("WaitingApproval");
+    expect(job.expected_action).toBe("fetch remote refs and push the current clean branch to its upstream");
+    expect(job.validation_condition).toBe("fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase");
+  });
+
   it("creates NAS deploy apply jobs with exact approval metadata", () => {
     const job = createBotOpsJob({
       job_id: "nas-deploy-apply-1",

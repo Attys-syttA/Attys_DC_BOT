@@ -240,6 +240,36 @@ describe("database", () => {
       });
     });
 
+    it("does not approve jobs that are no longer waiting for approval", () => {
+      createOrGetBotOpsJob({
+        job_id: "restart-already-approved",
+        requested_by: "operator",
+        target: "windows",
+        capability: "service.restart",
+        summary: "restart",
+      });
+
+      expect(approveBotOpsJob(
+        "restart-already-approved",
+        "operator",
+        new Date("2026-08-18T10:00:00.000Z"),
+      )?.approval_state).toBe("approved");
+
+      expect(approveBotOpsJob(
+        "restart-already-approved",
+        "operator-2",
+        new Date("2026-08-18T10:01:00.000Z"),
+      )).toBeUndefined();
+      expect(getBotOpsJob("restart-already-approved")).toMatchObject({
+        approval_state: "approved",
+        approved_by: "operator",
+        approval_expires_at: "2026-08-18T10:15:00.000Z",
+      });
+      expect(listBotOpsJobEvents("restart-already-approved").filter(
+        (event) => event.event_type === "approval.approved",
+      )).toHaveLength(1);
+    });
+
     it("can cancel a queued job without deleting its audit trail", () => {
       createOrGetBotOpsJob({
         job_id: "check-1",

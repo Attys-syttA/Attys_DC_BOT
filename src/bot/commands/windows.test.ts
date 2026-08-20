@@ -114,4 +114,47 @@ describe("/windows helper-run", () => {
       validation_condition: "commit succeeds after diff-check and secret scan",
     }));
   });
+
+  it("stores fetch-aware push approval metadata", async () => {
+    const job = {
+      job_id: "push-1",
+      requested_by: "operator-1",
+      target: "windows",
+      capability: "git.push",
+      status: "WaitingApproval",
+      approval_state: "required",
+      approved_by: null,
+      approval_expires_at: null,
+      summary: "Windows fixed helper request: push",
+      payload_json: "",
+      expected_action: "fetch remote refs and push the current clean branch to its upstream",
+      validation_condition: "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase",
+      lease_owner: null,
+      lease_expires_at: null,
+      heartbeat_at: null,
+      logs: "",
+      result: "",
+      created_at: "2026-08-18T10:00:00.000Z",
+      updated_at: "2026-08-18T10:00:00.000Z",
+    };
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({ job, created: true });
+    const interaction = {
+      options: {
+        getSubcommand: vi.fn(() => "helper-run"),
+        getString: vi.fn((name: string) => name === "helper" ? "push" : null),
+      },
+      user: {
+        id: "operator-1",
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      capability: "git.push",
+      expected_action: "fetch remote refs and push the current clean branch to its upstream",
+      validation_condition: "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase",
+    }));
+  });
 });

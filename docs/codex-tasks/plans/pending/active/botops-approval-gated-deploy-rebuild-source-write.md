@@ -39,7 +39,11 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - `/nas deploy-apply` csak jobot hoz letre, es nem indit kozvetlen deployt Discordbol;
   - a NAS worker csak approval utan veheti fel;
   - a worker fixed helper lancot futtat: `npm run nas:deploy -- -Apply`, majd kotelezo `npm run nas:deploy:verify`;
-  - deploy apply hiba eseten nincs fallback rebuild/restart; post-verify hiba eseten a job `Failed`.
+  - deploy apply hiba eseten nincs fallback rebuild/restart; ha az apply helper lefut, de a kotelezo post-verify bukik, a job `WaitingManualReview`.
+- 2026-08-20 deploy apply manual-review guard:
+  - a `nas.deploy.apply` worker ag explicit BotOps `WaitingManualReview` vegallapotot rogzít post-verify bukasnal;
+  - apply-before-verify hiba tovabbra is fail-closed `Failed`;
+  - nincs automatikus fallback deploy, rebuild, restart, rollback, commit, push vagy cleanup.
 - 2026-08-18 harmadik UX/preview slice:
   - `/nas deploy-plan` explicit `will-rebuild=no|yes|unknown` sort mutat a jelenlegi deploy verifier alapjan;
   - `/ops status` `next decision` sort mutat approval, worker recovery, running vagy failed job eseten.
@@ -65,6 +69,13 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - `git.commit`
   - `git.push`
   - `service.restart`
+- 2026-08-20 Git publication guard:
+  - a `git.push` helper approval utan fixed `git fetch --prune` preflightot futtat az ahead/behind osszevetes elott;
+  - fetch hiba eseten a push blokkol, es nincs fallback merge, rebase, force push, commit, deploy, restart vagy cleanup.
+- 2026-08-20 approval diagnostics slice:
+  - `/ops approve` csak akkor ir approvalt, ha az aktualis job meg `approval_state=required`;
+  - stale, already-approved vagy not-required jobnal nem allit sikert, hanem public-safe job reszletekkel jelzi, hogy nem tortent jovahagyas;
+  - az approval parancs tovabbra sem indit kozvetlen worker executiont.
 - NAS worker fixed helper alap:
   - `nas.worker.check`
   - `nas.deploy.verify`
@@ -195,8 +206,9 @@ Laikus cel: "Mutasd meg, mi tortenne, mielott engedelyezem."
 Laikus cel: "Igen, ezt az egy lepeset engedem."
 
 - Mar letezo jobot hagy jova.
+- Csak akkor ir approvalt, ha a job aktualisan `approval_state=required`.
 - Nem indit mas capabilityt.
-- Lejart vagy eltero approval fail-closed.
+- Lejart, stale, already-approved, not-required vagy eltero approval fail-closed, es nem allit hamis sikert.
 
 ### `/ops cancel`
 
@@ -322,6 +334,7 @@ Feladatok:
 - Push elott legyen:
   - clean worktree;
   - upstream letezik;
+  - remote tracking ref frissitve fixed `git fetch --prune` preflighttal;
   - branch not-behind;
   - no force push.
 

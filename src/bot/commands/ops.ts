@@ -17,6 +17,7 @@ import {
   formatBotOpsEventDetails,
   formatBotOpsJobDetails,
 } from "../../botops/render.js";
+import type { BotOpsJob } from "../../botops/contract.js";
 import {
   formatWorkerSupervisorStatus,
   readWorkerSupervisorStatus,
@@ -33,6 +34,42 @@ export function buildBotOpsWorkersReply(repoRoot: string): string {
     "",
     formatWorkerSupervisorStatus(readWorkerSupervisorStatus(repoRoot, "windows")),
     "```",
+  ].join("\n");
+}
+
+export function buildBotOpsApproveReply(
+  jobId: string,
+  currentJob: BotOpsJob | undefined,
+  approvedJob: BotOpsJob | undefined,
+): string {
+  if (!currentJob) {
+    return `BotOps job \`${jobId}\` was not found.`;
+  }
+
+  if (currentJob.approval_state !== "required") {
+    return [
+      `BotOps job \`${jobId}\` was not approved: approval ${currentJob.approval_state}.`,
+      "```text",
+      formatBotOpsJobDetails(currentJob),
+      "```",
+    ].join("\n");
+  }
+
+  if (!approvedJob) {
+    return [
+      `BotOps job \`${jobId}\` was not approved: approval update failed.`,
+      "```text",
+      formatBotOpsJobDetails(currentJob),
+      "```",
+    ].join("\n");
+  }
+
+  return [
+    "**BotOps approval recorded**",
+    "```text",
+    formatBotOpsJobDetails(approvedJob),
+    "```",
+    "No execution was started by this approval command.",
   ].join("\n");
 }
 
@@ -124,11 +161,12 @@ export async function execute(
   }
 
   if (action === "approve") {
-    const job = approveBotOpsJob(jobId, interaction.user.id);
+    const currentJob = getBotOpsJob(jobId);
+    const job = currentJob?.approval_state === "required"
+      ? approveBotOpsJob(jobId, interaction.user.id)
+      : undefined;
     await interaction.editReply({
-      content: job
-        ? `**BotOps approval recorded**\n\`\`\`text\n${formatBotOpsJobDetails(job)}\n\`\`\`\nNo execution was started by this approval command.`
-        : `BotOps job \`${jobId}\` was not found.`,
+      content: buildBotOpsApproveReply(jobId, currentJob, job),
     });
     return;
   }

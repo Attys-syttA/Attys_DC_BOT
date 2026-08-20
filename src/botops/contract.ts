@@ -24,6 +24,7 @@ export const BOTOPS_JOB_STATUSES = [
   "WaitingApproval",
   "Completed",
   "Failed",
+  "WaitingManualReview",
   "Cancelled",
   "WaitingWorker",
   "FailedDuplicateWorker",
@@ -88,8 +89,8 @@ const defaultApprovalMetadata: Record<BotOpsCapability, {
     validation_condition: "commit succeeds after diff-check and secret scan",
   },
   "git.push": {
-    expected_action: "push the current clean branch to its upstream",
-    validation_condition: "branch push succeeds without force or rebase",
+    expected_action: "fetch remote refs and push the current clean branch to its upstream",
+    validation_condition: "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase",
   },
   "service.restart": {
     expected_action: "restart the fixed Windows bot service helper",

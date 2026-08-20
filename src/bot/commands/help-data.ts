@@ -379,6 +379,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/windows helper-run` csak elore ismert helper capabilityhez hoz letre BotOps jobot.",
       "`status` es `check` approval nelkuli fixed helper request; `commit`, `push` es `restart` approval-koteles.",
       "`commit` csak mar staged valtozasokat commitol, diff-check es secret scan utan.",
+      "`push` approval utan fixed `git fetch --prune` preflightot futtat, es csak not-behind clean branch-et pushol force/rebase nelkul.",
       "A parancs nem futtat kozvetlen shellt, nem stage-el valtozast, nem indit szolgaltatast es nem deployol.",
     ],
   },

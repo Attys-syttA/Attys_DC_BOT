@@ -8,7 +8,7 @@ import {
   recordBotOpsWorkerHeartbeat,
 } from "../db/database.js";
 import { windowsCmdInvocation } from "../utils/process.js";
-import type { BotOpsCapability, BotOpsJob } from "./contract.js";
+import type { BotOpsCapability, BotOpsJob, BotOpsJobStatus } from "./contract.js";
 
 export interface FixedNasCommandResult {
   code: number;
@@ -123,19 +123,22 @@ function runNasDeployVerifyHelper(
 
 function runNasDeployApplyHelper(
   runner: FixedNasCommandRunner,
-): { ok: boolean; result: string } {
+): { ok: boolean; jobStatus: Extract<BotOpsJobStatus, "Completed" | "Failed" | "WaitingManualReview">; result: string } {
   const apply = runner(npmCommand(), ["run", "nas:deploy", "--", "-Apply"], 900_000);
   if (apply.code !== 0) {
     return {
       ok: false,
+      jobStatus: "Failed",
       result: "NAS deploy apply helper failed before post-verify",
     };
   }
 
   const verification = runner(npmCommand(), ["run", "nas:deploy:verify"], 120_000);
+  const ok = verification.code === 0;
   return {
-    ok: verification.code === 0,
-    result: verification.code === 0
+    ok,
+    jobStatus: ok ? "Completed" : "WaitingManualReview",
+    result: ok
       ? "NAS deploy apply helper completed and post-verify passed"
       : "NAS deploy apply helper completed but post-verify failed",
   };
@@ -177,7 +180,7 @@ export function runNasWorkerOnce(
 
   if (job.capability === "nas.deploy.apply") {
     const execution = runNasDeployApplyHelper(runner);
-    completeBotOpsJob(job.job_id, workerId, execution.ok ? "Completed" : "Failed", execution.result, new Date(now.getTime() + 200));
+    completeBotOpsJob(job.job_id, workerId, execution.jobStatus, execution.result, new Date(now.getTime() + 200));
     recordNasWorkerStatus(buildNasWorkerStatusSnapshot(workerId), execution.ok ? "completed" : "failed", `nas.deploy.apply: ${execution.ok ? "completed" : "failed"}`, new Date(now.getTime() + 200));
     return {
       status: execution.ok ? "completed" : "failed",

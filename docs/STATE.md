@@ -2,11 +2,15 @@
 
 ## Current Status
 
-- Date: 2026-08-18
+- Date: 2026-08-20
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
 - Phase: Windows prerelease baseline complete; external-platform acceptance remains active, NAS-0 connection/staging baseline is in place, the bounded audit-orchestration track has guarded repair coverage, and BotOps staged worker execution is consolidated into this primary repository.
-- Git state: local `main` tracks `origin/main`; current source started synced before the BotOps worker consolidation correction.
+- Git state: local `main` tracks `origin/main`; 2026-08-20 startup fetch confirmed `HEAD...origin/main = 0 0` before this checkpoint.
+- 2026-08-20 BotOps approval diagnostics: `/ops approve` now refuses stale, already-approved, or not-required jobs instead of claiming approval was recorded. It shows current public-safe job details, only updates approval while the job is still `approval_state=required`, and the database update itself is guarded by the same state condition. Package version is `0.1.1-prerelease.96`.
+- 2026-08-20 BotOps git push fetch preflight: the approval-gated Windows `git.push` helper now runs fixed `git fetch --prune` after confirming an upstream and before computing ahead/behind counts. Fetch failure blocks the push; no fallback merge, rebase, force push, commit, deploy, restart, or cleanup is attempted. Package version is `0.1.1-prerelease.95`.
+- 2026-08-20 BotOps NAS deploy apply manual-review guard: when `nas.deploy.apply` completes the fixed apply helper but the mandatory post-deploy verifier fails, the NAS worker now records the job as `WaitingManualReview` instead of `Failed`; `/ops jobs` shows the public-safe result and `/ops status` gives a manual-review next decision. Apply-before-verify failures still fail closed as `Failed`; no fallback deploy, rebuild, restart, rollback, commit, push, or cleanup is started. Package version is `0.1.1-prerelease.94`.
+- 2026-08-20 continuation boundary: BotOps staged-autonomy work may continue in small approved plan slices, but no live deploy/rebuild/restart/commit/push/cleanup execution was run in this checkpoint. New capabilities, NAS source-write/free Codex execution, rollback source selection, or weaker approval requirements still require a separate operator decision.
 - 2026-08-18 repository direction correction: `Attys_DC_BOT` is the single source-of-truth for the live Discord bot, BotOps command surface, NAS handoff/control-plane helpers, and limited Windows/NAS worker execution. The earlier same-day `Attys_DC_BOT_NAS` worker-target-root slice is superseded as a reference implementation, not a second active runtime repository.
 - 2026-08-18 BotOps dangerous approval visibility: `/ops jobs` compact rows now show `dangerous=yes` for `WaitingApproval` jobs that require approval, so consequential gates are visible without opening full logs. Package version is `0.1.1-prerelease.93`.
 - 2026-08-18 rollback decision checkpoint: rollback execution remains unimplemented because the rollback source is not selected yet. Operator decision recorded: rollback apply should use two-step approval, and rollback verify failure should end in `WaitingManualReview`.

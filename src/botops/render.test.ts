@@ -57,6 +57,16 @@ describe("BotOps renderer", () => {
     expect(content).toContain("WaitingWorker nas/nas.worker.check result=worker lease expired");
   });
 
+  it("shows manual-review results on compact job lines", () => {
+    const content = formatBotOpsJobLine(makeJob({
+      status: "WaitingManualReview",
+      capability: "nas.deploy.apply",
+      result: "post-verify failed",
+    }));
+
+    expect(content).toContain("WaitingManualReview nas/nas.deploy.apply result=post-verify failed");
+  });
+
   it("labels waiting approval jobs as dangerous on compact job lines", () => {
     const content = formatBotOpsJobLine(makeJob({
       status: "WaitingApproval",
@@ -135,6 +145,20 @@ describe("BotOps renderer", () => {
     expect(formatBotOpsNextDecision([
       makeJob({ job_id: "expired-lease-1", status: "WaitingWorker", result: "worker lease expired" }),
     ])).toBe("next decision: check worker, then /ops recover job_id:expired-lease-1 if the lease expired");
+  });
+
+  it("shows manual review as the next operator decision", () => {
+    const content = buildBotOpsStatusReply([
+      makeJob({
+        job_id: "nas-deploy-apply-verify-failed",
+        capability: "nas.deploy.apply",
+        status: "WaitingManualReview",
+        result: "post-verify failed",
+      }),
+    ]);
+
+    expect(content).toContain("waiting manual review: 1");
+    expect(content).toContain("next decision: manual review required; inspect /ops logs job_id:nas-deploy-apply-verify-failed");
   });
 
   it("shows no pending decision when jobs are completed", () => {
