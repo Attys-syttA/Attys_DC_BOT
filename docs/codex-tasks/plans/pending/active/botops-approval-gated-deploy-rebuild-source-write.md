@@ -52,14 +52,16 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - post-restart doctor hiba eseten a job `Failed`, nincs tovabbi fallback.
 - 2026-08-18 rollback preview slice:
   - `/nas rollback-plan` read-only preview keszult;
-  - rollback apply tovabbra is tiltott, rollback source nincs kivalasztva;
+  - rollback apply tovabbra is tiltott, rollback source Git commit;
   - rollback vegrehajtasi capability meg nem letezik.
 - 2026-08-18 jobs visibility slice:
   - `/ops jobs` compact sorban a `WaitingApproval` + `approval=required` jobok `dangerous=yes` jelzest kapnak.
 - 2026-08-18 rollback operatori dontes:
   - rollback apply csak ketlepcsos approval modellel tervezheto;
   - rollback verify bukas eseten a vegallapot `WaitingManualReview` legyen;
-  - rollback source meg nincs kivalasztva, ezert rollback apply runtime capability meg nem keszulhet.
+- 2026-08-20 rollback source operatori dontes:
+  - rollback source: Git commit;
+  - rollback apply runtime capability meg nem keszult; elotte pontos rollback commit kivalasztas es kulon guardolt apply design kell.
 - BotOps job/eveny/heartbeat SQLite alap es public-safe Discord status/log nezetek.
 - Lease alapu worker futtatas, stale/expired allapotokkal.
 - Explicit approval modell, ahol a worker nem kozvetlenul a Discord parancsbol futtat muveletet.
@@ -475,7 +477,7 @@ Feladatok:
 
 - Eloszor csak read-only rollback preview.
 - Meghatarozni, mi a rollback forrasa:
-  - elozo Git commit?
+  - elozo Git commit. Dontes: igen, ez a rollback source.
   - elozo NAS build identity?
   - elozo Docker image tag?
   - megorzott staging snapshot?
@@ -486,7 +488,7 @@ Kotelezo dontes implementacio elott:
 - A rollback legyen-e kulon parancsra indithato a botbol?
 - Kell-e ketlepcsos approval rollbackhez? Dontes: igen.
 - Mi legyen, ha rollback verify is bukik? Dontes: `WaitingManualReview`.
-- Mi legyen a rollback forrasa? Nyitott: elozo Git commit, elozo NAS build identity, elozo Docker image tag vagy megorzott staging snapshot kozul meg valasztani kell.
+- Mi legyen a rollback forrasa? Dontes: Git commit. A pontos rollback commitot vegrehajtas elott kulon kell kivalasztani.
 
 ## Hibas ágak es fail-closed viselkedes
 

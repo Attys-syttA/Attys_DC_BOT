@@ -203,7 +203,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/nas deploy-status` ugyanilyen read-only status flag alatt reszletesebb NAS deploy verifikacios check-listat mutat.",
       "`/nas deploy-plan` ugyanilyen read-only status flag alatt a NAS deploy helper dry-run elonezetet mutatja; nem ad at `-Apply` kapcsolot, nem ir NAS share-t, nem rebuildel es nem restartol.",
       "`/nas deploy-apply` approval-gated BotOps `nas.deploy.apply` jobot hoz letre; a worker csak approval utan futtathatja a fix deploy apply helpert es utana kotelezo deploy verifiert.",
-      "`/nas rollback-plan` read-only preview: megmutatja a jelenlegi deploy azonossagot es hogy rollback apply meg tiltott, rollback forras nincs kivalasztva.",
+      "`/nas rollback-plan` read-only preview: megmutatja a jelenlegi deploy azonossagot, a Git commit alapu rollback forrast, es hogy rollback apply meg tiltott.",
       "`/nas container-status` ugyanilyen read-only status flag alatt a restricted SSH status wrapperbol csak public-safe kontener elerhetoseg/futas/duration sorokat mutat.",
       "`/nas request` alapbol tiltott; csak `DISCORD_ENABLE_NAS_HANDOFF=true` mellett mukodik.",
       "`/nas request` a helyi audit store-ban is nyit egy `waiting_nas_result` jobot, igy `/audit status` alatt is kovetheto.",

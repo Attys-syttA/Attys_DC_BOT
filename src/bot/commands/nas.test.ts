@@ -1050,13 +1050,16 @@ describe("/nas", () => {
     });
   });
 
-  it("builds a read-only NAS rollback plan without choosing a rollback source", () => {
+  it("builds a read-only NAS rollback plan with Git commit as the rollback source", () => {
     const report = buildNasRollbackPlanReport("E:\\private\\repo");
 
     expect(report).toContain("NAS Rollback Plan");
     expect(report).toContain("mode=read-only");
     expect(report).toContain("rollback-apply=disabled");
-    expect(report).toContain("rollback-source=not-selected");
+    expect(report).toContain("rollback-source=git-commit");
+    expect(report).toContain("required-approval=two-step-required");
+    expect(report).toContain("verify-failure=WaitingManualReview");
+    expect(report).toContain("next=choose exact rollback commit before any apply command");
     expect(report).toContain("current-deploy=verified");
     expect(report).toContain("current-build=ebfa22a9abcd version=0.1.1-prerelease.2 checks=14/14");
     expect(report).not.toContain("E:\\");

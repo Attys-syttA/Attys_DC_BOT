@@ -477,8 +477,9 @@ export function buildNasRollbackPlanReport(repoRoot: string): string {
     "```text",
     "mode=read-only",
     "rollback-apply=disabled",
-    "rollback-source=not-selected",
-    "required-approval=future rollback capability approval",
+    "rollback-source=git-commit",
+    "required-approval=two-step-required",
+    "verify-failure=WaitingManualReview",
   ];
 
   if (!shareRoot || !fs.existsSync(shareRoot)) {
@@ -495,7 +496,7 @@ export function buildNasRollbackPlanReport(repoRoot: string): string {
     }
   }
 
-  lines.push("next=choose rollback source and approval rules before any apply command");
+  lines.push("next=choose exact rollback commit before any apply command");
   lines.push("```");
   return lines.join("\n");
 }

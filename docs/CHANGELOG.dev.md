@@ -2,6 +2,8 @@
 
 ## 2026-08-20
 
+- BotOps NAS rollback source decision: `/nas rollback-plan` now records the selected rollback source as `git-commit`, keeps rollback apply disabled, and shows that future rollback execution requires two-step approval with verification failure ending in `WaitingManualReview`.
+- Version bump: a package verzio `0.1.1-prerelease.102`, mert a user-visible `/nas rollback-plan` rollback-forras es approval preview pontosult.
 - BotOps repair revert handoff: `/audit repair-revert` now keeps the same source-write feature flag and applied-worktree preflights, then creates an approval-gated `source.write.revert` Windows BotOps job instead of reverting the source worktree directly from the Discord command. The Windows worker can execute revert only after approval, using the existing guarded exact-diff revert helper; source validation failure ends in `WaitingManualReview`, and no commit, push, deploy, cleanup, branch merge, arbitrary shell, or free Codex execution is started.
 - Version bump: a package verzio `0.1.1-prerelease.101`, mert a user-visible `/audit repair-revert` source-write handoff BotOps approval ala kerult.
 - Live BotOps `.101` publication and NAS refresh: commit `cb1481f` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.101` managed changes, rebuilt the NAS control-plane container, and verified package version `0.1.1-prerelease.101`; follow-up NAS verify, bridge status, and bridge smoke passed.
