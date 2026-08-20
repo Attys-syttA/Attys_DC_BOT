@@ -2,6 +2,7 @@
 
 ## 2026-08-20
 
+- Live BotOps guardrail publication: commit `beec491` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and it came back as `CodexBot.exe` PID `40044`. `npm run doctor:local` passed, `bot.err.log` stayed empty, and `bot.log` showed `Registered 29 application commands`.
 - BotOps approval diagnostics: `/ops approve` now refuses stale, already-approved, or not-required jobs instead of claiming approval was recorded. It shows the current public-safe job details, only calls the approval update path while the job is still `approval_state=required`, and the database update itself is guarded by the same state condition.
 - Version bump: a package verzio `0.1.1-prerelease.96`, mert a user-visible `/ops approve` stale/not-required approval hibakezelese szigorodott.
 - BotOps git push fetch preflight: the approval-gated Windows `git.push` helper now runs fixed `git fetch --prune` after confirming an upstream and before computing ahead/behind counts. If fetch fails, push is blocked and no fallback merge, rebase, force push, commit, deploy, restart, or cleanup is attempted.
