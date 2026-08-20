@@ -336,6 +336,11 @@ Nem megengedett:
 
 ### Szakasz 3 - Git publication flow egységesitese
 
+Allapot:
+
+- `git.commit` es `git.push` approval-gated worker guardjai keszek: staged-only commit, diff-check, changed-files secret scan, clean/not-behind push, fixed fetch preflight, es no force/rebase/merge.
+- `/windows helper-run helper:commit|push` most explicit approval/report blokkot mutat a preflightekkel, validacios feltetelekkel, tiltott akciokkal, es a kovetkezo `/ops preview` -> approve/cancel lepessel.
+
 Feladatok:
 
 - A `git.commit` es `git.push` helper keruljon be az uj preview/approval/report modellbe.

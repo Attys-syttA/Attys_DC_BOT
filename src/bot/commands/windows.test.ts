@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { BotOpsJob } from "../../botops/contract.js";
 
 const mocks = vi.hoisted(() => ({
   createOrGetBotOpsJob: vi.fn(),
@@ -10,7 +11,7 @@ vi.mock("../../db/database.js", () => ({
   listBotOpsWorkerHeartbeats: mocks.listBotOpsWorkerHeartbeats,
 }));
 
-import { execute, resolveWindowsHelperCapability } from "./windows.js";
+import { buildWindowsHelperQueuedReply, execute, resolveWindowsHelperCapability } from "./windows.js";
 
 describe("/windows helper-run", () => {
   beforeEach(() => {
@@ -67,7 +68,7 @@ describe("/windows helper-run", () => {
   });
 
   it("stores commit messages in the job payload", async () => {
-    const job = {
+    const job: BotOpsJob = {
       job_id: "commit-1",
       requested_by: "operator-1",
       target: "windows",
@@ -116,7 +117,7 @@ describe("/windows helper-run", () => {
   });
 
   it("stores fetch-aware push approval metadata", async () => {
-    const job = {
+    const job: BotOpsJob = {
       job_id: "push-1",
       requested_by: "operator-1",
       target: "windows",
@@ -156,5 +157,70 @@ describe("/windows helper-run", () => {
       expected_action: "fetch remote refs and push the current clean branch to its upstream",
       validation_condition: "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase",
     }));
+  });
+
+  it("explains commit approval scope and next review step", () => {
+    const job: BotOpsJob = {
+      job_id: "commit-1",
+      requested_by: "operator-1",
+      target: "windows",
+      capability: "git.commit",
+      status: "WaitingApproval",
+      approval_state: "required",
+      approved_by: null,
+      approval_expires_at: null,
+      summary: "Windows fixed helper request: commit staged changes",
+      payload_json: JSON.stringify({ message: "feat: test commit" }),
+      expected_action: "commit already staged source changes",
+      validation_condition: "commit succeeds after diff-check and secret scan",
+      lease_owner: null,
+      lease_expires_at: null,
+      heartbeat_at: null,
+      logs: "",
+      result: "",
+      created_at: "2026-08-18T10:00:00.000Z",
+      updated_at: "2026-08-18T10:00:00.000Z",
+    };
+
+    const reply = buildWindowsHelperQueuedReply(job, "commit", true);
+
+    expect(reply).toContain("**Windows helper approval requested**");
+    expect(reply).toContain("git publication step: commit");
+    expect(reply).toContain("preflight: staged changes only, no unstaged or untracked files");
+    expect(reply).toContain("validation: git diff --check --cached and changed-files secret scan");
+    expect(reply).toContain("blocked actions: staging files, push, deploy, restart, cleanup");
+    expect(reply).toContain("Review with `/ops preview`, then approve or cancel the BotOps job.");
+  });
+
+  it("explains push approval scope without implying force, merge, or rebase", () => {
+    const job: BotOpsJob = {
+      job_id: "push-1",
+      requested_by: "operator-1",
+      target: "windows",
+      capability: "git.push",
+      status: "WaitingApproval",
+      approval_state: "required",
+      approved_by: null,
+      approval_expires_at: null,
+      summary: "Windows fixed helper request: push",
+      payload_json: "",
+      expected_action: "fetch remote refs and push the current clean branch to its upstream",
+      validation_condition: "fetch succeeds, branch is not behind upstream, and push succeeds without force or rebase",
+      lease_owner: null,
+      lease_expires_at: null,
+      heartbeat_at: null,
+      logs: "",
+      result: "",
+      created_at: "2026-08-18T10:00:00.000Z",
+      updated_at: "2026-08-18T10:00:00.000Z",
+    };
+
+    const reply = buildWindowsHelperQueuedReply(job, "push", true);
+
+    expect(reply).toContain("git publication step: push");
+    expect(reply).toContain("preflight: clean worktree, configured upstream, fixed git fetch --prune");
+    expect(reply).toContain("validation: branch is not behind upstream and git push succeeds");
+    expect(reply).toContain("blocked actions: commit, merge, rebase, force push, deploy, restart");
+    expect(reply).not.toContain("force push allowed");
   });
 });

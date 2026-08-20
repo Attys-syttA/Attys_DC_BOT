@@ -4,7 +4,7 @@ import {
 } from "discord.js";
 import { createOrGetBotOpsJob, listBotOpsWorkerHeartbeats } from "../../db/database.js";
 import { formatBotOpsJobDetails, formatBotOpsWorkerHeartbeats } from "../../botops/render.js";
-import type { BotOpsCapability } from "../../botops/contract.js";
+import type { BotOpsCapability, BotOpsJob } from "../../botops/contract.js";
 
 const helperCapabilities: Record<string, BotOpsCapability> = {
   status: "status.read",
@@ -61,6 +61,62 @@ export function buildWindowsStatusReply(): string {
   ].join("\n");
 }
 
+function helperPublicationGuidance(helper: string): string[] {
+  if (helper === "commit") {
+    return [
+      "git publication step: commit",
+      "preflight: staged changes only, no unstaged or untracked files",
+      "validation: git diff --check --cached and changed-files secret scan",
+      "blocked actions: staging files, push, deploy, restart, cleanup",
+    ];
+  }
+
+  if (helper === "push") {
+    return [
+      "git publication step: push",
+      "preflight: clean worktree, configured upstream, fixed git fetch --prune",
+      "validation: branch is not behind upstream and git push succeeds",
+      "blocked actions: commit, merge, rebase, force push, deploy, restart",
+    ];
+  }
+
+  if (helper === "restart") {
+    return [
+      "service step: restart",
+      "preflight: fixed Windows launcher helper only",
+      "validation: post-restart doctor check passes",
+      "blocked actions: deploy, rebuild, env changes, unrelated process control",
+    ];
+  }
+
+  return [
+    "execution step: fixed helper",
+    "blocked actions: arbitrary shell, source write, deploy, restart",
+  ];
+}
+
+export function buildWindowsHelperQueuedReply(
+  job: BotOpsJob,
+  helper: string,
+  created: boolean,
+): string {
+  const approvalRequired = job.approval_state !== "not_required";
+  return [
+    approvalRequired
+      ? created ? "**Windows helper approval requested**" : "**Windows helper approval already requested**"
+      : created ? "**Windows helper request queued**" : "**Windows helper request already exists**",
+    "```text",
+    formatBotOpsJobDetails(job),
+    "",
+    ...helperPublicationGuidance(helper),
+    "```",
+    "No helper was executed directly from Discord.",
+    approvalRequired
+      ? "Review with `/ops preview`, then approve or cancel the BotOps job."
+      : "The worker may pick up this non-approval helper request when available.",
+  ].join("\n");
+}
+
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -113,12 +169,6 @@ export async function execute(
   });
 
   await interaction.editReply({
-    content: [
-      created ? "**Windows helper request queued**" : "**Windows helper request already exists**",
-      "```text",
-      formatBotOpsJobDetails(job),
-      "```",
-      "No helper was executed directly from Discord.",
-    ].join("\n"),
+    content: buildWindowsHelperQueuedReply(job, helper, created),
   });
 }
