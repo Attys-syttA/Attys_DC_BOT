@@ -5,11 +5,21 @@ import { spawnSync } from "node:child_process";
 import {
   acquireNextBotOpsJob,
   completeBotOpsJob,
+  getAuditJob,
+  getAuditRepairWorktree,
+  getProject,
+  insertAuditStepResult,
   listBotOpsJobs,
+  listAuditRepairExecutions,
+  listAuditSteps,
   recordBotOpsHeartbeat,
   recordBotOpsWorkerHeartbeat,
+  updateAuditRepairWorktreeStatus,
 } from "../db/database.js";
+import { isAuditCheckName } from "../audit/check-catalog.js";
+import { applyRepairWorktreeChanges } from "../audit/repair-apply.js";
 import { windowsCmdInvocation } from "../utils/process.js";
+import { sanitizePublicText } from "../utils/public-safety.js";
 import type { BotOpsCapability, BotOpsJob } from "./contract.js";
 
 export interface FixedCommandResult {
@@ -30,6 +40,12 @@ export interface WindowsWorkerOnceResult {
   result: string;
 }
 
+interface WindowsWorkerExecutionResult {
+  ok: boolean;
+  result: string;
+  jobStatus?: "Completed" | "Failed" | "WaitingManualReview";
+}
+
 export interface WindowsWorkerStatusSnapshot {
   worker_id: string;
   host: string;
@@ -45,6 +61,7 @@ export interface WindowsWorkerStatusSnapshot {
 export const WINDOWS_WORKER_CAPABILITIES = [
   "status.read",
   "audit.check",
+  "audit.repair.apply",
   "git.commit",
   "git.push",
   "service.restart",
@@ -436,12 +453,87 @@ function runGitPushHelper(
   };
 }
 
-export function runWindowsWorkerOnce(
+function parseAuditRepairApplyPayload(job: BotOpsJob): { channelId: string; auditJobId: string } | undefined {
+  try {
+    const payload = JSON.parse(job.payload_json) as { channel_id?: unknown; audit_job_id?: unknown };
+    if (typeof payload.channel_id !== "string" || typeof payload.audit_job_id !== "string") return undefined;
+    const channelId = payload.channel_id.trim();
+    const auditJobId = payload.audit_job_id.trim();
+    if (!channelId || !auditJobId) return undefined;
+    return { channelId, auditJobId };
+  } catch {
+    return undefined;
+  }
+}
+
+async function runAuditRepairApplyHelper(job: BotOpsJob): Promise<WindowsWorkerExecutionResult> {
+  const payload = parseAuditRepairApplyPayload(job);
+  if (!payload) {
+    return { ok: false, result: "audit repair apply blocked: invalid payload" };
+  }
+
+  const auditJob = getAuditJob(payload.auditJobId);
+  if (!auditJob || auditJob.status !== "completed") {
+    return { ok: false, result: "audit repair apply blocked: audit job is not completed" };
+  }
+  if (!auditJob.requested_check || !isAuditCheckName(auditJob.requested_check)) {
+    return { ok: false, result: "audit repair apply blocked: unsupported audit check" };
+  }
+
+  const project = getProject(payload.channelId);
+  if (!project) {
+    return { ok: false, result: "audit repair apply blocked: channel is not registered" };
+  }
+
+  const repairWorktree = getAuditRepairWorktree(auditJob.id);
+  if (!repairWorktree || ["removed", "applied_removed", "reverted_removed"].includes(repairWorktree.status)) {
+    return { ok: false, result: "audit repair apply blocked: no apply-ready repair workspace" };
+  }
+  if (repairWorktree.status === "applied") {
+    return { ok: false, result: "audit repair apply blocked: repair already applied" };
+  }
+
+  const latestRepairExecution = listAuditRepairExecutions(auditJob.id, 1).at(0);
+  if (!latestRepairExecution || latestRepairExecution.status !== "reviewed") {
+    return { ok: false, result: "audit repair apply blocked: no reviewed repair execution" };
+  }
+
+  const latestStep = listAuditSteps(auditJob.id).at(-1);
+  if (!latestStep || latestStep.step_name !== auditJob.requested_check || latestStep.status !== "passed") {
+    return { ok: false, result: "audit repair apply blocked: no passing isolated recheck" };
+  }
+
+  try {
+    const result = await applyRepairWorktreeChanges({
+      sourceRoot: project.project_path,
+      worktreePath: repairWorktree.worktree_path,
+      requestedCheck: auditJob.requested_check,
+    });
+    for (const validationResult of result.validationResults) {
+      insertAuditStepResult(auditJob.id, validationResult);
+    }
+    updateAuditRepairWorktreeStatus(auditJob.id, "applied", new Date().toISOString());
+    return {
+      ok: result.validationPassed,
+      jobStatus: result.validationPassed ? "Completed" : "WaitingManualReview",
+      result: result.validationPassed
+        ? `audit repair apply completed: ${sanitizePublicText(result.summary, 180)}`
+        : `audit repair apply validation failed: ${sanitizePublicText(result.summary, 180)}`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      result: `audit repair apply blocked: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair apply error", 180)}`,
+    };
+  }
+}
+
+export async function runWindowsWorkerOnce(
   repoRoot: string,
   workerId = defaultWindowsWorkerId(),
   runner: FixedCommandRunner = defaultFixedCommandRunner,
   now = new Date(),
-): WindowsWorkerOnceResult {
+): Promise<WindowsWorkerOnceResult> {
   const job = acquireNextBotOpsJob(
     workerId,
     "windows",
@@ -465,22 +557,24 @@ export function runWindowsWorkerOnce(
 
   recordBotOpsHeartbeat(job.job_id, workerId, new Date(now.getTime() + 100));
 
-  const execution = job.capability === "status.read"
+  const execution: WindowsWorkerExecutionResult = job.capability === "status.read"
     ? runStatusHelper(repoRoot, workerId, runner)
     : job.capability === "audit.check"
       ? runCheckHelper(repoRoot, workerId, runner)
-      : job.capability === "git.commit"
-        ? runGitCommitHelper(repoRoot, job, runner)
-        : job.capability === "git.push"
-          ? runGitPushHelper(repoRoot, workerId, runner)
-          : job.capability === "service.restart"
-            ? runServiceRestartHelper(repoRoot, workerId, runner)
-            : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
+      : job.capability === "audit.repair.apply"
+        ? await runAuditRepairApplyHelper(job)
+        : job.capability === "git.commit"
+          ? runGitCommitHelper(repoRoot, job, runner)
+          : job.capability === "git.push"
+            ? runGitPushHelper(repoRoot, workerId, runner)
+            : job.capability === "service.restart"
+              ? runServiceRestartHelper(repoRoot, workerId, runner)
+              : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
 
   completeBotOpsJob(
     job.job_id,
     workerId,
-    execution.ok ? "Completed" : "Failed",
+    execution.jobStatus ?? (execution.ok ? "Completed" : "Failed"),
     execution.result,
     new Date(now.getTime() + 200),
   );

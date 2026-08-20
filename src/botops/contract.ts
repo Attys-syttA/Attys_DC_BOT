@@ -7,6 +7,8 @@ export const BOTOPS_CAPABILITIES = [
   "audit.repair.prepare",
   "audit.repair.run",
   "audit.repair.apply",
+  "source.write.revert",
+  "repair.cleanup",
   "git.commit",
   "git.push",
   "service.restart",
@@ -53,6 +55,8 @@ export type BotOpsTarget = typeof BOTOPS_TARGETS[number];
 
 const approvalRequiredCapabilities = new Set<BotOpsCapability>([
   "audit.repair.apply",
+  "source.write.revert",
+  "repair.cleanup",
   "git.commit",
   "git.push",
   "service.restart",
@@ -83,6 +87,14 @@ const defaultApprovalMetadata: Record<BotOpsCapability, {
   "audit.repair.apply": {
     expected_action: "apply a reviewed passing repair diff to the source worktree",
     validation_condition: "the original named check passes again in the source worktree",
+  },
+  "source.write.revert": {
+    expected_action: "revert an applied repair diff from the source worktree",
+    validation_condition: "the original named check passes again after revert",
+  },
+  "repair.cleanup": {
+    expected_action: "remove a guarded isolated repair worktree",
+    validation_condition: "cleanup succeeds without modifying the source worktree",
   },
   "git.commit": {
     expected_action: "commit already staged source changes",

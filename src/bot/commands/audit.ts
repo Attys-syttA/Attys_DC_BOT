@@ -10,7 +10,6 @@ import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { createAuditRepairCodexStarter } from "../../audit/repair-codex-starter.js";
 import {
-  applyRepairWorktreeChanges,
   revertAppliedRepairWorktreeChanges,
 } from "../../audit/repair-apply.js";
 import { buildAuditRepairContract } from "../../audit/repair-contract.js";
@@ -31,6 +30,7 @@ import {
 } from "../../audit/types.js";
 import {
   createAuditJob,
+  createOrGetBotOpsJob,
   getActiveAuditJob,
   getActiveAuditJobByProjectPath,
   getAuditJob,
@@ -45,6 +45,7 @@ import {
   updateAuditRepairWorktreeStatus,
   updateAuditJobProgress,
 } from "../../db/database.js";
+import { formatBotOpsJobDetails } from "../../botops/render.js";
 import type { AuditJobRecord, AuditRepairExecutionRecord, AuditStepRecord } from "../../db/types.js";
 import { getConfig } from "../../utils/config.js";
 import { L } from "../../utils/i18n.js";
@@ -946,52 +947,30 @@ async function executeRepairApply(interaction: ChatInputCommandInteraction): Pro
     return;
   }
 
-  recordOperatorEvent({ kind: "task", status: "audit-repair-apply-started", channelId: interaction.channelId });
-  await interaction.editReply({
-    content: `Applying reviewed repair changes to the source worktree for audit job \`${job.id.slice(0, 8)}...\`.`,
+  const { job: botOpsJob, created } = createOrGetBotOpsJob({
+    job_id: `audit-repair-apply:${job.id}`,
+    requested_by: interaction.user.id,
+    target: "windows",
+    capability: "audit.repair.apply",
+    summary: `Audit repair apply handoff for job ${job.id.slice(0, 8)}`,
+    payload_json: JSON.stringify({
+      channel_id: interaction.channelId,
+      audit_job_id: job.id,
+    }),
+    expected_action: `apply reviewed repair diff for audit job ${job.id.slice(0, 8)}`,
+    validation_condition: `source-side ${job.requested_check} check passes after apply`,
   });
-
-  try {
-    const result = await applyRepairWorktreeChanges({
-      sourceRoot: project.project_path,
-      worktreePath: repairWorktree.worktree_path,
-      requestedCheck: job.requested_check,
-    });
-    for (const validationResult of result.validationResults) {
-      insertAuditStepResult(job.id, validationResult);
-      recordAuditStepEvent(validationResult, interaction.channelId);
-    }
-    updateAuditRepairWorktreeStatus(job.id, "applied", new Date().toISOString());
-    recordOperatorEvent({
-      kind: "task",
-      status: result.validationPassed ? "audit-repair-applied" : "audit-repair-applied-validation-failed",
-      channelId: interaction.channelId,
-    });
-    await interaction.followUp({
-      content: [
-        `**Audit repair apply ${result.validationPassed ? "completed" : "validation failed"}**`,
-        "```text",
-        `job: ${job.id.slice(0, 8)}...`,
-        `changes: ${result.summary}`,
-        `source validation: ${result.validationPassed ? "passed" : "failed"}`,
-        "source worktree: modified",
-        "no commit, push, deploy, cleanup, or branch merge was performed",
-        "```",
-      ].join("\n"),
-    });
-  } catch (error) {
-    recordOperatorEvent({ kind: "task", status: "audit-repair-apply-blocked", channelId: interaction.channelId });
-    await interaction.followUp({
-      content: [
-        "**Audit repair apply blocked**",
-        "```text",
-        `job: ${job.id.slice(0, 8)}...`,
-        `reason: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair apply error", 240)}`,
-        "source write: not performed by this command",
-        "```",
-      ].join("\n"),
-    });
-  }
+  recordOperatorEvent({ kind: "task", status: "audit-repair-apply-queued", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: [
+      created ? "**Audit repair apply approval requested**" : "**Audit repair apply approval already requested**",
+      "```text",
+      formatBotOpsJobDetails(botOpsJob),
+      "```",
+      "No source write was performed by this command.",
+      "Review with `/ops preview`, then approve or cancel the BotOps job.",
+    ].join("\n"),
+  });
 }
 
 async function executeRepairRevert(interaction: ChatInputCommandInteraction): Promise<void> {

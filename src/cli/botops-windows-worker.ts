@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   }
 
   if (mode === "--once") {
-    const result = runWindowsWorkerOnce(repoRoot, workerId);
+    const result = await runWindowsWorkerOnce(repoRoot, workerId);
     print(`status=${result.status}`);
     print(result.result);
     return;
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     const intervalMs = parsePositiveInt(process.env.BOTOPS_WINDOWS_WORKER_POLL_MS, 15_000);
     print(`Windows worker loop started: ${workerId}`);
     while (true) {
-      const result = runWindowsWorkerOnce(repoRoot, workerId);
+      const result = await runWindowsWorkerOnce(repoRoot, workerId);
       print(`${new Date().toISOString()} status=${result.status}`);
       await sleep(intervalMs);
     }

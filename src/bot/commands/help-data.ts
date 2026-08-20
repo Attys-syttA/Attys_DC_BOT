@@ -47,7 +47,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "`/audit recheck` a `DISCORD_ENABLE_AUDIT_REPAIR=true` flag alatt az eredetileg kert named checket futtatja ujra az izolalt repair workspace-ben.",
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
-      "`/audit repair-apply` kulon `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` flaget ker; csak completed, reviewed es passed recheck utan vesz at egyszeru tracked modositast a normal source worktree-be, majd ott ujra validal.",
+      "`/audit repair-apply` kulon `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` flaget ker; csak completed, reviewed es passed recheck utan hoz letre BotOps approval jobot, amely jovahagyas utan veszi at az egyszeru tracked modositast es ott ujra validal.",
       "`/audit repair-revert` ugyanezzel a source-write flaggel csak `applied` handoffot fordit vissza, ha az izolalt worktree megvan es a diff egyezik.",
       "`/audit repair-cleanup` csak terminal jobnal probalja non-force modon eltavolitani a sajat izolalt repair worktree-t; dirty workspace eseten fail-closed `cleanup_failed` allapot marad.",
       "`/audit review` apply utan mutatja, ha a normal source worktree-ben mar ott van a handoff javitas; cleanup utan revert csak /audit-on kivuli operatori dontes lehet.",

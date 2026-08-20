@@ -80,6 +80,10 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
   - approval-gated job jovahagyasakor belso fingerprint keszul a `job_id`, target, capability, `expected_action` es `validation_condition` ertekekbol;
   - worker pickup elott az approved job fingerprintje ellenorzodik;
   - scope drift eseten a job `WaitingApproval` + `approval_state=stale` allapotba kerul `approval scope changed` eredmennyel, es nem fut le.
+- 2026-08-20 audit repair apply BotOps handoff slice:
+  - `/audit repair-apply` mar nem ir kozvetlenul source worktree-be, hanem completed/reviewed/passed-recheck preflight utan `audit.repair.apply` BotOps jobot hoz letre;
+  - Windows worker csak approval utan veheti fel, es a meglevo guarded repair apply helpert hasznalja;
+  - source validation hiba `WaitingManualReview`, nincs automatikus commit, push, deploy, cleanup, branch merge, arbitrary shell vagy free Codex.
 - NAS worker fixed helper alap:
   - `nas.worker.check`
   - `nas.deploy.verify`
@@ -304,6 +308,11 @@ Nem megengedett:
 - live restart.
 
 ### Szakasz 2 - Source-write handoff formalizalasa
+
+Allapot:
+
+- `audit.repair.apply` BotOps job/approval es Windows worker execution kesz.
+- `source.write.revert` es `repair.cleanup` capability nev contract szinten letezik, de runtime execution meg nincs bekotve.
 
 Feladatok:
 

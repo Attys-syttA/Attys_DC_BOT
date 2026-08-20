@@ -18,6 +18,8 @@ describe("BotOps contract", () => {
     expect(capabilityRequiresApproval("status.read")).toBe(false);
     expect(capabilityRequiresApproval("audit.check")).toBe(false);
     expect(capabilityRequiresApproval("audit.repair.apply")).toBe(true);
+    expect(capabilityRequiresApproval("source.write.revert")).toBe(true);
+    expect(capabilityRequiresApproval("repair.cleanup")).toBe(true);
     expect(capabilityRequiresApproval("git.push")).toBe(true);
     expect(capabilityRequiresApproval("service.restart")).toBe(true);
     expect(capabilityRequiresApproval("nas.deploy.apply")).toBe(true);
@@ -97,6 +99,30 @@ describe("BotOps contract", () => {
     expect(job.approval_state).toBe("required");
     expect(job.expected_action).toBe("run the fixed NAS deploy apply helper and post-deploy verifier");
     expect(job.validation_condition).toBe("deploy apply exits successfully and NAS deploy verifier passes afterwards");
+  });
+
+  it("creates source handoff jobs with exact approval metadata", () => {
+    const revert = createBotOpsJob({
+      job_id: "source-revert-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "source.write.revert",
+      summary: "revert applied repair",
+    });
+    const cleanup = createBotOpsJob({
+      job_id: "repair-cleanup-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "repair.cleanup",
+      summary: "cleanup repair workspace",
+    });
+
+    expect(revert.status).toBe("WaitingApproval");
+    expect(revert.expected_action).toBe("revert an applied repair diff from the source worktree");
+    expect(revert.validation_condition).toBe("the original named check passes again after revert");
+    expect(cleanup.status).toBe("WaitingApproval");
+    expect(cleanup.expected_action).toBe("remove a guarded isolated repair worktree");
+    expect(cleanup.validation_condition).toBe("cleanup succeeds without modifying the source worktree");
   });
 
   it("matches approvals by exact job target and capability", () => {

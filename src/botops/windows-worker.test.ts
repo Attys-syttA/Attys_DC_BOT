@@ -4,6 +4,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FixedCommandRunner } from "./windows-worker.js";
 
+const repairApplyMocks = vi.hoisted(() => ({
+  applyRepairWorktreeChanges: vi.fn(),
+}));
+
 vi.mock("better-sqlite3", async () => {
   const actual = await vi.importActual("better-sqlite3") as any;
   const RealDatabase = actual.default;
@@ -13,14 +17,25 @@ vi.mock("better-sqlite3", async () => {
     },
   };
 });
+vi.mock("../audit/repair-apply.js", () => ({
+  applyRepairWorktreeChanges: repairApplyMocks.applyRepairWorktreeChanges,
+}));
 
 import {
   approveBotOpsJob,
+  createAuditJob,
+  createAuditRepairExecution,
+  createAuditRepairWorktree,
   createOrGetBotOpsJob,
   getBotOpsJob,
   initDatabase,
+  insertAuditStepResult,
   listBotOpsWorkerHeartbeats,
+  registerProject,
+  getAuditRepairWorktree,
+  listAuditSteps,
 } from "../db/database.js";
+import { defaultAuditCapabilities } from "../audit/types.js";
 import {
   buildWindowsWorkerStatusSnapshot,
   formatWindowsWorkerStatus,
@@ -78,6 +93,23 @@ function makeRunner(gitStatusOutput: string, npmCode = 0, cmdCode = 0): FixedCom
 describe("Windows worker", () => {
   beforeEach(() => {
     initDatabase();
+    repairApplyMocks.applyRepairWorktreeChanges.mockReset();
+    repairApplyMocks.applyRepairWorktreeChanges.mockResolvedValue({
+      changedFiles: 1,
+      summary: "applied files=1",
+      validationPassed: true,
+      validationResults: [{
+        name: "tests",
+        status: "passed",
+        exitCode: 0,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "ok",
+        startedAt: "2026-08-18T10:02:00.000Z",
+        finishedAt: "2026-08-18T10:02:01.000Z",
+        durationMs: 1_000,
+      }],
+    });
   });
 
   afterEach(() => {
@@ -86,9 +118,9 @@ describe("Windows worker", () => {
     }
   });
 
-  it("reports idle when there is no Windows job", () => {
+  it("reports idle when there is no Windows job", async () => {
     const repo = makeTempDir();
-    const result = runWindowsWorkerOnce(repo, "worker-1", makeRunner(""));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""));
 
     expect(result.status).toBe("idle");
     expect(result.result).toBe("no requested Windows worker job");
@@ -99,7 +131,7 @@ describe("Windows worker", () => {
     });
   });
 
-  it("completes a Windows status job without requiring a clean worktree", () => {
+  it("completes a Windows status job without requiring a clean worktree", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "windows-status-1",
@@ -109,7 +141,7 @@ describe("Windows worker", () => {
       summary: "windows status",
     });
 
-    const result = runWindowsWorkerOnce(
+    const result = await runWindowsWorkerOnce(
       repo,
       "worker-1",
       makeRunner(" M src/file.ts"),
@@ -122,7 +154,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("windows-status-1")?.status).toBe("Completed");
   });
 
-  it("blocks check jobs on a dirty worktree", () => {
+  it("blocks check jobs on a dirty worktree", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "windows-check-1",
@@ -132,7 +164,7 @@ describe("Windows worker", () => {
       summary: "check",
     });
 
-    const result = runWindowsWorkerOnce(
+    const result = await runWindowsWorkerOnce(
       repo,
       "worker-1",
       makeRunner(" M src/file.ts"),
@@ -144,7 +176,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("windows-check-1")?.status).toBe("Failed");
   });
 
-  it("runs only the fixed npm check helper for clean check jobs", () => {
+  it("runs only the fixed npm check helper for clean check jobs", async () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
     const calls: string[] = [];
@@ -162,7 +194,7 @@ describe("Windows worker", () => {
       summary: "check",
     });
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner);
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner);
 
     expect(result.status).toBe("completed");
     expect(result.result).toBe("check helper completed: npm run check passed");
@@ -170,7 +202,173 @@ describe("Windows worker", () => {
     expect(calls.some((call) => call.endsWith("run check"))).toBe(true);
   });
 
-  it("does not pick service restart jobs without approval", () => {
+  it("applies reviewed repair handoff only after BotOps approval", async () => {
+    const repo = makeTempDir();
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-1",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: "recheck",
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-1",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-1"),
+      branchName: "audit-repair/audit-job-1",
+      headCommit: "0123456789abcdef",
+      status: "cleanup_failed",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairExecution({
+      id: "repair-execution-1",
+      jobId: "audit-job-1",
+      status: "reviewed",
+      iteration: 1,
+      threadId: "thread-1",
+      turnId: "turn-1",
+      resultSummary: "operator reviewed",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    insertAuditStepResult("audit-job-1", {
+      name: "tests",
+      status: "passed",
+      exitCode: 0,
+      timedOut: false,
+      stopped: false,
+      publicOutput: "ok",
+      startedAt: "2026-08-18T10:00:02.000Z",
+      finishedAt: "2026-08-18T10:00:03.000Z",
+      durationMs: 1_000,
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-apply:audit-job-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "audit.repair.apply",
+      summary: "Audit repair apply handoff for job audit-jo",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-1",
+      }),
+    });
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""))).status).toBe("idle");
+    approveBotOpsJob("audit-repair-apply:audit-job-1", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("audit repair apply completed: applied files=1");
+    expect(repairApplyMocks.applyRepairWorktreeChanges).toHaveBeenCalledWith({
+      sourceRoot: repo,
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-1"),
+      requestedCheck: "tests",
+    });
+    expect(getAuditRepairWorktree("audit-job-1")?.status).toBe("applied");
+    expect(listAuditSteps("audit-job-1").at(-1)).toMatchObject({
+      step_name: "tests",
+      status: "passed",
+      public_output: "ok",
+    });
+    expect(getBotOpsJob("audit-repair-apply:audit-job-1")?.status).toBe("Completed");
+  });
+
+  it("moves repair apply validation failures to manual review", async () => {
+    const repo = makeTempDir();
+    repairApplyMocks.applyRepairWorktreeChanges.mockResolvedValueOnce({
+      changedFiles: 1,
+      summary: "applied files=1 validation failed",
+      validationPassed: false,
+      validationResults: [{
+        name: "tests",
+        status: "failed",
+        exitCode: 1,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "failed",
+        startedAt: "2026-08-18T10:02:00.000Z",
+        finishedAt: "2026-08-18T10:02:01.000Z",
+        durationMs: 1_000,
+      }],
+    });
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-2",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: "recheck",
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-2",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-2"),
+      branchName: "audit-repair/audit-job-2",
+      headCommit: "0123456789abcdef",
+      status: "cleanup_failed",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairExecution({
+      id: "repair-execution-2",
+      jobId: "audit-job-2",
+      status: "reviewed",
+      iteration: 1,
+      threadId: "thread-1",
+      turnId: "turn-1",
+      resultSummary: "operator reviewed",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    insertAuditStepResult("audit-job-2", {
+      name: "tests",
+      status: "passed",
+      exitCode: 0,
+      timedOut: false,
+      stopped: false,
+      publicOutput: "ok",
+      startedAt: "2026-08-18T10:00:02.000Z",
+      finishedAt: "2026-08-18T10:00:03.000Z",
+      durationMs: 1_000,
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-apply:audit-job-2",
+      requested_by: "operator",
+      target: "windows",
+      capability: "audit.repair.apply",
+      summary: "Audit repair apply handoff for job audit-jo",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-2",
+      }),
+    });
+    approveBotOpsJob("audit-repair-apply:audit-job-2", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("audit repair apply validation failed: applied files=1 validation failed");
+    expect(getBotOpsJob("audit-repair-apply:audit-job-2")?.status).toBe("WaitingManualReview");
+  });
+
+  it("does not pick service restart jobs without approval", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "restart-1",
@@ -180,11 +378,11 @@ describe("Windows worker", () => {
       summary: "restart",
     });
 
-    expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("")).status).toBe("idle");
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""))).status).toBe("idle");
     expect(getBotOpsJob("restart-1")?.status).toBe("WaitingApproval");
   });
 
-  it("does not pick git push jobs without approval", () => {
+  it("does not pick git push jobs without approval", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "push-1",
@@ -194,11 +392,11 @@ describe("Windows worker", () => {
       summary: "push",
     });
 
-    expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("")).status).toBe("idle");
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""))).status).toBe("idle");
     expect(getBotOpsJob("push-1")?.status).toBe("WaitingApproval");
   });
 
-  it("does not pick git commit jobs without approval", () => {
+  it("does not pick git commit jobs without approval", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "commit-1",
@@ -209,11 +407,11 @@ describe("Windows worker", () => {
       payload_json: JSON.stringify({ message: "feat: staged change" }),
     });
 
-    expect(runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts")).status).toBe("idle");
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts"))).status).toBe("idle");
     expect(getBotOpsJob("commit-1")?.status).toBe("WaitingApproval");
   });
 
-  it("blocks approved git commit jobs without a valid message payload", () => {
+  it("blocks approved git commit jobs without a valid message payload", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "commit-no-message",
@@ -224,14 +422,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-no-message", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts"), new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner("M  src/file.ts"), new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git commit blocked: valid commit message missing");
     expect(getBotOpsJob("commit-no-message")?.status).toBe("Failed");
   });
 
-  it("blocks approved git commit jobs without staged changes", () => {
+  it("blocks approved git commit jobs without staged changes", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "commit-empty",
@@ -243,14 +441,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-empty", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git commit blocked: no staged changes");
     expect(getBotOpsJob("commit-empty")?.status).toBe("Failed");
   });
 
-  it("blocks approved git commit jobs with unstaged or untracked changes", () => {
+  it("blocks approved git commit jobs with unstaged or untracked changes", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "commit-dirty",
@@ -262,7 +460,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-dirty", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(
+    const result = await runWindowsWorkerOnce(
       repo,
       "worker-1",
       makeRunner("M  src/file.ts\n M src/other.ts\n?? tmp.txt"),
@@ -274,7 +472,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("commit-dirty")?.status).toBe("Failed");
   });
 
-  it("blocks approved git commit jobs when staged diff check fails", () => {
+  it("blocks approved git commit jobs when staged diff check fails", async () => {
     const repo = makeTempDir();
     const runner: FixedCommandRunner = (command, args) => {
       if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "M  src/file.ts" };
@@ -291,14 +489,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-whitespace", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git commit blocked: staged diff check failed");
     expect(getBotOpsJob("commit-whitespace")?.status).toBe("Failed");
   });
 
-  it("blocks approved git commit jobs when the secret scan fails", () => {
+  it("blocks approved git commit jobs when the secret scan fails", async () => {
     const repo = makeTempDir();
     const runner: FixedCommandRunner = (command, args) => {
       if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "M  src/file.ts" };
@@ -316,14 +514,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-secret", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git commit blocked: secret scan failed");
     expect(getBotOpsJob("commit-secret")?.status).toBe("Failed");
   });
 
-  it("runs only fixed git commit commands after exact approval", () => {
+  it("runs only fixed git commit commands after exact approval", async () => {
     const repo = makeTempDir();
     const calls: string[] = [];
     const runner: FixedCommandRunner = (command, args) => {
@@ -344,7 +542,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("commit-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("completed");
     expect(result.result).toBe("git commit helper completed: staged changes committed");
@@ -358,7 +556,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("commit-approved")?.status).toBe("Completed");
   });
 
-  it("blocks approved git push jobs on a dirty worktree", () => {
+  it("blocks approved git push jobs on a dirty worktree", async () => {
     const repo = makeTempDir();
     createOrGetBotOpsJob({
       job_id: "push-dirty",
@@ -369,7 +567,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("push-dirty", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(
+    const result = await runWindowsWorkerOnce(
       repo,
       "worker-1",
       makeRunner(" M src/file.ts"),
@@ -381,7 +579,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("push-dirty")?.status).toBe("Failed");
   });
 
-  it("blocks approved git push jobs when the upstream is behind", () => {
+  it("blocks approved git push jobs when the upstream is behind", async () => {
     const repo = makeTempDir();
     const runner: FixedCommandRunner = (command, args) => {
       if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
@@ -403,14 +601,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("push-behind", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git push blocked: upstream behind=1");
     expect(getBotOpsJob("push-behind")?.status).toBe("Failed");
   });
 
-  it("blocks approved git push jobs when fetch fails", () => {
+  it("blocks approved git push jobs when fetch fails", async () => {
     const repo = makeTempDir();
     const runner: FixedCommandRunner = (command, args) => {
       if (command === "git" && args.join(" ") === "status --porcelain") return { code: 0, output: "" };
@@ -429,14 +627,14 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("push-fetch-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("git push blocked: fetch failed");
     expect(getBotOpsJob("push-fetch-failed")?.status).toBe("Failed");
   });
 
-  it("runs only fixed git push commands after exact approval", () => {
+  it("runs only fixed git push commands after exact approval", async () => {
     const repo = makeTempDir();
     const calls: string[] = [];
     const runner: FixedCommandRunner = (command, args) => {
@@ -463,7 +661,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("push-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("completed");
     expect(result.result).toBe("git push helper completed: pushed 2 commit(s)");
@@ -478,7 +676,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("push-approved")?.status).toBe("Completed");
   });
 
-  it("blocks approved service restart jobs on a dirty worktree", () => {
+  it("blocks approved service restart jobs on a dirty worktree", async () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
     fs.writeFileSync(path.join(repo, "win-start.bat"), "@echo off\n");
@@ -491,7 +689,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("restart-dirty", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(
+    const result = await runWindowsWorkerOnce(
       repo,
       "worker-1",
       makeRunner(" M src/file.ts"),
@@ -503,7 +701,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("restart-dirty")?.status).toBe("Failed");
   });
 
-  it("runs only the fixed win-start restart helper and post-restart doctor after exact approval", () => {
+  it("runs only the fixed win-start restart helper and post-restart doctor after exact approval", async () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
     fs.writeFileSync(path.join(repo, "win-start.bat"), "@echo off\n");
@@ -528,7 +726,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("restart-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("completed");
     expect(result.result).toBe("service restart helper completed: win-start.bat and doctor passed");
@@ -539,7 +737,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("restart-approved")?.status).toBe("Completed");
   });
 
-  it("fails service restart when the post-restart doctor fails", () => {
+  it("fails service restart when the post-restart doctor fails", async () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".env"), "BASE_PROJECT_DIR=C:\\workspace\n");
     fs.writeFileSync(path.join(repo, "win-start.bat"), "@echo off\n");
@@ -564,7 +762,7 @@ describe("Windows worker", () => {
     });
     approveBotOpsJob("restart-doctor-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
 
-    const result = runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
+    const result = await runWindowsWorkerOnce(repo, "worker-1", runner, new Date("2026-08-18T10:01:00.000Z"));
 
     expect(result.status).toBe("failed");
     expect(result.result).toBe("service restart helper failed: post-restart doctor failed");
@@ -573,7 +771,7 @@ describe("Windows worker", () => {
     expect(getBotOpsJob("restart-doctor-failed")?.status).toBe("Failed");
   });
 
-  it("requires real worker config instead of treating the database path as bot config", () => {
+  it("requires real worker config instead of treating the database path as bot config", async () => {
     const repo = makeTempDir();
     const originalDatabasePath = process.env.DISCORD_DATABASE_PATH;
     process.env.DISCORD_DATABASE_PATH = path.join(repo, ".discord-bot-state", "bridge.sqlite");
@@ -589,13 +787,13 @@ describe("Windows worker", () => {
     }
   });
 
-  it("resolves an explicit absolute Windows worker target repo", () => {
+  it("resolves an explicit absolute Windows worker target repo", async () => {
     const repo = makeTempDir();
 
     expect(resolveWindowsWorkerRepoRoot(process.cwd(), repo)).toBe(path.resolve(repo));
   });
 
-  it("fails closed for relative or missing Windows worker target repos", () => {
+  it("fails closed for relative or missing Windows worker target repos", async () => {
     const repo = makeTempDir();
 
     expect(() => resolveWindowsWorkerRepoRoot(repo, "relative-target")).toThrow(
@@ -606,26 +804,26 @@ describe("Windows worker", () => {
     );
   });
 
-  it("reports stale bot locks without stopping any process", () => {
+  it("reports stale bot locks without stopping any process", async () => {
     const repo = makeTempDir();
     fs.writeFileSync(path.join(repo, ".bot.lock"), "999999999");
 
     expect(readBotLockState(repo)).toBe("stale");
   });
 
-  it("formats public-safe worker status", () => {
+  it("formats public-safe worker status", async () => {
     const repo = makeTempDir();
     const formatted = formatWindowsWorkerStatus(
       buildWindowsWorkerStatusSnapshot(repo, "worker-1", makeRunner("")),
     );
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: status.read, audit.check, git.commit, git.push, service.restart");
+    expect(formatted).toContain("capabilities: status.read, audit.check, audit.repair.apply, git.commit, git.push, service.restart");
     expect(formatted).toContain("worktree: clean");
     expect(formatted).not.toContain(":\\");
   });
 
-  it("records public-safe status heartbeats", () => {
+  it("records public-safe status heartbeats", async () => {
     const repo = makeTempDir();
     const snapshot = buildWindowsWorkerStatusSnapshot(repo, "worker-1", makeRunner(" M src/file.ts"));
     recordWindowsWorkerStatus(snapshot, "status", "manual status check", new Date("2026-08-18T10:00:00.000Z"));
@@ -633,7 +831,7 @@ describe("Windows worker", () => {
     expect(listBotOpsWorkerHeartbeats("windows")[0]).toMatchObject({
       worker_id: "worker-1",
       target: "windows",
-      capabilities: "status.read, audit.check, git.commit, git.push, service.restart",
+      capabilities: "status.read, audit.check, audit.repair.apply, git.commit, git.push, service.restart",
       status: "status",
       detail: "manual status check",
       heartbeat_at: "2026-08-18T10:00:00.000Z",

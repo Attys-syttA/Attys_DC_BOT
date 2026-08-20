@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getAuditRepairWorktree: vi.fn(),
   getLatestAuditJob: vi.fn(),
   createAuditJob: vi.fn(),
+  createOrGetBotOpsJob: vi.fn(),
   updateAuditJobProgress: vi.fn(),
   updateAuditRepairWorktreeStatus: vi.fn(),
   requestAuditJobStop: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("../../db/database.js", () => ({
   getAuditRepairWorktree: mocks.getAuditRepairWorktree,
   getLatestAuditJob: mocks.getLatestAuditJob,
   createAuditJob: mocks.createAuditJob,
+  createOrGetBotOpsJob: mocks.createOrGetBotOpsJob,
   updateAuditJobProgress: mocks.updateAuditJobProgress,
   updateAuditRepairWorktreeStatus: mocks.updateAuditRepairWorktreeStatus,
   requestAuditJobStop: mocks.requestAuditJobStop,
@@ -97,6 +99,7 @@ function makeInteraction(
 ) {
   return {
     channelId: "channel-1",
+    user: { id: "user-1" },
     options: {
       getSubcommand: vi.fn(() => subcommand),
       getString: vi.fn((name: string) => {
@@ -160,6 +163,30 @@ describe("/audit", () => {
     mocks.getAuditJob.mockReturnValue(makeJob());
     mocks.getAuditRepairWorktree.mockReturnValue(undefined);
     mocks.getLatestAuditJob.mockReturnValue(makeJob());
+    mocks.createOrGetBotOpsJob.mockReturnValue({
+      created: true,
+      job: {
+        job_id: "audit-repair-apply:audit-job-1",
+        requested_by: "user-1",
+        target: "windows",
+        capability: "audit.repair.apply",
+        summary: "Audit repair apply handoff for job audit-jo",
+        payload_json: JSON.stringify({ channel_id: "channel-1", audit_job_id: "audit-job-1" }),
+        expected_action: "apply reviewed repair diff for audit job audit-jo",
+        validation_condition: "source-side tests check passes after apply",
+        created_at: "2026-08-01T12:00:00.000Z",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        updated_at: "2026-08-01T12:00:00.000Z",
+      },
+    });
     mocks.listAuditRepairExecutions.mockReturnValue([]);
     mocks.listAuditSteps.mockReturnValue([makeStep()]);
     mocks.createAuditRepairCodexStarter.mockReturnValue(vi.fn());
@@ -1413,7 +1440,7 @@ describe("/audit", () => {
     });
   });
 
-  it("applies reviewed repair changes to the source worktree and records source validation", async () => {
+  it("queues reviewed repair apply as an approval-gated BotOps job", async () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_ENABLE_AUDIT: true,
       DISCORD_ENABLE_AUDIT_REPAIR: true,
@@ -1452,24 +1479,32 @@ describe("/audit", () => {
 
     await execute(interaction as never);
 
-    expect(mocks.applyRepairWorktreeChanges).toHaveBeenCalledWith({
-      sourceRoot: "/projects/app",
-      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
-      requestedCheck: "tests",
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith({
+      job_id: "audit-repair-apply:audit-job-1",
+      requested_by: "user-1",
+      target: "windows",
+      capability: "audit.repair.apply",
+      summary: "Audit repair apply handoff for job audit-jo",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-1",
+      }),
+      expected_action: "apply reviewed repair diff for audit job audit-jo",
+      validation_condition: "source-side tests check passes after apply",
     });
-    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith("audit-job-1", expect.objectContaining({
-      name: "tests",
-      status: "passed",
-    }));
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "applied", expect.any(String));
+    expect(mocks.applyRepairWorktreeChanges).not.toHaveBeenCalled();
+    expect(mocks.insertAuditStepResult).not.toHaveBeenCalled();
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
     expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
       kind: "task",
-      status: "audit-repair-applied",
+      status: "audit-repair-apply-queued",
       channelId: "channel-1",
     });
-    const followUp = (interaction.followUp as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0].content;
-    expect(followUp).toContain("**Audit repair apply completed**");
-    expect(followUp).toContain("no commit, push, deploy, cleanup, or branch merge was performed");
+    const reply = (interaction.editReply as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0].content;
+    expect(reply).toContain("**Audit repair apply approval requested**");
+    expect(reply).toContain("capability: audit.repair.apply");
+    expect(reply).toContain("No source write was performed by this command.");
+    expect(reply).toContain("Review with `/ops preview`, then approve or cancel the BotOps job.");
   });
 
   it("rejects repair-apply without a reviewed repair execution", async () => {
