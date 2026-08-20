@@ -207,7 +207,13 @@ export const data = new SlashCommandBuilder()
     .setDescription("Queue an approval-gated NAS deploy apply worker job"))
   .addSubcommand((subcommand) => subcommand
     .setName("rollback-plan")
-    .setDescription("Preview NAS rollback requirements without applying rollback"))
+    .setDescription("Preview NAS rollback requirements without applying rollback")
+    .addStringOption((option) => option
+      .setName("commit")
+      .setDescription("Optional Git commit to validate as the planned rollback source")
+      .setRequired(false)
+      .setMinLength(7)
+      .setMaxLength(40)))
   .addSubcommand((subcommand) => subcommand
     .setName("handoff-gate")
     .setDescription("Show the read-only NAS architecture handoff gate"))
@@ -470,7 +476,25 @@ export async function buildNasDeployPlanReport(repoRoot: string): Promise<string
   ].join("\n");
 }
 
-export function buildNasRollbackPlanReport(repoRoot: string): string {
+function normalizeRollbackCommitCandidate(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return /^[0-9a-f]{7,40}$/i.test(trimmed) ? trimmed : "invalid";
+}
+
+async function rollbackCommitCandidateLine(repoRoot: string, requestedCommit: string | null | undefined): Promise<string> {
+  const candidate = normalizeRollbackCommitCandidate(requestedCommit);
+  if (!candidate) return "candidate-commit=not-selected";
+  if (candidate === "invalid") return "candidate-commit=invalid reason=expected-hex-git-commit";
+
+  const result = await runLocalCommand("git", ["rev-parse", "--verify", "--short=12", `${candidate}^{commit}`], repoRoot, 15_000);
+  if (result.exitCode !== 0 || result.timedOut) return "candidate-commit=invalid reason=not-a-commit";
+
+  const resolved = result.output.match(/\b[0-9a-f]{7,40}\b/i)?.[0] ?? candidate;
+  return `candidate-commit=${smokeField(resolved.slice(0, 12), "unknown", 12)} status=valid`;
+}
+
+export async function buildNasRollbackPlanReport(repoRoot: string, requestedCommit?: string | null): Promise<string> {
   const shareRoot = nasShareRoot(repoRoot);
   const lines = [
     "**NAS Rollback Plan**",
@@ -481,6 +505,8 @@ export function buildNasRollbackPlanReport(repoRoot: string): string {
     "required-approval=two-step-required",
     "verify-failure=WaitingManualReview",
   ];
+
+  lines.push(await rollbackCommitCandidateLine(repoRoot, requestedCommit));
 
   if (!shareRoot || !fs.existsSync(shareRoot)) {
     lines.push("current-deploy=unknown reason=deploy-verifier-unavailable");
@@ -1371,7 +1397,7 @@ export async function execute(
     }
 
     await interaction.editReply({
-      content: buildNasRollbackPlanReport(process.cwd()),
+      content: await buildNasRollbackPlanReport(process.cwd(), interaction.options.getString("commit")),
     });
     return;
   }

@@ -1050,13 +1050,14 @@ describe("/nas", () => {
     });
   });
 
-  it("builds a read-only NAS rollback plan with Git commit as the rollback source", () => {
-    const report = buildNasRollbackPlanReport("E:\\private\\repo");
+  it("builds a read-only NAS rollback plan with Git commit as the rollback source", async () => {
+    const report = await buildNasRollbackPlanReport("E:\\private\\repo");
 
     expect(report).toContain("NAS Rollback Plan");
     expect(report).toContain("mode=read-only");
     expect(report).toContain("rollback-apply=disabled");
     expect(report).toContain("rollback-source=git-commit");
+    expect(report).toContain("candidate-commit=not-selected");
     expect(report).toContain("required-approval=two-step-required");
     expect(report).toContain("verify-failure=WaitingManualReview");
     expect(report).toContain("next=choose exact rollback commit before any apply command");
@@ -1066,21 +1067,50 @@ describe("/nas", () => {
     expect(report).not.toContain("K:\\");
   });
 
-  it("executes NAS rollback plan as a read-only report only", async () => {
+  it("validates an optional rollback Git commit without applying rollback", async () => {
+    mocks.runLocalCommand.mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: "abcdef123456\n",
+    });
+
+    const report = await buildNasRollbackPlanReport("E:\\private\\repo", "abcdef1");
+
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith("git", ["rev-parse", "--verify", "--short=12", "abcdef1^{commit}"], "E:\\private\\repo", 15_000);
+    expect(report).toContain("candidate-commit=abcdef1 status=valid");
+    expect(report).toContain("rollback-apply=disabled");
+  });
+
+  it("rejects malformed rollback commit candidates without running Git", async () => {
+    const report = await buildNasRollbackPlanReport("E:\\private\\repo", "not-a-sha");
+
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    expect(report).toContain("candidate-commit=invalid reason=expected-hex-git-commit");
+    expect(report).toContain("rollback-apply=disabled");
+  });
+
+  it("executes NAS rollback plan as a read-only commit validation report only", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: true });
     const interaction = {
       options: {
         getSubcommand: vi.fn(() => "rollback-plan"),
+        getString: vi.fn(() => "abcdef1"),
       },
       editReply: vi.fn(),
     };
+    mocks.runLocalCommand.mockResolvedValueOnce({
+      exitCode: 0,
+      timedOut: false,
+      output: "abcdef123456\n",
+    });
 
     await execute(interaction as never);
 
-    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith("git", ["rev-parse", "--verify", "--short=12", "abcdef1^{commit}"], "E:\\codex_works\\Attys_DC_BOT", 15_000);
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS Rollback Plan");
     expect(content).toContain("rollback-apply=disabled");
+    expect(content).toContain("candidate-commit=abcdef1 status=valid");
   });
 
   it("keeps the NAS rollback plan behind the NAS status flag", async () => {

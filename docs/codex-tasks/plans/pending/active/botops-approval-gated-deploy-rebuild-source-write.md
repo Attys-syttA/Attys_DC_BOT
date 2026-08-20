@@ -62,6 +62,9 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
 - 2026-08-20 rollback source operatori dontes:
   - rollback source: Git commit;
   - rollback apply runtime capability meg nem keszult; elotte pontos rollback commit kivalasztas es kulon guardolt apply design kell.
+- 2026-08-20 rollback commit preview slice:
+  - `/nas rollback-plan commit:<optional>` read-only modon validalja a megadott Git commitot;
+  - nincs rollback apply runtime capability, NAS write, rebuild vagy restart.
 - BotOps job/eveny/heartbeat SQLite alap es public-safe Discord status/log nezetek.
 - Lease alapu worker futtatas, stale/expired allapotokkal.
 - Explicit approval modell, ahol a worker nem kozvetlenul a Discord parancsbol futtat muveletet.

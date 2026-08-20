@@ -2,6 +2,8 @@
 
 ## 2026-08-20
 
+- BotOps NAS rollback commit preview: `/nas rollback-plan` now accepts optional `commit:<sha>` input and validates it read-only with Git before showing a public-safe candidate commit line. Rollback apply remains disabled; no rollback execution capability was added.
+- Version bump: a package verzio `0.1.1-prerelease.103`, mert a user-visible `/nas rollback-plan` valasztott Git commit elonezete bovult.
 - BotOps NAS rollback source decision: `/nas rollback-plan` now records the selected rollback source as `git-commit`, keeps rollback apply disabled, and shows that future rollback execution requires two-step approval with verification failure ending in `WaitingManualReview`.
 - Version bump: a package verzio `0.1.1-prerelease.102`, mert a user-visible `/nas rollback-plan` rollback-forras es approval preview pontosult.
 - Live BotOps `.102` publication and NAS refresh: commit `8568bd9` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.102` managed changes, rebuilt the NAS control-plane container, and verified package version `0.1.1-prerelease.102`; follow-up NAS verify, bridge status, and bridge smoke passed.
