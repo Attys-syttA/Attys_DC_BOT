@@ -1280,7 +1280,7 @@ describe("/audit", () => {
     expect(mocks.updateAuditRepairExecutionResult).not.toHaveBeenCalled();
   });
 
-  it("removes a terminal job repair workspace through the safe cleanup helper", async () => {
+  it("queues repair cleanup as an approval-gated BotOps job", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "completed",
       requested_check: "tests",
@@ -1295,24 +1295,58 @@ describe("/audit", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:01.000Z",
     });
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({
+      created: true,
+      job: {
+        job_id: "audit-repair-cleanup:audit-job-1",
+        requested_by: "user-1",
+        target: "windows",
+        capability: "repair.cleanup",
+        summary: "Audit repair cleanup handoff for job audit-jo",
+        payload_json: JSON.stringify({ channel_id: "channel-1", audit_job_id: "audit-job-1" }),
+        expected_action: "remove guarded repair worktree for audit job audit-jo",
+        validation_condition: "cleanup succeeds without modifying the source worktree",
+        created_at: "2026-08-01T12:00:00.000Z",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        updated_at: "2026-08-01T12:00:00.000Z",
+      },
+    });
     const interaction = makeInteraction("repair-cleanup");
 
     await execute(interaction as never);
 
-    expect(mocks.removeRepairWorktree).toHaveBeenCalledWith({
-      sourceRoot: "/projects/app",
-      jobId: "audit-job-1",
-      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
-    });
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "removed", expect.any(String));
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      job_id: "audit-repair-cleanup:audit-job-1",
+      requested_by: "user-1",
+      target: "windows",
+      capability: "repair.cleanup",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-1",
+      }),
+      expected_action: "remove guarded repair worktree for audit job audit-jo",
+      validation_condition: "cleanup succeeds without modifying the source worktree",
+    }));
+    expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
     expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
       kind: "task",
-      status: "audit-repair-cleanup",
+      status: "audit-repair-cleanup-queued",
       channelId: "channel-1",
     });
-    expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Audit job `audit-jo...` repair workspace cleanup: removed.",
-    });
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("**Audit repair cleanup approval requested**");
+    expect(content).toContain("capability: repair.cleanup");
+    expect(content).toContain("No cleanup was performed by this command.");
+    expect(content).toContain("Review with `/ops preview`, then approve or cancel the BotOps job.");
   });
 
   it("rejects repair cleanup while the audit job is not terminal", async () => {
@@ -1331,7 +1365,7 @@ describe("/audit", () => {
     });
   });
 
-  it("marks cleanup_failed when safe repair workspace cleanup fails", async () => {
+  it("does not run repair cleanup directly from Discord when cleanup would need review", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "stagnated",
       requested_check: "tests",
@@ -1346,23 +1380,18 @@ describe("/audit", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:01.000Z",
     });
-    mocks.removeRepairWorktree.mockRejectedValueOnce(new Error("dirty repair worktree"));
     const interaction = makeInteraction("repair-cleanup");
 
     await execute(interaction as never);
 
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "cleanup_failed", expect.any(String));
-    expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
-      kind: "task",
-      status: "audit-repair-cleanup-failed",
-      channelId: "channel-1",
-    });
-    expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Audit job `audit-jo...` repair workspace cleanup failed; workspace retained for manual review.",
-    });
+    expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      capability: "repair.cleanup",
+    }));
   });
 
-  it("uses applied repair cleanup when the repair result was already handed off", async () => {
+  it("queues applied repair cleanup instead of running source-aware cleanup directly", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "completed",
       requested_check: "tests",
@@ -1381,19 +1410,19 @@ describe("/audit", () => {
 
     await execute(interaction as never);
 
-    expect(mocks.removeAppliedRepairWorktree).toHaveBeenCalledWith({
-      sourceRoot: "/projects/app",
-      jobId: "audit-job-1",
-      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
-    });
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      capability: "repair.cleanup",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-1",
+      }),
+    }));
+    expect(mocks.removeAppliedRepairWorktree).not.toHaveBeenCalled();
     expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "applied_removed", expect.any(String));
-    expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Audit job `audit-jo...` repair workspace cleanup: removed.",
-    });
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
   });
 
-  it("uses reverted repair cleanup after the source handoff was reverted", async () => {
+  it("queues reverted repair cleanup instead of running cleanup directly", async () => {
     mocks.getLatestAuditJob.mockReturnValue(makeJob({
       status: "completed",
       requested_check: "tests",
@@ -1411,17 +1440,13 @@ describe("/audit", () => {
 
     await execute(interaction as never);
 
-    expect(mocks.removeRevertedRepairWorktree).toHaveBeenCalledWith({
-      sourceRoot: "/projects/app",
-      jobId: "audit-job-1",
-      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
-    });
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      capability: "repair.cleanup",
+    }));
+    expect(mocks.removeRevertedRepairWorktree).not.toHaveBeenCalled();
     expect(mocks.removeRepairWorktree).not.toHaveBeenCalled();
     expect(mocks.removeAppliedRepairWorktree).not.toHaveBeenCalled();
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "reverted_removed", expect.any(String));
-    expect(interaction.editReply).toHaveBeenCalledWith({
-      content: "Audit job `audit-jo...` repair workspace cleanup: removed.",
-    });
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
   });
 
   it("keeps repair-apply disabled behind its separate source-write flag", async () => {

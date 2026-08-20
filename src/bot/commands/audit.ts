@@ -19,9 +19,6 @@ import { buildAuditRepairPrompt } from "../../audit/repair-prompt.js";
 import { runAuditCheckPipeline, type AuditCheckRunResult } from "../../audit/check-runner.js";
 import {
   inspectRepairWorktreeChanges,
-  removeAppliedRepairWorktree,
-  removeRepairWorktree,
-  removeRevertedRepairWorktree,
 } from "../../audit/worktree-manager.js";
 import {
   assertAuditModeAllowsCapabilities,
@@ -820,8 +817,7 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
     return;
   }
 
-  const project = getProject(interaction.channelId);
-  if (!project) {
+  if (!getProject(interaction.channelId)) {
     await interaction.editReply({ content: "This channel is not registered to any project." });
     return;
   }
@@ -842,37 +838,30 @@ async function executeRepairCleanup(interaction: ChatInputCommandInteraction): P
     return;
   }
 
-  try {
-    const cleanupOptions = {
-      sourceRoot: project.project_path,
-      jobId: job.id,
-      worktreePath: repairWorktree.worktree_path,
-    };
-    const result = repairWorktree.status === "applied"
-      ? await removeAppliedRepairWorktree(cleanupOptions)
-      : repairWorktree.status === "reverted"
-      ? await removeRevertedRepairWorktree(cleanupOptions)
-      : await removeRepairWorktree(cleanupOptions);
-    updateAuditRepairWorktreeStatus(
-      job.id,
-      repairWorktree.status === "applied"
-        ? "applied_removed"
-        : repairWorktree.status === "reverted"
-        ? "reverted_removed"
-        : "removed",
-      new Date().toISOString(),
-    );
-    recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup", channelId: interaction.channelId });
-    await interaction.editReply({
-      content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup: ${result.summary}.`,
-    });
-  } catch {
-    updateAuditRepairWorktreeStatus(job.id, "cleanup_failed", new Date().toISOString());
-    recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup-failed", channelId: interaction.channelId });
-    await interaction.editReply({
-      content: `Audit job \`${job.id.slice(0, 8)}...\` repair workspace cleanup failed; workspace retained for manual review.`,
-    });
-  }
+  const { job: botOpsJob, created } = createOrGetBotOpsJob({
+    job_id: `audit-repair-cleanup:${job.id}`,
+    requested_by: interaction.user.id,
+    target: "windows",
+    capability: "repair.cleanup",
+    summary: `Audit repair cleanup handoff for job ${job.id.slice(0, 8)}`,
+    payload_json: JSON.stringify({
+      channel_id: interaction.channelId,
+      audit_job_id: job.id,
+    }),
+    expected_action: `remove guarded repair worktree for audit job ${job.id.slice(0, 8)}`,
+    validation_condition: "cleanup succeeds without modifying the source worktree",
+  });
+  recordOperatorEvent({ kind: "task", status: "audit-repair-cleanup-queued", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: [
+      created ? "**Audit repair cleanup approval requested**" : "**Audit repair cleanup approval already requested**",
+      "```text",
+      formatBotOpsJobDetails(botOpsJob),
+      "```",
+      "No cleanup was performed by this command.",
+      "Review with `/ops preview`, then approve or cancel the BotOps job.",
+    ].join("\n"),
+  });
 }
 
 async function executeRepairApply(interaction: ChatInputCommandInteraction): Promise<void> {

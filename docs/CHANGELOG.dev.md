@@ -2,6 +2,8 @@
 
 ## 2026-08-20
 
+- BotOps repair cleanup handoff: `/audit repair-cleanup` now performs the same terminal-job, registered-channel, cleanup-ready worktree, and no-started-repair preflights, then creates an approval-gated `repair.cleanup` Windows BotOps job instead of removing the repair worktree directly from the Discord command. The Windows worker can execute cleanup only after approval, using the existing guarded cleanup helper for normal, applied, or reverted repair worktrees; cleanup helper failure records `cleanup_failed` and ends the job in `WaitingManualReview`.
+- Version bump: a package verzio `0.1.1-prerelease.100`, mert a user-visible `/audit repair-cleanup` cleanup handoff BotOps approval ala kerult.
 - BotOps Git publication helper UX: `/windows helper-run helper:commit|push|restart` approval-koteles valasza most explicit scope/report blokkot ad a preflightekkel, validacios feltetelekkel, tiltott akciokkal, es a kovetkezo `/ops preview` -> approve/cancel lepessel. A valasz tovabbra sem indit helper executiont, staginget, push-t, deployt, restartot vagy cleanupot kozvetlenul Discordbol.
 - Version bump: a package verzio `0.1.1-prerelease.99`, mert a user-visible Windows helper approval/report UX pontosult.
 - Live BotOps `.99` publication and NAS refresh: commit `c18ee18` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.99` managed changes, rebuilt the NAS control-plane container, and verified package version `0.1.1-prerelease.99`; follow-up NAS verify, bridge status, and bridge smoke passed.

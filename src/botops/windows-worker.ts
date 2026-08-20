@@ -18,6 +18,12 @@ import {
 } from "../db/database.js";
 import { isAuditCheckName } from "../audit/check-catalog.js";
 import { applyRepairWorktreeChanges } from "../audit/repair-apply.js";
+import {
+  removeAppliedRepairWorktree,
+  removeRepairWorktree,
+  removeRevertedRepairWorktree,
+} from "../audit/worktree-manager.js";
+import { isTerminalAuditStatus } from "../audit/types.js";
 import { windowsCmdInvocation } from "../utils/process.js";
 import { sanitizePublicText } from "../utils/public-safety.js";
 import type { BotOpsCapability, BotOpsJob } from "./contract.js";
@@ -62,6 +68,7 @@ export const WINDOWS_WORKER_CAPABILITIES = [
   "status.read",
   "audit.check",
   "audit.repair.apply",
+  "repair.cleanup",
   "git.commit",
   "git.push",
   "service.restart",
@@ -528,6 +535,66 @@ async function runAuditRepairApplyHelper(job: BotOpsJob): Promise<WindowsWorkerE
   }
 }
 
+async function runRepairCleanupHelper(job: BotOpsJob): Promise<WindowsWorkerExecutionResult> {
+  const payload = parseAuditRepairApplyPayload(job);
+  if (!payload) {
+    return { ok: false, result: "repair cleanup blocked: invalid payload" };
+  }
+
+  const auditJob = getAuditJob(payload.auditJobId);
+  if (!auditJob || !isTerminalAuditStatus(auditJob.status)) {
+    return { ok: false, result: "repair cleanup blocked: audit job is not terminal" };
+  }
+
+  const project = getProject(payload.channelId);
+  if (!project) {
+    return { ok: false, result: "repair cleanup blocked: channel is not registered" };
+  }
+
+  const repairWorktree = getAuditRepairWorktree(auditJob.id);
+  if (!repairWorktree || ["removed", "applied_removed", "reverted_removed"].includes(repairWorktree.status)) {
+    return { ok: false, result: "repair cleanup blocked: no cleanup-ready repair workspace" };
+  }
+
+  const startedRepairExecution = listAuditRepairExecutions(auditJob.id, 3).find((execution) => execution.status === "started");
+  if (startedRepairExecution) {
+    return { ok: false, result: "repair cleanup blocked: repair execution still started" };
+  }
+
+  try {
+    const cleanupOptions = {
+      sourceRoot: project.project_path,
+      jobId: auditJob.id,
+      worktreePath: repairWorktree.worktree_path,
+    };
+    const result = repairWorktree.status === "applied"
+      ? await removeAppliedRepairWorktree(cleanupOptions)
+      : repairWorktree.status === "reverted"
+      ? await removeRevertedRepairWorktree(cleanupOptions)
+      : await removeRepairWorktree(cleanupOptions);
+    updateAuditRepairWorktreeStatus(
+      auditJob.id,
+      repairWorktree.status === "applied"
+        ? "applied_removed"
+        : repairWorktree.status === "reverted"
+        ? "reverted_removed"
+        : "removed",
+      new Date().toISOString(),
+    );
+    return {
+      ok: true,
+      result: `repair cleanup completed: ${sanitizePublicText(result.summary, 180)}`,
+    };
+  } catch (error) {
+    updateAuditRepairWorktreeStatus(auditJob.id, "cleanup_failed", new Date().toISOString());
+    return {
+      ok: false,
+      jobStatus: "WaitingManualReview",
+      result: `repair cleanup blocked: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair cleanup error", 180)}`,
+    };
+  }
+}
+
 export async function runWindowsWorkerOnce(
   repoRoot: string,
   workerId = defaultWindowsWorkerId(),
@@ -563,13 +630,15 @@ export async function runWindowsWorkerOnce(
       ? runCheckHelper(repoRoot, workerId, runner)
       : job.capability === "audit.repair.apply"
         ? await runAuditRepairApplyHelper(job)
-        : job.capability === "git.commit"
-          ? runGitCommitHelper(repoRoot, job, runner)
-          : job.capability === "git.push"
-            ? runGitPushHelper(repoRoot, workerId, runner)
-            : job.capability === "service.restart"
-              ? runServiceRestartHelper(repoRoot, workerId, runner)
-              : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
+        : job.capability === "repair.cleanup"
+          ? await runRepairCleanupHelper(job)
+          : job.capability === "git.commit"
+            ? runGitCommitHelper(repoRoot, job, runner)
+            : job.capability === "git.push"
+              ? runGitPushHelper(repoRoot, workerId, runner)
+              : job.capability === "service.restart"
+                ? runServiceRestartHelper(repoRoot, workerId, runner)
+                : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
 
   completeBotOpsJob(
     job.job_id,

@@ -7,6 +7,11 @@ import type { FixedCommandRunner } from "./windows-worker.js";
 const repairApplyMocks = vi.hoisted(() => ({
   applyRepairWorktreeChanges: vi.fn(),
 }));
+const repairCleanupMocks = vi.hoisted(() => ({
+  removeAppliedRepairWorktree: vi.fn(),
+  removeRepairWorktree: vi.fn(),
+  removeRevertedRepairWorktree: vi.fn(),
+}));
 
 vi.mock("better-sqlite3", async () => {
   const actual = await vi.importActual("better-sqlite3") as any;
@@ -19,6 +24,11 @@ vi.mock("better-sqlite3", async () => {
 });
 vi.mock("../audit/repair-apply.js", () => ({
   applyRepairWorktreeChanges: repairApplyMocks.applyRepairWorktreeChanges,
+}));
+vi.mock("../audit/worktree-manager.js", () => ({
+  removeAppliedRepairWorktree: repairCleanupMocks.removeAppliedRepairWorktree,
+  removeRepairWorktree: repairCleanupMocks.removeRepairWorktree,
+  removeRevertedRepairWorktree: repairCleanupMocks.removeRevertedRepairWorktree,
 }));
 
 import {
@@ -94,6 +104,9 @@ describe("Windows worker", () => {
   beforeEach(() => {
     initDatabase();
     repairApplyMocks.applyRepairWorktreeChanges.mockReset();
+    repairCleanupMocks.removeAppliedRepairWorktree.mockReset();
+    repairCleanupMocks.removeRepairWorktree.mockReset();
+    repairCleanupMocks.removeRevertedRepairWorktree.mockReset();
     repairApplyMocks.applyRepairWorktreeChanges.mockResolvedValue({
       changedFiles: 1,
       summary: "applied files=1",
@@ -110,6 +123,9 @@ describe("Windows worker", () => {
         durationMs: 1_000,
       }],
     });
+    repairCleanupMocks.removeAppliedRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
+    repairCleanupMocks.removeRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
+    repairCleanupMocks.removeRevertedRepairWorktree.mockResolvedValue({ removed: true, summary: "removed" });
   });
 
   afterEach(() => {
@@ -366,6 +382,161 @@ describe("Windows worker", () => {
     expect(result.status).toBe("failed");
     expect(result.result).toBe("audit repair apply validation failed: applied files=1 validation failed");
     expect(getBotOpsJob("audit-repair-apply:audit-job-2")?.status).toBe("WaitingManualReview");
+  });
+
+  it("cleans up a guarded repair worktree only after BotOps approval", async () => {
+    const repo = makeTempDir();
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-cleanup-1",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: null,
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-cleanup-1",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-cleanup-1"),
+      branchName: "audit-repair/audit-job-cleanup-1",
+      headCommit: "0123456789abcdef",
+      status: "retained",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-cleanup:audit-job-cleanup-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "repair.cleanup",
+      summary: "Audit repair cleanup handoff for job audit-jo",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-cleanup-1",
+      }),
+    });
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""))).status).toBe("idle");
+    approveBotOpsJob("audit-repair-cleanup:audit-job-cleanup-1", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("repair cleanup completed: removed");
+    expect(repairCleanupMocks.removeRepairWorktree).toHaveBeenCalledWith({
+      sourceRoot: repo,
+      jobId: "audit-job-cleanup-1",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-cleanup-1"),
+    });
+    expect(getAuditRepairWorktree("audit-job-cleanup-1")?.status).toBe("removed");
+    expect(getBotOpsJob("audit-repair-cleanup:audit-job-cleanup-1")?.status).toBe("Completed");
+  });
+
+  it("uses applied repair cleanup helper for applied repair worktrees", async () => {
+    const repo = makeTempDir();
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-cleanup-2",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: null,
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-cleanup-2",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-cleanup-2"),
+      branchName: "audit-repair/audit-job-cleanup-2",
+      headCommit: "0123456789abcdef",
+      status: "applied",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-cleanup:audit-job-cleanup-2",
+      requested_by: "operator",
+      target: "windows",
+      capability: "repair.cleanup",
+      summary: "cleanup",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-cleanup-2",
+      }),
+    });
+    approveBotOpsJob("audit-repair-cleanup:audit-job-cleanup-2", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(repairCleanupMocks.removeAppliedRepairWorktree).toHaveBeenCalledWith({
+      sourceRoot: repo,
+      jobId: "audit-job-cleanup-2",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-cleanup-2"),
+    });
+    expect(repairCleanupMocks.removeRepairWorktree).not.toHaveBeenCalled();
+    expect(getAuditRepairWorktree("audit-job-cleanup-2")?.status).toBe("applied_removed");
+  });
+
+  it("moves cleanup helper failures to manual review and retains the repair worktree", async () => {
+    const repo = makeTempDir();
+    repairCleanupMocks.removeRepairWorktree.mockRejectedValueOnce(new Error("dirty repair worktree"));
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-cleanup-3",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "stagnated",
+      requestedCheck: "tests",
+      currentStep: null,
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-cleanup-3",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-cleanup-3"),
+      branchName: "audit-repair/audit-job-cleanup-3",
+      headCommit: "0123456789abcdef",
+      status: "cleanup_failed",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-cleanup:audit-job-cleanup-3",
+      requested_by: "operator",
+      target: "windows",
+      capability: "repair.cleanup",
+      summary: "cleanup",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-cleanup-3",
+      }),
+    });
+    approveBotOpsJob("audit-repair-cleanup:audit-job-cleanup-3", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("repair cleanup blocked: dirty repair worktree");
+    expect(getAuditRepairWorktree("audit-job-cleanup-3")?.status).toBe("cleanup_failed");
+    expect(getBotOpsJob("audit-repair-cleanup:audit-job-cleanup-3")?.status).toBe("WaitingManualReview");
   });
 
   it("does not pick service restart jobs without approval", async () => {
@@ -818,7 +989,7 @@ describe("Windows worker", () => {
     );
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: status.read, audit.check, audit.repair.apply, git.commit, git.push, service.restart");
+    expect(formatted).toContain("capabilities: status.read, audit.check, audit.repair.apply, repair.cleanup, git.commit, git.push, service.restart");
     expect(formatted).toContain("worktree: clean");
     expect(formatted).not.toContain(":\\");
   });
@@ -831,7 +1002,7 @@ describe("Windows worker", () => {
     expect(listBotOpsWorkerHeartbeats("windows")[0]).toMatchObject({
       worker_id: "worker-1",
       target: "windows",
-      capabilities: "status.read, audit.check, audit.repair.apply, git.commit, git.push, service.restart",
+      capabilities: "status.read, audit.check, audit.repair.apply, repair.cleanup, git.commit, git.push, service.restart",
       status: "status",
       detail: "manual status check",
       heartbeat_at: "2026-08-18T10:00:00.000Z",
