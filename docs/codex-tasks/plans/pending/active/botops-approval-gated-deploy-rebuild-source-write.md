@@ -1,6 +1,6 @@
 # BotOps jovahagyasos deploy, rebuild es source-write terv
 
-Status: approved / deploy apply, audit repair apply, cleanup, Git commit/push, and Windows restart gates implemented; rebuild/source-write-revert/rollback remain explicit later gates
+Status: approved / deploy apply, audit repair apply/revert, cleanup, Git commit/push, and Windows restart gates implemented; rebuild/rollback remain explicit later gates
 
 ## Kapcsolodo jelenlegi helyzet
 
@@ -180,7 +180,7 @@ Az approval csak akkor ervenyes, ha pontosan egyezik:
 | Capability | Allapot | Mit csinalhat | Mit nem csinalhat | Kell-e explicit approval |
 | --- | --- | --- | --- | --- |
 | `audit.repair.apply` | meglevo, szigoritando | reviewed es passing izolalt repair eredmenyt patchkent atvesz a source worktree-be | commit, push, deploy, cleanup | igen |
-| `source.write.revert` | javasolt | pontosan egyezo, bot altal atvett source diffet visszafordit | reset hard, mas fajlok erintese | igen |
+| `source.write.revert` | meglevo, approval-gated | pontosan egyezo, bot altal atvett source diffet visszafordit | reset hard, mas fajlok erintese | igen |
 | `repair.cleanup` | meglevo, approval-gated | izolalt repair worktree non-force takaritasa guardokkal | source worktree modositas | igen |
 | `git.commit` | meglevo | mar staged valtozasokat commitol validalt uzenettel | staging, push, deploy | igen |
 | `git.push` | meglevo | clean es not-behind branch push | commit, merge, force push | igen |
@@ -312,8 +312,8 @@ Nem megengedett:
 Allapot:
 
 - `audit.repair.apply` BotOps job/approval es Windows worker execution kesz.
+- `source.write.revert` BotOps job/approval es Windows worker execution kesz; csak `applied` repair handoffot fordit vissza a meglevo guarded exact-diff helperrel, source validation hiba `WaitingManualReview`.
 - `repair.cleanup` BotOps job/approval es Windows worker execution kesz; normal, applied es reverted repair worktree cleanup a meglevo guarded helpereken keresztul fut, helper hiba `cleanup_failed` + `WaitingManualReview`.
-- `source.write.revert` capability nev contract szinten letezik, de runtime execution meg nincs bekotve.
 
 Feladatok:
 

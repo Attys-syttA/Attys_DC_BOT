@@ -6,6 +6,7 @@ import type { FixedCommandRunner } from "./windows-worker.js";
 
 const repairApplyMocks = vi.hoisted(() => ({
   applyRepairWorktreeChanges: vi.fn(),
+  revertAppliedRepairWorktreeChanges: vi.fn(),
 }));
 const repairCleanupMocks = vi.hoisted(() => ({
   removeAppliedRepairWorktree: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("better-sqlite3", async () => {
 });
 vi.mock("../audit/repair-apply.js", () => ({
   applyRepairWorktreeChanges: repairApplyMocks.applyRepairWorktreeChanges,
+  revertAppliedRepairWorktreeChanges: repairApplyMocks.revertAppliedRepairWorktreeChanges,
 }));
 vi.mock("../audit/worktree-manager.js", () => ({
   removeAppliedRepairWorktree: repairCleanupMocks.removeAppliedRepairWorktree,
@@ -104,12 +106,29 @@ describe("Windows worker", () => {
   beforeEach(() => {
     initDatabase();
     repairApplyMocks.applyRepairWorktreeChanges.mockReset();
+    repairApplyMocks.revertAppliedRepairWorktreeChanges.mockReset();
     repairCleanupMocks.removeAppliedRepairWorktree.mockReset();
     repairCleanupMocks.removeRepairWorktree.mockReset();
     repairCleanupMocks.removeRevertedRepairWorktree.mockReset();
     repairApplyMocks.applyRepairWorktreeChanges.mockResolvedValue({
       changedFiles: 1,
       summary: "applied files=1",
+      validationPassed: true,
+      validationResults: [{
+        name: "tests",
+        status: "passed",
+        exitCode: 0,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "ok",
+        startedAt: "2026-08-18T10:02:00.000Z",
+        finishedAt: "2026-08-18T10:02:01.000Z",
+        durationMs: 1_000,
+      }],
+    });
+    repairApplyMocks.revertAppliedRepairWorktreeChanges.mockResolvedValue({
+      changedFiles: 1,
+      summary: "reverted files=1",
       validationPassed: true,
       validationResults: [{
         name: "tests",
@@ -537,6 +556,129 @@ describe("Windows worker", () => {
     expect(result.result).toBe("repair cleanup blocked: dirty repair worktree");
     expect(getAuditRepairWorktree("audit-job-cleanup-3")?.status).toBe("cleanup_failed");
     expect(getBotOpsJob("audit-repair-cleanup:audit-job-cleanup-3")?.status).toBe("WaitingManualReview");
+  });
+
+  it("reverts an applied repair handoff only after BotOps approval", async () => {
+    const repo = makeTempDir();
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-revert-1",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: null,
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-revert-1",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-revert-1"),
+      branchName: "audit-repair/audit-job-revert-1",
+      headCommit: "0123456789abcdef",
+      status: "applied",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-revert:audit-job-revert-1",
+      requested_by: "operator",
+      target: "windows",
+      capability: "source.write.revert",
+      summary: "Audit repair revert handoff for job audit-jo",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-revert-1",
+      }),
+    });
+    expect((await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""))).status).toBe("idle");
+    approveBotOpsJob("audit-repair-revert:audit-job-revert-1", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("repair revert completed: reverted files=1");
+    expect(repairApplyMocks.revertAppliedRepairWorktreeChanges).toHaveBeenCalledWith({
+      sourceRoot: repo,
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-revert-1"),
+      requestedCheck: "tests",
+    });
+    expect(getAuditRepairWorktree("audit-job-revert-1")?.status).toBe("reverted");
+    expect(listAuditSteps("audit-job-revert-1").at(-1)).toMatchObject({
+      step_name: "tests",
+      status: "passed",
+      public_output: "ok",
+    });
+    expect(getBotOpsJob("audit-repair-revert:audit-job-revert-1")?.status).toBe("Completed");
+  });
+
+  it("moves repair revert validation failures to manual review", async () => {
+    const repo = makeTempDir();
+    repairApplyMocks.revertAppliedRepairWorktreeChanges.mockResolvedValueOnce({
+      changedFiles: 1,
+      summary: "reverted files=1 validation failed",
+      validationPassed: false,
+      validationResults: [{
+        name: "tests",
+        status: "failed",
+        exitCode: 1,
+        timedOut: false,
+        stopped: false,
+        publicOutput: "failed",
+        startedAt: "2026-08-18T10:02:00.000Z",
+        finishedAt: "2026-08-18T10:02:01.000Z",
+        durationMs: 1_000,
+      }],
+    });
+    registerProject("channel-1", repo, "guild-1");
+    createAuditJob({
+      id: "audit-job-revert-2",
+      channelId: "channel-1",
+      projectLabel: "app",
+      mode: "check-only",
+      status: "completed",
+      requestedCheck: "tests",
+      currentStep: null,
+      iteration: 1,
+      maxIterations: 2,
+      stopRequested: false,
+      capabilities: defaultAuditCapabilities("check-only"),
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createAuditRepairWorktree({
+      jobId: "audit-job-revert-2",
+      worktreePath: path.join(repo, ".discord-bot-state", "audit-worktrees", "audit-job-revert-2"),
+      branchName: "audit-repair/audit-job-revert-2",
+      headCommit: "0123456789abcdef",
+      status: "applied",
+      createdAt: "2026-08-18T10:00:00.000Z",
+      updatedAt: "2026-08-18T10:00:01.000Z",
+    });
+    createOrGetBotOpsJob({
+      job_id: "audit-repair-revert:audit-job-revert-2",
+      requested_by: "operator",
+      target: "windows",
+      capability: "source.write.revert",
+      summary: "revert",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-revert-2",
+      }),
+    });
+    approveBotOpsJob("audit-repair-revert:audit-job-revert-2", "operator", new Date("2026-08-18T10:01:00.000Z"));
+
+    const result = await runWindowsWorkerOnce(repo, "worker-1", makeRunner(""), new Date("2026-08-18T10:01:01.000Z"));
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("repair revert validation failed: reverted files=1 validation failed");
+    expect(getAuditRepairWorktree("audit-job-revert-2")?.status).toBe("reverted");
+    expect(getBotOpsJob("audit-repair-revert:audit-job-revert-2")?.status).toBe("WaitingManualReview");
   });
 
   it("does not pick service restart jobs without approval", async () => {
@@ -989,7 +1131,7 @@ describe("Windows worker", () => {
     );
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: status.read, audit.check, audit.repair.apply, repair.cleanup, git.commit, git.push, service.restart");
+    expect(formatted).toContain("capabilities: status.read, audit.check, audit.repair.apply, source.write.revert, repair.cleanup, git.commit, git.push, service.restart");
     expect(formatted).toContain("worktree: clean");
     expect(formatted).not.toContain(":\\");
   });
@@ -1002,7 +1144,7 @@ describe("Windows worker", () => {
     expect(listBotOpsWorkerHeartbeats("windows")[0]).toMatchObject({
       worker_id: "worker-1",
       target: "windows",
-      capabilities: "status.read, audit.check, audit.repair.apply, repair.cleanup, git.commit, git.push, service.restart",
+      capabilities: "status.read, audit.check, audit.repair.apply, source.write.revert, repair.cleanup, git.commit, git.push, service.restart",
       status: "status",
       detail: "manual status check",
       heartbeat_at: "2026-08-18T10:00:00.000Z",

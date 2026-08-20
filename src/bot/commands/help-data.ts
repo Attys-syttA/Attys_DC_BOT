@@ -48,7 +48,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
       "A recheck tiszteletben tartja a job iteration budgetjet; budgetemeles approval nelkul nincs.",
       "Ha a recheck ugyanazzal a public-safe hiba-fingerprinttel bukik, a job `stagnated` allapotban megall.",
       "`/audit repair-apply` kulon `DISCORD_ENABLE_AUDIT_REPAIR_APPLY=true` flaget ker; csak completed, reviewed es passed recheck utan hoz letre BotOps approval jobot, amely jovahagyas utan veszi at az egyszeru tracked modositast es ott ujra validal.",
-      "`/audit repair-revert` ugyanezzel a source-write flaggel csak `applied` handoffot fordit vissza, ha az izolalt worktree megvan es a diff egyezik.",
+      "`/audit repair-revert` ugyanezzel a source-write flaggel csak `source.write.revert` BotOps approval jobot ker; a worker approval utan forditja vissza az `applied` handoffot, ha az izolalt worktree megvan es a diff egyezik.",
       "`/audit repair-cleanup` csak terminal jobnal hoz letre approval-gated `repair.cleanup` BotOps jobot; a worker approval utan non-force modon takarit, dirty workspace eseten `cleanup_failed` es manual review marad.",
       "`/audit review` apply utan mutatja, ha a normal source worktree-ben mar ott van a handoff javitas; cleanup utan revert csak /audit-on kivuli operatori dontes lehet.",
       "A repair-run nem merge-el, commitol, pushol, deployol, es nem ir a normal source worktree-be; a repair-apply/revert sem commitol, pushol, deployol vagy takarit automatikusan.",

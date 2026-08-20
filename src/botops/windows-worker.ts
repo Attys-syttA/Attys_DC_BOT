@@ -17,7 +17,10 @@ import {
   updateAuditRepairWorktreeStatus,
 } from "../db/database.js";
 import { isAuditCheckName } from "../audit/check-catalog.js";
-import { applyRepairWorktreeChanges } from "../audit/repair-apply.js";
+import {
+  applyRepairWorktreeChanges,
+  revertAppliedRepairWorktreeChanges,
+} from "../audit/repair-apply.js";
 import {
   removeAppliedRepairWorktree,
   removeRepairWorktree,
@@ -68,6 +71,7 @@ export const WINDOWS_WORKER_CAPABILITIES = [
   "status.read",
   "audit.check",
   "audit.repair.apply",
+  "source.write.revert",
   "repair.cleanup",
   "git.commit",
   "git.push",
@@ -595,6 +599,55 @@ async function runRepairCleanupHelper(job: BotOpsJob): Promise<WindowsWorkerExec
   }
 }
 
+async function runSourceWriteRevertHelper(job: BotOpsJob): Promise<WindowsWorkerExecutionResult> {
+  const payload = parseAuditRepairApplyPayload(job);
+  if (!payload) {
+    return { ok: false, result: "repair revert blocked: invalid payload" };
+  }
+
+  const auditJob = getAuditJob(payload.auditJobId);
+  if (!auditJob || auditJob.status !== "completed") {
+    return { ok: false, result: "repair revert blocked: audit job is not completed" };
+  }
+  if (!auditJob.requested_check || !isAuditCheckName(auditJob.requested_check)) {
+    return { ok: false, result: "repair revert blocked: unsupported audit check" };
+  }
+
+  const project = getProject(payload.channelId);
+  if (!project) {
+    return { ok: false, result: "repair revert blocked: channel is not registered" };
+  }
+
+  const repairWorktree = getAuditRepairWorktree(auditJob.id);
+  if (!repairWorktree || repairWorktree.status !== "applied") {
+    return { ok: false, result: "repair revert blocked: no applied repair handoff" };
+  }
+
+  try {
+    const result = await revertAppliedRepairWorktreeChanges({
+      sourceRoot: project.project_path,
+      worktreePath: repairWorktree.worktree_path,
+      requestedCheck: auditJob.requested_check,
+    });
+    for (const validationResult of result.validationResults) {
+      insertAuditStepResult(auditJob.id, validationResult);
+    }
+    updateAuditRepairWorktreeStatus(auditJob.id, "reverted", new Date().toISOString());
+    return {
+      ok: result.validationPassed,
+      jobStatus: result.validationPassed ? "Completed" : "WaitingManualReview",
+      result: result.validationPassed
+        ? `repair revert completed: ${sanitizePublicText(result.summary, 180)}`
+        : `repair revert validation failed: ${sanitizePublicText(result.summary, 180)}`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      result: `repair revert blocked: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair revert error", 180)}`,
+    };
+  }
+}
+
 export async function runWindowsWorkerOnce(
   repoRoot: string,
   workerId = defaultWindowsWorkerId(),
@@ -632,13 +685,15 @@ export async function runWindowsWorkerOnce(
         ? await runAuditRepairApplyHelper(job)
         : job.capability === "repair.cleanup"
           ? await runRepairCleanupHelper(job)
-          : job.capability === "git.commit"
-            ? runGitCommitHelper(repoRoot, job, runner)
-            : job.capability === "git.push"
-              ? runGitPushHelper(repoRoot, workerId, runner)
-              : job.capability === "service.restart"
-                ? runServiceRestartHelper(repoRoot, workerId, runner)
-                : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
+          : job.capability === "source.write.revert"
+            ? await runSourceWriteRevertHelper(job)
+            : job.capability === "git.commit"
+              ? runGitCommitHelper(repoRoot, job, runner)
+              : job.capability === "git.push"
+                ? runGitPushHelper(repoRoot, workerId, runner)
+                : job.capability === "service.restart"
+                  ? runServiceRestartHelper(repoRoot, workerId, runner)
+                  : { ok: false, result: `unsupported Windows capability: ${job.capability}` };
 
   completeBotOpsJob(
     job.job_id,

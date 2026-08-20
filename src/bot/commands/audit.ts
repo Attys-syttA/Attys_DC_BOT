@@ -9,9 +9,6 @@ import { randomUUID } from "node:crypto";
 import { isAuditCheckName, type AuditCheckName } from "../../audit/check-catalog.js";
 import { hasMatchingPreviousFailure } from "../../audit/fingerprint.js";
 import { createAuditRepairCodexStarter } from "../../audit/repair-codex-starter.js";
-import {
-  revertAppliedRepairWorktreeChanges,
-} from "../../audit/repair-apply.js";
 import { buildAuditRepairContract } from "../../audit/repair-contract.js";
 import { startTrackedAuditRepairExecution } from "../../audit/repair-execution-tracker.js";
 import { renderAuditRepairPlan } from "../../audit/repair-plan.js";
@@ -900,8 +897,7 @@ async function executeRepairApply(interaction: ChatInputCommandInteraction): Pro
     return;
   }
 
-  const project = getProject(interaction.channelId);
-  if (!project) {
+  if (!getProject(interaction.channelId)) {
     await interaction.editReply({ content: "This channel is not registered to any project." });
     return;
   }
@@ -1025,52 +1021,30 @@ async function executeRepairRevert(interaction: ChatInputCommandInteraction): Pr
     return;
   }
 
-  recordOperatorEvent({ kind: "task", status: "audit-repair-revert-started", channelId: interaction.channelId });
-  await interaction.editReply({
-    content: `Reverting applied repair changes from the source worktree for audit job \`${job.id.slice(0, 8)}...\`.`,
+  const { job: botOpsJob, created } = createOrGetBotOpsJob({
+    job_id: `audit-repair-revert:${job.id}`,
+    requested_by: interaction.user.id,
+    target: "windows",
+    capability: "source.write.revert",
+    summary: `Audit repair revert handoff for job ${job.id.slice(0, 8)}`,
+    payload_json: JSON.stringify({
+      channel_id: interaction.channelId,
+      audit_job_id: job.id,
+    }),
+    expected_action: `revert applied repair diff for audit job ${job.id.slice(0, 8)}`,
+    validation_condition: `source-side ${requestedCheck} check passes after revert`,
   });
-
-  try {
-    const result = await revertAppliedRepairWorktreeChanges({
-      sourceRoot: project.project_path,
-      worktreePath: repairWorktree.worktree_path,
-      requestedCheck,
-    });
-    for (const validationResult of result.validationResults) {
-      insertAuditStepResult(job.id, validationResult);
-      recordAuditStepEvent(validationResult, interaction.channelId);
-    }
-    updateAuditRepairWorktreeStatus(job.id, "reverted", new Date().toISOString());
-    recordOperatorEvent({
-      kind: "task",
-      status: result.validationPassed ? "audit-repair-reverted" : "audit-repair-reverted-validation-failed",
-      channelId: interaction.channelId,
-    });
-    await interaction.followUp({
-      content: [
-        `**Audit repair revert ${result.validationPassed ? "completed" : "validation failed"}**`,
-        "```text",
-        `job: ${job.id.slice(0, 8)}...`,
-        `changes: ${result.summary}`,
-        `source validation: ${result.validationPassed ? "passed" : "failed"}`,
-        "source worktree: reverted",
-        "no commit, push, deploy, cleanup, or branch merge was performed",
-        "```",
-      ].join("\n"),
-    });
-  } catch (error) {
-    recordOperatorEvent({ kind: "task", status: "audit-repair-revert-blocked", channelId: interaction.channelId });
-    await interaction.followUp({
-      content: [
-        "**Audit repair revert blocked**",
-        "```text",
-        `job: ${job.id.slice(0, 8)}...`,
-        `reason: ${sanitizePublicText(error instanceof Error ? error.message : "unknown repair revert error", 240)}`,
-        "source write: not performed by this command",
-        "```",
-      ].join("\n"),
-    });
-  }
+  recordOperatorEvent({ kind: "task", status: "audit-repair-revert-queued", channelId: interaction.channelId });
+  await interaction.editReply({
+    content: [
+      created ? "**Audit repair revert approval requested**" : "**Audit repair revert approval already requested**",
+      "```text",
+      formatBotOpsJobDetails(botOpsJob),
+      "```",
+      "No source write was performed by this command.",
+      "Review with `/ops preview`, then approve or cancel the BotOps job.",
+    ].join("\n"),
+  });
 }
 
 export async function execute(

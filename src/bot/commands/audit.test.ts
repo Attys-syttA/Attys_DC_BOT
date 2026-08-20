@@ -1563,7 +1563,7 @@ describe("/audit", () => {
     });
   });
 
-  it("reverts an applied repair handoff from the source worktree and records validation", async () => {
+  it("queues applied repair revert as an approval-gated BotOps job", async () => {
     mocks.getConfig.mockReturnValue({
       DISCORD_ENABLE_AUDIT: true,
       DISCORD_ENABLE_AUDIT_REPAIR: true,
@@ -1583,28 +1583,59 @@ describe("/audit", () => {
       created_at: "2026-08-01T12:00:00.000Z",
       updated_at: "2026-08-01T12:00:01.000Z",
     });
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({
+      created: true,
+      job: {
+        job_id: "audit-repair-revert:audit-job-1",
+        requested_by: "user-1",
+        target: "windows",
+        capability: "source.write.revert",
+        summary: "Audit repair revert handoff for job audit-jo",
+        payload_json: JSON.stringify({ channel_id: "channel-1", audit_job_id: "audit-job-1" }),
+        expected_action: "revert applied repair diff for audit job audit-jo",
+        validation_condition: "source-side tests check passes after revert",
+        created_at: "2026-08-01T12:00:00.000Z",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        updated_at: "2026-08-01T12:00:00.000Z",
+      },
+    });
     const interaction = makeInteraction("repair-revert");
 
     await execute(interaction as never);
 
-    expect(mocks.revertAppliedRepairWorktreeChanges).toHaveBeenCalledWith({
-      sourceRoot: "/projects/app",
-      worktreePath: "/projects/app/.discord-bot-state/audit-worktrees/audit-job-1",
-      requestedCheck: "tests",
-    });
-    expect(mocks.insertAuditStepResult).toHaveBeenCalledWith("audit-job-1", expect.objectContaining({
-      name: "tests",
-      status: "passed",
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      job_id: "audit-repair-revert:audit-job-1",
+      requested_by: "user-1",
+      target: "windows",
+      capability: "source.write.revert",
+      payload_json: JSON.stringify({
+        channel_id: "channel-1",
+        audit_job_id: "audit-job-1",
+      }),
+      expected_action: "revert applied repair diff for audit job audit-jo",
+      validation_condition: "source-side tests check passes after revert",
     }));
-    expect(mocks.updateAuditRepairWorktreeStatus).toHaveBeenCalledWith("audit-job-1", "reverted", expect.any(String));
+    expect(mocks.revertAppliedRepairWorktreeChanges).not.toHaveBeenCalled();
+    expect(mocks.insertAuditStepResult).not.toHaveBeenCalled();
+    expect(mocks.updateAuditRepairWorktreeStatus).not.toHaveBeenCalled();
     expect(mocks.recordOperatorEvent).toHaveBeenCalledWith({
       kind: "task",
-      status: "audit-repair-reverted",
+      status: "audit-repair-revert-queued",
       channelId: "channel-1",
     });
-    const followUp = (interaction.followUp as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0].content;
-    expect(followUp).toContain("**Audit repair revert completed**");
-    expect(followUp).toContain("no commit, push, deploy, cleanup, or branch merge was performed");
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("**Audit repair revert approval requested**");
+    expect(content).toContain("capability: source.write.revert");
+    expect(content).toContain("No source write was performed by this command.");
+    expect(content).toContain("Review with `/ops preview`, then approve or cancel the BotOps job.");
   });
 
   it("rejects repair-revert after the isolated applied handoff was cleaned up", async () => {
