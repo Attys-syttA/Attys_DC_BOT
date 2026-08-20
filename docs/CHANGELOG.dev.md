@@ -2,6 +2,7 @@
 
 ## 2026-08-20
 
+- CI portability fix: GitHub Actions run `32375489972` failed on Node 20/22 Linux because the `/nas rollback-plan` command test expected a Windows-only checkout path. The test now expects `process.cwd()` for the command handler path; no runtime behavior or package version changed.
 - Live BotOps `.105` publication and NAS refresh: commit `22595a8` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.105` managed changes, rebuilt the NAS control-plane container, and `npm run nas:deploy:verify` verified package version `0.1.1-prerelease.105`; a follow-up closeout source sync keeps the NAS source snapshot on the latest pushed documentation commit without changing the package version. NAS container status, bridge status, and bridge smoke passed.
 - NAS staging source identity fix: `prepare-nas-staging.ps1` now uses `SourceCommitOverride` for rollback-exported source identity, avoiding the PowerShell case-insensitive parameter/local variable collision that could write `sourceCommit=unknown` and image tag `local`.
 - Version bump: a package verzio `0.1.1-prerelease.105`, mert a NAS staging/deploy build identity javitasa runtime deploy helyesseget erint.

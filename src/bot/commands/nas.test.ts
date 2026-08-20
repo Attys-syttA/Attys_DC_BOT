@@ -1106,7 +1106,7 @@ describe("/nas", () => {
 
     await execute(interaction as never);
 
-    expect(mocks.runLocalCommand).toHaveBeenCalledWith("git", ["rev-parse", "--verify", "--short=12", "abcdef1^{commit}"], "E:\\codex_works\\Attys_DC_BOT", 15_000);
+    expect(mocks.runLocalCommand).toHaveBeenCalledWith("git", ["rev-parse", "--verify", "--short=12", "abcdef1^{commit}"], process.cwd(), 15_000);
     const content = interaction.editReply.mock.calls[0][0].content;
     expect(content).toContain("NAS Rollback Plan");
     expect(content).toContain("rollback-apply=disabled");
