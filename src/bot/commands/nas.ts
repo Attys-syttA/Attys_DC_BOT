@@ -215,6 +215,15 @@ export const data = new SlashCommandBuilder()
       .setMinLength(7)
       .setMaxLength(40)))
   .addSubcommand((subcommand) => subcommand
+    .setName("rollback-apply")
+    .setDescription("Queue an approval-gated NAS rollback apply worker job")
+    .addStringOption((option) => option
+      .setName("commit")
+      .setDescription("Git commit to deploy as the rollback source")
+      .setRequired(true)
+      .setMinLength(7)
+      .setMaxLength(40)))
+  .addSubcommand((subcommand) => subcommand
     .setName("handoff-gate")
     .setDescription("Show the read-only NAS architecture handoff gate"))
   .addSubcommand((subcommand) => subcommand
@@ -480,6 +489,11 @@ function normalizeRollbackCommitCandidate(value: string | null | undefined): str
   const trimmed = value?.trim();
   if (!trimmed) return null;
   return /^[0-9a-f]{7,40}$/i.test(trimmed) ? trimmed : "invalid";
+}
+
+function validRollbackCommitCandidate(value: string | null | undefined): string | null {
+  const candidate = normalizeRollbackCommitCandidate(value);
+  return candidate && candidate !== "invalid" ? candidate : null;
 }
 
 async function rollbackCommitCandidateLine(repoRoot: string, requestedCommit: string | null | undefined): Promise<string> {
@@ -1297,6 +1311,42 @@ export async function execute(
         formatBotOpsWorkerHeartbeats(heartbeats),
         "```",
         "No deploy was executed directly from Discord. Review `/ops preview`, then approve explicitly with `/ops approve`.",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  if (subcommand === "rollback-apply") {
+    const commit = validRollbackCommitCandidate(interaction.options.getString("commit", true));
+    if (!commit) {
+      await interaction.editReply({
+        content: "`/nas rollback-apply` requires a 7-40 character hexadecimal Git commit.",
+      });
+      return;
+    }
+
+    const { job, created } = createOrGetBotOpsJob({
+      job_id: `nas-rollback-apply:${commit.toLowerCase()}`,
+      requested_by: interaction.user.id,
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "NAS fixed rollback apply request",
+      payload_json: JSON.stringify({ commit }),
+      expected_action: "run the fixed NAS rollback helper for one approved Git commit and post-rollback verifier",
+      validation_condition: "rollback helper exits successfully and NAS deploy verifier passes afterwards",
+    });
+    const heartbeats = listBotOpsWorkerHeartbeats("nas");
+
+    await interaction.editReply({
+      content: [
+        created ? "**NAS rollback apply job queued**" : "**NAS rollback apply job already exists**",
+        "```text",
+        formatBotOpsJobDetails(job),
+        `rollback-commit: ${commit}`,
+        "",
+        formatBotOpsWorkerHeartbeats(heartbeats),
+        "```",
+        "No rollback was executed directly from Discord. Approval is required before the worker can run it.",
       ].join("\n"),
     });
     return;

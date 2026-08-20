@@ -79,6 +79,8 @@ npm run nas:deploy:verify -- --target-root K:\ --json
 
 The verifier checks the NAS staging manifest, `app\NAS_BUILD_INFO.json`, `docker-compose.yml`, and `logs\nas-control-plane-status.json` together. The CLI briefly rereads the snapshot when it sees a build mismatch, because SMB can expose a just-replaced status file inconsistently for a short moment. It fails if the compose image tag or generated labels do not match the staged build identity, the running container snapshot still does not match the staged source commit/package version, the snapshot is stale or clock-skewed too far into the future, NAS-side Codex execution is not disabled, the handoff store is not ready, configured worker health is not OK, or public worker metadata exposes URL fields. `/nas status` also includes a compact `NAS deploy verification` line from the same verification logic when the NAS share is reachable. `/nas deploy-status` shows the same verification as a fuller Discord checklist, still without exposing raw paths, worker URLs, process IDs, or raw JSON.
 
+`/nas rollback-apply commit:<sha>` uses the same BotOps approval model as deploy apply, but the source comes from one explicit Git commit. The Discord command only queues a `nas.rollback.apply` job and does not execute rollback directly. After approval, the NAS worker runs the fixed `npm run nas:rollback -- -Commit <sha>` helper, which exports that commit to a temporary ignored staging source, prepares/checks/syncs/rebuilds/verifies the NAS control-plane, and removes the temporary export. A helper failure fails closed as `Failed`; a post-rollback verifier failure ends in `WaitingManualReview`.
+
 One-command NAS deploy orchestration:
 
 ```powershell

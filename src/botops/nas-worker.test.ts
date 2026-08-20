@@ -99,6 +99,20 @@ describe("NAS worker", () => {
     expect(getBotOpsJob("nas-apply-1")?.status).toBe("WaitingApproval");
   });
 
+  it("does not pick NAS rollback apply jobs without approval", () => {
+    createOrGetBotOpsJob({
+      job_id: "nas-rollback-1",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "rollback apply",
+      payload_json: JSON.stringify({ commit: "abcdef1" }),
+    });
+
+    expect(runNasWorkerOnce("worker-1").status).toBe("idle");
+    expect(getBotOpsJob("nas-rollback-1")?.status).toBe("WaitingApproval");
+  });
+
   it("runs only the fixed NAS deploy verifier after approval", () => {
     const calls: string[] = [];
     const runner: FixedNasCommandRunner = (command, args) => {
@@ -222,6 +236,82 @@ describe("NAS worker", () => {
     expect(getBotOpsJob("nas-apply-verify-failed")?.status).toBe("WaitingManualReview");
   });
 
+  it("runs the fixed NAS rollback helper and then the verifier after approval", () => {
+    const calls: string[] = [];
+    const runner: FixedNasCommandRunner = (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      if ((command === "npm" || command === "npm.cmd") && args.join(" ") === "run nas:rollback -- -Commit abcdef1") {
+        return { code: 0, output: "rolled back" };
+      }
+      if ((command === "npm" || command === "npm.cmd") && args.join(" ") === "run nas:deploy:verify") {
+        return { code: 0, output: "verified" };
+      }
+      return { code: 1, output: "unexpected" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "nas-rollback-approved",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "rollback apply",
+      payload_json: JSON.stringify({ commit: "abcdef1" }),
+    });
+    approveBotOpsJob("nas-rollback-approved", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runNasWorkerOnce("worker-1", new Date("2026-08-18T10:01:00.000Z"), runner);
+
+    expect(result.status).toBe("completed");
+    expect(result.result).toBe("NAS rollback helper completed and post-verify passed");
+    expect(calls).toEqual(expect.arrayContaining([
+      expect.stringMatching(/run nas:rollback -- -Commit abcdef1$/),
+      expect.stringMatching(/run nas:deploy:verify$/),
+    ]));
+    expect(getBotOpsJob("nas-rollback-approved")?.status).toBe("Completed");
+  });
+
+  it("blocks approved NAS rollback jobs without a valid commit payload", () => {
+    const runner: FixedNasCommandRunner = () => ({ code: 1, output: "should not run" });
+    createOrGetBotOpsJob({
+      job_id: "nas-rollback-invalid",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "rollback apply",
+      payload_json: JSON.stringify({ commit: "not-a-sha" }),
+    });
+    approveBotOpsJob("nas-rollback-invalid", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runNasWorkerOnce("worker-1", new Date("2026-08-18T10:01:00.000Z"), runner);
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("NAS rollback apply blocked: invalid rollback commit payload");
+    expect(getBotOpsJob("nas-rollback-invalid")?.status).toBe("Failed");
+  });
+
+  it("moves NAS rollback apply to manual review when post-verify fails", () => {
+    const runner: FixedNasCommandRunner = (_command, args) => {
+      if (args.join(" ") === "run nas:rollback -- -Commit abcdef1") {
+        return { code: 0, output: "rolled back" };
+      }
+      return { code: 1, output: "verify failed" };
+    };
+    createOrGetBotOpsJob({
+      job_id: "nas-rollback-verify-failed",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "rollback apply",
+      payload_json: JSON.stringify({ commit: "abcdef1" }),
+    });
+    approveBotOpsJob("nas-rollback-verify-failed", "operator", new Date("2026-08-18T10:00:00.000Z"));
+
+    const result = runNasWorkerOnce("worker-1", new Date("2026-08-18T10:01:00.000Z"), runner);
+
+    expect(result.status).toBe("failed");
+    expect(result.result).toBe("NAS rollback helper completed but post-verify failed");
+    expect(getBotOpsJob("nas-rollback-verify-failed")?.status).toBe("WaitingManualReview");
+  });
+
   it("formats public-safe worker status", () => {
     createOrGetBotOpsJob({
       job_id: "nas-check-2",
@@ -234,7 +324,7 @@ describe("NAS worker", () => {
     const formatted = formatNasWorkerStatus(buildNasWorkerStatusSnapshot("worker-1"));
 
     expect(formatted).toContain("worker: worker-1");
-    expect(formatted).toContain("capabilities: nas.worker.check, nas.deploy.verify, nas.deploy.apply");
+    expect(formatted).toContain("capabilities: nas.worker.check, nas.deploy.verify, nas.deploy.apply, nas.rollback.apply");
     expect(formatted).toContain("queued jobs: 1");
     expect(formatted).not.toContain(":\\");
   });
@@ -243,7 +333,7 @@ describe("NAS worker", () => {
     const snapshot = buildNasWorkerStatusSnapshot("worker-1");
     recordNasWorkerStatus(snapshot, "status", "manual status check", new Date("2026-08-18T10:00:00.000Z"));
 
-    expect(snapshot.capabilities).toEqual(["nas.worker.check", "nas.deploy.verify", "nas.deploy.apply"]);
+    expect(snapshot.capabilities).toEqual(["nas.worker.check", "nas.deploy.verify", "nas.deploy.apply", "nas.rollback.apply"]);
     expect(listBotOpsWorkerHeartbeats("nas")[0]).toMatchObject({
       worker_id: "worker-1",
       status: "status",

@@ -15,6 +15,7 @@ export const BOTOPS_CAPABILITIES = [
   "nas.worker.check",
   "nas.deploy.verify",
   "nas.deploy.apply",
+  "nas.rollback.apply",
 ] as const;
 
 export type BotOpsCapability = typeof BOTOPS_CAPABILITIES[number];
@@ -62,6 +63,7 @@ const approvalRequiredCapabilities = new Set<BotOpsCapability>([
   "service.restart",
   "nas.deploy.verify",
   "nas.deploy.apply",
+  "nas.rollback.apply",
 ]);
 
 const defaultApprovalMetadata: Record<BotOpsCapability, {
@@ -119,6 +121,10 @@ const defaultApprovalMetadata: Record<BotOpsCapability, {
   "nas.deploy.apply": {
     expected_action: "run the fixed NAS deploy apply helper and post-deploy verifier",
     validation_condition: "deploy apply exits successfully and NAS deploy verifier passes afterwards",
+  },
+  "nas.rollback.apply": {
+    expected_action: "run the fixed NAS rollback helper for one approved Git commit and post-rollback verifier",
+    validation_condition: "rollback helper exits successfully and NAS deploy verifier passes afterwards",
   },
 };
 

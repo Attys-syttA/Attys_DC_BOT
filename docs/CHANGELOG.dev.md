@@ -2,6 +2,9 @@
 
 ## 2026-08-20
 
+- BotOps NAS rollback apply capability: `/nas rollback-apply commit:<sha>` now creates an approval-gated `nas.rollback.apply` job for one selected Git commit. The NAS worker can run only the fixed `npm run nas:rollback -- -Commit <sha>` helper after approval, then a mandatory `npm run nas:deploy:verify` post-check; Discord command execution itself starts no rollback. Helper failure fails closed as `Failed`, while post-rollback verifier failure ends in `WaitingManualReview`.
+- NAS rollback helper: added `scripts/apply-nas-rollback.ps1`, which validates a Git commit, refuses dirty current source, exports only the approved commit to a temporary ignored staging source, prepares/checks/syncs/rebuilds/verifies the NAS control-plane, and removes the temporary export.
+- Version bump: a package verzio `0.1.1-prerelease.104`, mert uj approval-gated `/nas rollback-apply` subcommand es NAS worker `nas.rollback.apply` capability jelent meg.
 - BotOps NAS rollback commit preview: `/nas rollback-plan` now accepts optional `commit:<sha>` input and validates it read-only with Git before showing a public-safe candidate commit line. Rollback apply remains disabled; no rollback execution capability was added.
 - Version bump: a package verzio `0.1.1-prerelease.103`, mert a user-visible `/nas rollback-plan` valasztott Git commit elonezete bovult.
 - Live BotOps `.103` publication and NAS refresh: commit `328c046` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.103` managed changes, rebuilt the NAS control-plane container, and verified package version `0.1.1-prerelease.103`; follow-up NAS verify, bridge status, and bridge smoke passed.

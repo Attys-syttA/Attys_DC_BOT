@@ -65,6 +65,12 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
 - 2026-08-20 rollback commit preview slice:
   - `/nas rollback-plan commit:<optional>` read-only modon validalja a megadott Git commitot;
   - nincs rollback apply runtime capability, NAS write, rebuild vagy restart.
+- 2026-08-20 rollback apply capability slice:
+  - `/nas rollback-apply commit:<sha>` approval-gated `nas.rollback.apply` BotOps jobot hoz letre;
+  - Discordbol nincs kozvetlen rollback execution;
+  - a NAS worker csak approval utan futtatja a fix `npm run nas:rollback -- -Commit <sha>` helpert;
+  - rollback helper hiba `Failed`, post-rollback verify hiba `WaitingManualReview`;
+  - a helper Git commitbol exportalt ideiglenes staging source-t hasznal, nem checkoutolja vissza a jelenlegi source worktree-t.
 - BotOps job/eveny/heartbeat SQLite alap es public-safe Discord status/log nezetek.
 - Lease alapu worker futtatas, stale/expired allapotokkal.
 - Explicit approval modell, ahol a worker nem kozvetlenul a Discord parancsbol futtat muveletet.
@@ -194,7 +200,7 @@ Az approval csak akkor ervenyes, ha pontosan egyezik:
 | `nas.deploy.apply` | javasolt | meglévo `npm run nas:deploy -- -Apply` fixed helper, preflight + post-verify mellett | arbitrary SSH/shell, Codex futtatas, titokkiiras | igen |
 | `nas.container.rebuild` | javasolt | meglévo restricted rebuild helper, ha a deploy terv ezt keri | share sync, source write, raw Docker output | igen |
 | `nas.rollback.plan` | javasolt kesobbi | rollback lehetosegek public-safe elonezete | visszaallitas | nem vagy read-only |
-| `nas.rollback.apply` | javasolt kesobbi | kulon definialt rollback helper | improvizalt torles, reset, kezi SSH shell | igen |
+| `nas.rollback.apply` | megvalosult, approval-gated | kulon definialt Git commit alapu rollback helper + post-verify | improvizalt torles, reset, kezi SSH shell | igen |
 
 Uj capability csak akkor kerulhet be, ha ebben a tablaban vagy egy kulon, jovahagyott tervben szerepel.
 
@@ -485,6 +491,12 @@ Feladatok:
   - elozo Docker image tag?
   - megorzott staging snapshot?
 - Meghatarozni, ki donthet rollbackrol es milyen approval kell hozza.
+- Implementalt rollback apply korlat:
+  - csak Git commit alapu;
+  - csak BotOps approval utan;
+  - csak fix helperrel;
+  - post-verify kotelezo;
+  - nincs automatikus rollback barmely mas hibaagbol.
 
 Kotelezo dontes implementacio elott:
 

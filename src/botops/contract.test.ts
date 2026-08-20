@@ -23,6 +23,7 @@ describe("BotOps contract", () => {
     expect(capabilityRequiresApproval("git.push")).toBe(true);
     expect(capabilityRequiresApproval("service.restart")).toBe(true);
     expect(capabilityRequiresApproval("nas.deploy.apply")).toBe(true);
+    expect(capabilityRequiresApproval("nas.rollback.apply")).toBe(true);
   });
 
   it("creates read-only jobs without approval", () => {
@@ -99,6 +100,22 @@ describe("BotOps contract", () => {
     expect(job.approval_state).toBe("required");
     expect(job.expected_action).toBe("run the fixed NAS deploy apply helper and post-deploy verifier");
     expect(job.validation_condition).toBe("deploy apply exits successfully and NAS deploy verifier passes afterwards");
+  });
+
+  it("creates NAS rollback apply jobs with exact approval metadata", () => {
+    const job = createBotOpsJob({
+      job_id: "nas-rollback-apply-1",
+      requested_by: "operator",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "rollback apply",
+      payload_json: JSON.stringify({ commit: "abcdef1" }),
+    });
+
+    expect(job.status).toBe("WaitingApproval");
+    expect(job.approval_state).toBe("required");
+    expect(job.expected_action).toBe("run the fixed NAS rollback helper for one approved Git commit and post-rollback verifier");
+    expect(job.validation_condition).toBe("rollback helper exits successfully and NAS deploy verifier passes afterwards");
   });
 
   it("creates source handoff jobs with exact approval metadata", () => {

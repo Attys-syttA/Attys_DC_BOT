@@ -40,6 +40,7 @@ export const NAS_WORKER_CAPABILITIES = [
   "nas.worker.check",
   "nas.deploy.verify",
   "nas.deploy.apply",
+  "nas.rollback.apply",
 ] as const satisfies readonly BotOpsCapability[];
 
 export function defaultNasWorkerId(): string {
@@ -144,6 +145,51 @@ function runNasDeployApplyHelper(
   };
 }
 
+function readRollbackCommit(job: BotOpsJob): string | undefined {
+  if (!job.payload_json.trim()) return undefined;
+  try {
+    const parsed = JSON.parse(job.payload_json) as { commit?: unknown };
+    if (typeof parsed.commit !== "string") return undefined;
+    const commit = parsed.commit.trim();
+    return /^[0-9a-f]{7,40}$/i.test(commit) ? commit : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function runNasRollbackApplyHelper(
+  job: BotOpsJob,
+  runner: FixedNasCommandRunner,
+): { ok: boolean; jobStatus: Extract<BotOpsJobStatus, "Completed" | "Failed" | "WaitingManualReview">; result: string } {
+  const commit = readRollbackCommit(job);
+  if (!commit) {
+    return {
+      ok: false,
+      jobStatus: "Failed",
+      result: "NAS rollback apply blocked: invalid rollback commit payload",
+    };
+  }
+
+  const apply = runner(npmCommand(), ["run", "nas:rollback", "--", "-Commit", commit], 900_000);
+  if (apply.code !== 0) {
+    return {
+      ok: false,
+      jobStatus: "Failed",
+      result: "NAS rollback helper failed before post-verify",
+    };
+  }
+
+  const verification = runner(npmCommand(), ["run", "nas:deploy:verify"], 120_000);
+  const ok = verification.code === 0;
+  return {
+    ok,
+    jobStatus: ok ? "Completed" : "WaitingManualReview",
+    result: ok
+      ? "NAS rollback helper completed and post-verify passed"
+      : "NAS rollback helper completed but post-verify failed",
+  };
+}
+
 export function runNasWorkerOnce(
   workerId = defaultNasWorkerId(),
   now = new Date(),
@@ -182,6 +228,17 @@ export function runNasWorkerOnce(
     const execution = runNasDeployApplyHelper(runner);
     completeBotOpsJob(job.job_id, workerId, execution.jobStatus, execution.result, new Date(now.getTime() + 200));
     recordNasWorkerStatus(buildNasWorkerStatusSnapshot(workerId), execution.ok ? "completed" : "failed", `nas.deploy.apply: ${execution.ok ? "completed" : "failed"}`, new Date(now.getTime() + 200));
+    return {
+      status: execution.ok ? "completed" : "failed",
+      job,
+      result: execution.result,
+    };
+  }
+
+  if (job.capability === "nas.rollback.apply") {
+    const execution = runNasRollbackApplyHelper(job, runner);
+    completeBotOpsJob(job.job_id, workerId, execution.jobStatus, execution.result, new Date(now.getTime() + 200));
+    recordNasWorkerStatus(buildNasWorkerStatusSnapshot(workerId), execution.ok ? "completed" : "failed", `nas.rollback.apply: ${execution.ok ? "completed" : "failed"}`, new Date(now.getTime() + 200));
     return {
       status: execution.ok ? "completed" : "failed",
       job,

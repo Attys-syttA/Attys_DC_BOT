@@ -2,14 +2,18 @@
 param(
   [string]$StagingRoot = "nas-staging\Discord_Codex_BOT",
   [switch]$IncludeSource,
-  [switch]$AllowDirtySource
+  [switch]$AllowDirtySource,
+  [string]$SourceRoot = "",
+  [string]$TemplateRoot = "",
+  [string]$SourceCommit = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$templateRoot = Join-Path $repoRoot "deploy\nas\Discord_Codex_BOT"
+$effectiveTemplateRoot = if ($TemplateRoot.Trim().Length -gt 0) { [System.IO.Path]::GetFullPath($TemplateRoot) } else { Join-Path $repoRoot "deploy\nas\Discord_Codex_BOT" }
+$effectiveSourceRoot = if ($SourceRoot.Trim().Length -gt 0) { [System.IO.Path]::GetFullPath($SourceRoot) } else { $repoRoot }
 $targetRoot = Join-Path $repoRoot $StagingRoot
 $resolvedTargetRoot = [System.IO.Path]::GetFullPath($targetRoot)
 $requiredTargetPrefix = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "nas-staging\"))
@@ -18,11 +22,15 @@ if (-not $resolvedTargetRoot.StartsWith($requiredTargetPrefix, [System.StringCom
   throw "Refusing to write outside the repository nas-staging folder: $resolvedTargetRoot"
 }
 
-if (-not (Test-Path -LiteralPath $templateRoot)) {
-  throw "NAS template folder is missing: $templateRoot"
+if (-not (Test-Path -LiteralPath $effectiveTemplateRoot)) {
+  throw "NAS template folder is missing: $effectiveTemplateRoot"
 }
 
-if ($IncludeSource -and -not $AllowDirtySource) {
+if (-not (Test-Path -LiteralPath $effectiveSourceRoot)) {
+  throw "NAS source folder is missing: $effectiveSourceRoot"
+}
+
+if ($IncludeSource -and -not $AllowDirtySource -and $effectiveSourceRoot -eq $repoRoot) {
   $status = git -C $repoRoot status --short --untracked-files=all
   if ($LASTEXITCODE -ne 0) {
     throw "Cannot inspect git status before source staging."
@@ -37,23 +45,27 @@ if (Test-Path -LiteralPath $resolvedTargetRoot) {
 }
 
 New-Item -ItemType Directory -Force -Path $resolvedTargetRoot | Out-Null
-Copy-Item -Path (Join-Path $templateRoot "*") -Destination $resolvedTargetRoot -Recurse -Force
+Copy-Item -Path (Join-Path $effectiveTemplateRoot "*") -Destination $resolvedTargetRoot -Recurse -Force
 
 $appRoot = Join-Path $resolvedTargetRoot "app"
 $sourceCommit = "unknown"
 $packageVersion = "unknown"
 
 try {
-  $sourceCommitValue = git -C $repoRoot rev-parse --short=12 HEAD
-  if ($LASTEXITCODE -eq 0 -and $sourceCommitValue) {
-    $sourceCommit = [string]$sourceCommitValue
+  if ($SourceCommit.Trim().Length -gt 0) {
+    $sourceCommit = $SourceCommit.Trim()
+  } else {
+    $sourceCommitValue = git -C $repoRoot rev-parse --short=12 HEAD
+    if ($LASTEXITCODE -eq 0 -and $sourceCommitValue) {
+      $sourceCommit = [string]$sourceCommitValue
+    }
   }
 } catch {
   $sourceCommit = "unknown"
 }
 
 try {
-  $packageJson = Get-Content -LiteralPath (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
+    $packageJson = Get-Content -LiteralPath (Join-Path $effectiveSourceRoot "package.json") -Raw | ConvertFrom-Json
   if ($packageJson.version) {
     $packageVersion = [string]$packageJson.version
   }
@@ -70,7 +82,7 @@ if ($IncludeSource) {
   )
 
   foreach ($item in $sourceItems) {
-    $sourcePath = Join-Path $repoRoot $item
+    $sourcePath = Join-Path $effectiveSourceRoot $item
     $destinationPath = Join-Path $appRoot $item
     if (-not (Test-Path -LiteralPath $sourcePath)) {
       throw "Required source item is missing: $sourcePath"

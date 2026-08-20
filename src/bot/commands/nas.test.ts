@@ -1856,6 +1856,82 @@ describe("/nas", () => {
     expect(content).toContain("/ops approve");
   });
 
+  it("queues an approval-gated NAS rollback apply worker job without executing it", async () => {
+    mocks.createOrGetBotOpsJob.mockReturnValueOnce({
+      created: true,
+      job: {
+        job_id: "nas-rollback-apply:abcdef1",
+        requested_by: "operator-1",
+        target: "nas",
+        capability: "nas.rollback.apply",
+        status: "WaitingApproval",
+        approval_state: "required",
+        approved_by: null,
+        approval_expires_at: null,
+        summary: "NAS fixed rollback apply request",
+        payload_json: JSON.stringify({ commit: "abcdef1" }),
+        expected_action: "run the fixed NAS rollback helper for one approved Git commit and post-rollback verifier",
+        validation_condition: "rollback helper exits successfully and NAS deploy verifier passes afterwards",
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        logs: "",
+        result: "",
+        created_at: "2026-08-18T10:00:00.000Z",
+        updated_at: "2026-08-18T10:00:00.000Z",
+      },
+    });
+    const interaction = {
+      user: {
+        id: "operator-1",
+      },
+      options: {
+        getSubcommand: vi.fn(() => "rollback-apply"),
+        getString: vi.fn(() => "abcdef1"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.createOrGetBotOpsJob).toHaveBeenCalledWith(expect.objectContaining({
+      job_id: "nas-rollback-apply:abcdef1",
+      requested_by: "operator-1",
+      target: "nas",
+      capability: "nas.rollback.apply",
+      summary: "NAS fixed rollback apply request",
+      payload_json: JSON.stringify({ commit: "abcdef1" }),
+      expected_action: "run the fixed NAS rollback helper for one approved Git commit and post-rollback verifier",
+      validation_condition: "rollback helper exits successfully and NAS deploy verifier passes afterwards",
+    }));
+    expect(mocks.runLocalCommand).not.toHaveBeenCalled();
+    const content = interaction.editReply.mock.calls[0][0].content;
+    expect(content).toContain("NAS rollback apply job queued");
+    expect(content).toContain("approval: required");
+    expect(content).toContain("rollback-commit: abcdef1");
+    expect(content).toContain("No rollback was executed directly from Discord");
+  });
+
+  it("rejects malformed NAS rollback apply commits before creating a job", async () => {
+    const interaction = {
+      user: {
+        id: "operator-1",
+      },
+      options: {
+        getSubcommand: vi.fn(() => "rollback-apply"),
+        getString: vi.fn(() => "not-a-sha"),
+      },
+      editReply: vi.fn(),
+    };
+
+    await execute(interaction as never);
+
+    expect(mocks.createOrGetBotOpsJob).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "`/nas rollback-apply` requires a 7-40 character hexadecimal Git commit.",
+    });
+  });
+
   it("keeps the NAS handoff gate behind the NAS status flag", async () => {
     mocks.getConfig.mockReturnValue({ DISCORD_ENABLE_NAS_STATUS: false });
     const interaction = {
