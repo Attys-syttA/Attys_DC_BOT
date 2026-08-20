@@ -67,7 +67,7 @@ try {
     -IncludeSource `
     -SourceRoot $resolvedExportRoot `
     -TemplateRoot $templateRoot `
-    -SourceCommit $shortCommit
+    -SourceCommitOverride $shortCommit
   if ($LASTEXITCODE -ne 0) {
     throw "Rollback NAS staging preparation failed."
   }

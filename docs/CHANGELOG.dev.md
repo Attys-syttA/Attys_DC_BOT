@@ -2,6 +2,8 @@
 
 ## 2026-08-20
 
+- NAS staging source identity fix: `prepare-nas-staging.ps1` now uses `SourceCommitOverride` for rollback-exported source identity, avoiding the PowerShell case-insensitive parameter/local variable collision that could write `sourceCommit=unknown` and image tag `local`.
+- Version bump: a package verzio `0.1.1-prerelease.105`, mert a NAS staging/deploy build identity javitasa runtime deploy helyesseget erint.
 - BotOps NAS rollback apply capability: `/nas rollback-apply commit:<sha>` now creates an approval-gated `nas.rollback.apply` job for one selected Git commit. The NAS worker can run only the fixed `npm run nas:rollback -- -Commit <sha>` helper after approval, then a mandatory `npm run nas:deploy:verify` post-check; Discord command execution itself starts no rollback. Helper failure fails closed as `Failed`, while post-rollback verifier failure ends in `WaitingManualReview`.
 - NAS rollback helper: added `scripts/apply-nas-rollback.ps1`, which validates a Git commit, refuses dirty current source, exports only the approved commit to a temporary ignored staging source, prepares/checks/syncs/rebuilds/verifies the NAS control-plane, and removes the temporary export.
 - Version bump: a package verzio `0.1.1-prerelease.104`, mert uj approval-gated `/nas rollback-apply` subcommand es NAS worker `nas.rollback.apply` capability jelent meg.

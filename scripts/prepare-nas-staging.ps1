@@ -5,7 +5,7 @@ param(
   [switch]$AllowDirtySource,
   [string]$SourceRoot = "",
   [string]$TemplateRoot = "",
-  [string]$SourceCommit = ""
+  [string]$SourceCommitOverride = ""
 )
 
 Set-StrictMode -Version Latest
@@ -52,8 +52,8 @@ $sourceCommit = "unknown"
 $packageVersion = "unknown"
 
 try {
-  if ($SourceCommit.Trim().Length -gt 0) {
-    $sourceCommit = $SourceCommit.Trim()
+  if ($SourceCommitOverride.Trim().Length -gt 0) {
+    $sourceCommit = $SourceCommitOverride.Trim()
   } else {
     $sourceCommitValue = git -C $repoRoot rev-parse --short=12 HEAD
     if ($LASTEXITCODE -eq 0 -and $sourceCommitValue) {
