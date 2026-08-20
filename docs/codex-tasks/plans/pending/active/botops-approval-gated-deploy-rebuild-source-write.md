@@ -1,6 +1,6 @@
 # BotOps jovahagyasos deploy, rebuild es source-write terv
 
-Status: approved / deploy apply, audit repair apply/revert, cleanup, Git commit/push, and Windows restart gates implemented; rebuild/rollback remain explicit later gates
+Status: approved / deploy apply, audit repair apply/revert, cleanup, Git commit/push, Windows restart, and Git commit based rollback apply gates implemented; standalone rebuild remains an explicit later gate
 
 ## Kapcsolodo jelenlegi helyzet
 
@@ -115,12 +115,12 @@ Fontos: egy `deploy` jovahagyas nem jelenthet automatikus `push` jogot, egy `pus
 
 ## Nyitott reszek
 
-- Kulon BotOps approval contract kell a valodi source-write, deploy, rebuild, restart, cleanup es rollback muveletekhez.
+- Kulon BotOps approval contract kell minden meg hianyzo valodi rebuild/restart jellegu muvelethez.
 - A Discord parancsoknak elobb preview/dry-run eredmenyt kell mutatniuk, es csak utana kerhetnek explicit operatori jovahagyast.
 - A NAS oldali deploy/rebuild csak allowlistes helperen keresztul indulhat, nem arbitrary shell parancskent.
 - Source write utan a botnak erthetoen jeleznie kell: "a forras mar modositva van, de meg nincs commit/push/deploy".
 - Deploy/rebuild utan kotelezo post-verify kell, kulonben az allapot `WaitingManualReview` vagy `Failed` legyen.
-- Rollback policyt meg kell hatarozni: mit jelent pontosan a visszaallitas, honnan, milyen helperrel, es mikor szabad futtatni.
+- Standalone NAS container rebuild policyt meg kell hatarozni, ha a kesobbi preview kulon rebuildet ker a deploy apply helperen tul.
 
 ## Cel es vart eredmeny
 
@@ -273,8 +273,8 @@ Laikus cel: "Most tedd fel a jóváhagyott verziót a NAS-ra."
 
 Laikus cel: "Ha deploy utan baj van, legyen elore ismert visszaut."
 
-- Eloszor csak terv/preview keszulhet.
-- Apply csak kesobbi kulon jovahagyott rollback helperrel.
+- A plan read-only commit previewt ad.
+- Apply csak kulon jovahagyott Git commit alapu rollback helperrel fut.
 - A rollback nem talalhat ki parancsot a helyzet kozben.
 
 ## Implementacios szakaszok
