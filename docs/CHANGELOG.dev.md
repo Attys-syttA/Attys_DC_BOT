@@ -2,6 +2,7 @@
 
 ## 2026-08-20
 
+- Live NAS `.96` refresh: after operator approval, the NAS bridge was restarted to recover worker health, the prior NAS deploy verifier returned OK, and `npm run nas:deploy -- -Apply` synced 32 managed changes, rebuilt the NAS control-plane container, and verified source commit `e0396aac23ae` with package version `0.1.1-prerelease.96`. Follow-up `npm run nas:deploy:verify`, `npm run nas:bridge:status`, `npm run nas:bridge:smoke`, and `npm run doctor:local` passed.
 - Live BotOps guardrail publication: commit `beec491` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and it came back as `CodexBot.exe` PID `40044`. `npm run doctor:local` passed, `bot.err.log` stayed empty, and `bot.log` showed `Registered 29 application commands`.
 - BotOps approval diagnostics: `/ops approve` now refuses stale, already-approved, or not-required jobs instead of claiming approval was recorded. It shows the current public-safe job details, only calls the approval update path while the job is still `approval_state=required`, and the database update itself is guarded by the same state condition.
 - Version bump: a package verzio `0.1.1-prerelease.96`, mert a user-visible `/ops approve` stale/not-required approval hibakezelese szigorodott.
