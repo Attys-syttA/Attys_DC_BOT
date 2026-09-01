@@ -1,5 +1,14 @@
 # Development Changelog
 
+## 2026-09-01
+
+- Windows safe update repair: reproduced the startup failure from the tray path with C# `ProcessStartInfo` launching bare `npm.cmd` under `UseShellExecute=false`; npm incorrectly resolved its base to the repository folder and failed on missing `node_modules\npm\bin\npm-prefix.js`.
+- Change: `tray/CodexBotTray.cs` now runs `.cmd/.bat` commands through `cmd.exe /d /c`, and `src/cli/safe-update.ts` reuses the existing Windows `.cmd` invocation wrapper before `spawnSync`.
+- Recovery: `npm.cmd install` was run once manually with the normal shell path to bring local `node_modules` in sync after the failed safe-update install step; generated `package-lock.json` noise from that install was reverted before the source fix was recorded.
+- Validation: `npm.cmd ls --depth=0`, `npm.cmd run safe-update:status`, `npm.cmd run doctor:local`, `npm.cmd run check`, temporary C# tray compile, and `git diff --check` passed. `npm audit --audit-level=high` still reports 3 high-severity dev-toolchain advisories (`brace-expansion`, `nanoid`, `postcss`); no automatic audit fix was run.
+- Version bump: a package verzio `0.1.1-prerelease.106`, mert a Windows safe update user-visible dependency install/build/check flow javult.
+- Runtime note: the live bot and tray were not restarted during this repair; the running tray binary will pick up the fix after the next tray rebuild/restart.
+
 ## 2026-08-20
 
 - CI portability fix: GitHub Actions run `32375489972` failed on Node 20/22 Linux because the `/nas rollback-plan` command test expected a Windows-only checkout path. The test now expects `process.cwd()` for the command handler path; no runtime behavior or package version changed.

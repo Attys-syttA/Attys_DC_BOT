@@ -2,11 +2,12 @@
 
 ## Current Status
 
-- Date: 2026-08-20
+- Date: 2026-09-01
 - Repository folder: `<CODEX_WORKS>\Attys_DC_BOT`
 - Target remote: `https://github.com/Attys-syttA/Attys_DC_BOT`
 - Phase: Windows prerelease baseline complete; external-platform acceptance remains active, NAS-0 connection/staging baseline is in place, the bounded audit-orchestration track has guarded repair coverage, and BotOps staged worker execution is consolidated into this primary repository.
-- Git state: local `main` tracks `origin/main`; 2026-08-20 startup fetch confirmed `HEAD...origin/main = 0 0` before this checkpoint.
+- Git state: local `main` tracks `origin/main`; 2026-09-01 startup checks confirmed `HEAD` and `origin/main` matched before this repair.
+- 2026-09-01 Windows safe update repair: startup safe update had already pulled `origin/main` to `a00c3fc` but stopped at `npm install` because C# `ProcessStartInfo` launched bare `npm.cmd` with `UseShellExecute=false`, causing npm to look under the repository `node_modules\npm` folder. The tray command runner now wraps `.cmd/.bat` calls with `cmd.exe /d /c`, and the TypeScript safe-update CLI uses the same Windows command wrapper. Package version is `0.1.1-prerelease.106`. Validation passed: manual C# reproduction of the failure, `npm.cmd install`, `npm.cmd ls --depth=0`, `npm run doctor:local`, `npm run check`, C# compile to temporary validation exe, and `git diff --check`. Runtime note: the currently running tray process still uses the old compiled exe until the tray is restarted/rebuilt.
 - 2026-08-20 CI portability fix: GitHub Actions run `32375489972` failed because `src/bot/commands/nas.test.ts` expected a Windows-only checkout path while the Node 20/22 Linux runners used `/home/runner/work/Attys_DC_BOT/Attys_DC_BOT`. The test now expects `process.cwd()` for the command handler path; no runtime behavior or package version changed.
 - 2026-08-20 live BotOps `.105` publication and NAS refresh: commit `22595a8` was pushed to `origin/main`, the live Windows bot was restarted through `win-start.bat --restart`, and `npm run doctor:local` passed. `npm run nas:deploy -- -Apply` synced the `.105` managed changes, rebuilt the NAS control-plane container, and `npm run nas:deploy:verify` verified package version `0.1.1-prerelease.105`; a follow-up closeout source sync keeps the NAS source snapshot on the latest pushed documentation commit without changing the package version. `npm run nas:container:status`, `npm run nas:bridge:status`, and `npm run nas:bridge:smoke` passed.
 - 2026-08-20 NAS staging source identity fix: `prepare-nas-staging.ps1` now uses `SourceCommitOverride` for rollback-exported source identity, avoiding a PowerShell case-insensitive parameter/local variable collision that could write `sourceCommit=unknown` and image tag `local`. Package version is `0.1.1-prerelease.105`.

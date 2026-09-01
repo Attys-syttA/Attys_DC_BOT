@@ -1201,9 +1201,17 @@ internal sealed class CodexBotTray : Form
         CommandResult result = new CommandResult();
         try
         {
+            string resolvedFileName = fileName;
+            string resolvedArguments = arguments;
+            if (IsWindowsCommandScript(fileName))
+            {
+                resolvedFileName = "cmd.exe";
+                resolvedArguments = "/d /c " + QuoteForCmd(fileName) + (string.IsNullOrWhiteSpace(arguments) ? "" : " " + arguments);
+            }
+
             ProcessStartInfo info = new ProcessStartInfo();
-            info.FileName = fileName;
-            info.Arguments = arguments;
+            info.FileName = resolvedFileName;
+            info.Arguments = resolvedArguments;
             info.WorkingDirectory = botDir;
             info.UseShellExecute = false;
             info.RedirectStandardOutput = true;
@@ -1252,6 +1260,18 @@ internal sealed class CodexBotTray : Form
             result.Error = SafeError(ex.Message);
         }
         return result;
+    }
+
+    private static bool IsWindowsCommandScript(string fileName)
+    {
+        return fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string QuoteForCmd(string value)
+    {
+        if (value.IndexOfAny(new char[] { ' ', '\t', '"' }) < 0) return value;
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
     }
 
     private static string FirstLine(string value)

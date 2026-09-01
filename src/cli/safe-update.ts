@@ -2,12 +2,14 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { decideSafeUpdate, parseAheadBehind } from "../utils/git-update-state.js";
+import { windowsCmdInvocation } from "../utils/process.js";
 
 const repoRoot = process.cwd();
 const updateLogPath = path.join(repoRoot, "update.log");
 
 function run(command: string, args: string[], options: { log?: boolean } = {}): { code: number; output: string } {
-  const result = spawnSync(command, args, {
+  const invocation = windowsCmdInvocation(command, args);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: repoRoot,
     encoding: "utf-8",
     shell: false,
